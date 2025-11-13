@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.27)
-project(pk1_pruefung)
+project(chess-engine)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 
 enable_testing()
 
-add_executable(pk1_pruefung engine/main.cpp
+add_executable(chess-engine engine/main.cpp
         engine/board.cpp
         engine/board.h
         engine/movement/move_gen.cpp
