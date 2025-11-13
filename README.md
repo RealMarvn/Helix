@@ -1,16 +1,17 @@
 # ♟️ ChessBot
 
-**ChessBot** is a chess bot developed as part of my first programming project (PK1) at the University of Konstanz. This project dives into the complexities of chess move generation, including pseudolegal moves, castling, en passant, and iterative deepening for move depth evaluation.
+**ChessBot** is a chess bot developed as part of my first programming project (PK1) and my bachelor project at the University of Konstanz. This project dives into the complexities of chess move generation, including pseudolegal moves, castling, en passant, and iterative deepening for move depth evaluation.
 
 ## 🚀 Features
 
 - **Pseudolegal Move Generation**: Generates moves without considering check, enhancing speed.
 - **Castling and En Passant**: Supports special moves, providing a more complete set of chess rules.
+- **Alpha-Beta Pruning**: Optimization of depth evaluation for faster computation.
 - **Iterative Deepening**: Uses progressive depth evaluation to find the best move efficiently.
 
 ## 🏫 Project Background
 
-This project was created as an introduction to programming concepts and problem-solving strategies. It combines classic chess rules with computational methods to give a practical application to theoretical programming knowledge from the University of Konstanz’s PK1 course.
+This project was created as an introduction to programming concepts and problem-solving strategies. It combines classic chess rules with computational methods to give a practical application to theoretical programming knowledge from the University of Konstanz’s PK1 course. Later this project was used for my bachelor project with more advanced improvements like iterative deepening and other optimizations.
 
 ## 🔍 How It Works
 
