@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include "./chess_game.h"
 
 int main() {

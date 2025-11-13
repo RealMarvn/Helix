@@ -5,17 +5,17 @@
 #pragma once
 
 #include <memory>
-#include <string>
 
 #include "./chess_bot.h"
 
 class ChessGame {
- public:
+public:
   /**
    * @class ChessGame
    * Represents a chess game.
    */
-  ChessGame() : board{new Board} {};
+  ChessGame() : board{new Board} {
+  };
 
   /**
    * @brief Starts the chess game and handles the input and gameplay.
@@ -24,9 +24,9 @@ class ChessGame {
    * It supports several commands and performs the corresponding actions based on the input.
    * The game continues until a checkmate occurs.
    */
-  void start();
+  void start() const;
 
- private:
+private:
   std::unique_ptr<Board> board;
   ChessBot chessBot;
 };

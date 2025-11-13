@@ -5,17 +5,13 @@
 #pragma once
 
 #include <cassert>
-#include <iostream>
 #include <map>
-#include <memory>
 #include <random>
 #include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "./exceptions/board_exception.h"
-#include "./exceptions/fen_exception.h"
 #include "./misc/board_settings.h"
 #include "./misc/move.h"
 #include "./misc/piece.h"
@@ -88,7 +84,7 @@ class Board {
    * @param pieceColor The color of the piece to check (true for white, false for black).
    * @return True if the square is attacked, false otherwise.
    */
-  bool isSquareAttacked(std::pair<int, int> square, bool pieceColor);
+  bool isSquareAttacked(const std::pair<int, int>& square, bool pieceColor);
 
   /**
    * @brief Attempts to move a chess piece on the board.
@@ -100,7 +96,7 @@ class Board {
    * @param move The move to be made.
    * @return True if the move is successful, false otherwise. If false, the move will not be applied.
    */
-  bool tryToMovePiece(Move& move);
+  bool tryToMovePiece(const Move& move);
 
   /**
    * @brief Moves a chess piece on the board.
@@ -113,7 +109,7 @@ class Board {
    * @param move The move to make.
    * @return True if the move is successful, false otherwise. If false the move will not be applied!.
    */
-  bool makeMove(Move move);
+  bool makeMove(const Move& move);
 
   /**
    * @brief Removes the last move from the list of moves and updates the board state accordingly.
@@ -131,7 +127,7 @@ class Board {
    * This function prints the current state of the chessboard.
    * It shows the current turn and the positions of all the pieces on the board.
    */
-  void printCurrentBoard();
+  void printCurrentBoard() const;
 
   /**
    * @brief Reads a FEN string and sets up the board accordingly.
@@ -152,7 +148,7 @@ class Board {
    *
    * @return The current FEN representation of the chessboard.
    */
-  std::string getFen();
+  [[nodiscard]] std::string getFen() const;
 
   /**
    * @brief Checks if the current player is in checkmate.
@@ -178,9 +174,9 @@ class Board {
    * @param input The string representing the chess move.
    * @return The parsed Move object.
    */
-  Move parseMove(std::string input);
+  [[nodiscard]] Move parseMove(const std::string& input) const;
 
-  uint64_t getHash() { return boardHash; }
+  [[nodiscard]] uint64_t getHash() const { return boardHash; }
 
  private:
   // Represents the board.
@@ -235,7 +231,7 @@ class Board {
    *
    * @param move The move that was made.
    */
-  void handleCastlingPermissions(Move& move);
+  void handleCastlingPermissions(const Move& move);
 
   /**
    * @brief Converts a square number to its corresponding X and Y coordinates on a chess board.
@@ -248,7 +244,7 @@ class Board {
    * @return A string representation of the X and Y coordinates in the format "Xn", where X is a letter
    *         and n is a number.
    */
-  static inline std::string convertToXandY(int square) {
+  static std::string convertToXandY(int square) {
     std::ostringstream out;
     out << static_cast<char>((square) % 8 + 'a') << (square) / 8 + 1;
     return out.str();

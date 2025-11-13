@@ -8,12 +8,13 @@
 #include <string>
 #include <utility>
 
-class BoardInterruptException : public std::exception {
- public:
-  explicit BoardInterruptException(std::string msg) : message{std::move(msg)} {}
+class BoardInterruptException final : public std::exception {
+public:
+  explicit BoardInterruptException(std::string msg) : message{std::move(msg)} {
+  }
 
   [[nodiscard]] const char* what() const noexcept override { return message.c_str(); }
 
- private:
+private:
   std::string message;
 };

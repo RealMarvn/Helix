@@ -2,9 +2,12 @@
 // Created by Marvin Becker on 15.12.23.
 //
 
-#include "./board.h"
+#include <iostream>
 
+#include "./board.h"
 #include "./chess_bot.h"
+#include "./exceptions/board_exception.h"
+#include "./exceptions/fen_exception.h"
 
 bool Board::isKingInCheck(bool pieceColor) {
   // Go through board.
@@ -21,7 +24,7 @@ bool Board::isKingInCheck(bool pieceColor) {
   throw BoardInterruptException("No king found!");
 }
 
-bool Board::isSquareAttacked(std::pair<int, int> square, bool pieceColor) {
+bool Board::isSquareAttacked(const std::pair<int, int>& square, bool pieceColor) {
   PseudoLegalMoves allKnightMoves;
   PseudoLegalMoves allPawnMoves;
   PseudoLegalMoves allBishopMoves;
@@ -134,7 +137,7 @@ bool Board::popLastMove() {
   return true;
 }
 
-bool Board::makeMove(Move move) {
+bool Board::makeMove(const Move& move) {
   // Set the square to move to the piece where it is currently.
   board[move.moveSquare] = board[move.square];
 
@@ -215,7 +218,7 @@ bool Board::makeMove(Move move) {
   return true;
 }
 
-void Board::handleCastlingPermissions(Move& move) {
+void Board::handleCastlingPermissions(const Move& move) {
   // If king is moved. disable everything.
   if (move.movingPiece.pieceType == WK) {
     boardSettings.whiteQueenSide = false;
@@ -273,7 +276,7 @@ bool Board::isCheckMate(bool isWhite) {
   return counter == 0;
 }
 
-Move Board::parseMove(std::string input) {
+Move Board::parseMove(const std::string& input) const {
   bool capture = false;
   char promotion_figure = ' ';
 
@@ -330,7 +333,7 @@ Move Board::parseMove(std::string input) {
   return Move{movePosition, position, Piece(figure), board[movePosition], Piece(promotion_figure), moveType};
 }
 
-bool Board::tryToMovePiece(Move& move) {
+bool Board::tryToMovePiece(const Move& move) {
   bool capture = false;
   if (move.capturedPiece.pieceType != EMPTY) {  // Detect if there is a capture.
     capture = true;
@@ -482,7 +485,7 @@ void Board::readFen(const std::string& input) {
   moves.clear();
 }
 
-void Board::printCurrentBoard() {
+void Board::printCurrentBoard() const {
   // Print the current turn.
   if (player == WHITE) {
     std::cout << "Current turn: "
@@ -502,12 +505,12 @@ void Board::printCurrentBoard() {
   }
   std::cout << "     a";
   for (int i = 2; i <= 8; i++) {
-    std::cout << "  " << char(i + 96);
+    std::cout << "  " << static_cast<char>(i + 96);
   }
   std::cout << std::endl;
 }
 
-std::string Board::getFen() {
+std::string Board::getFen() const {
   std::string outPutFen;
   // Got through y = 8-1 and x = 1-8.
   for (int y = 8; y > 0; y--) {
