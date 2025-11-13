@@ -8,10 +8,10 @@
 
 class Zobrist {
 public:
-  uint64_t zobrist_squares[12][64]{0};
-  uint64_t zobrist_stm[2]{0};
-  uint64_t zobrist_ep[8]{0};
-  uint64_t zobrist_castling[4]{0};
+  uint64_t zobrist_squares[12][64]{};
+  uint64_t zobrist_stm[2]{};
+  uint64_t zobrist_ep[8]{};
+  uint64_t zobrist_castling[4]{};
 
   Zobrist() {
     for (auto& piece: zobrist_squares) {
