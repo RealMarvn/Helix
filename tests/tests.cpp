@@ -30,7 +30,7 @@ uint64_t perft(Board& boardManager, int depth, bool player) {
 
 TEST(MoveGenTest, PerftTest) {
   // Get Perft file!
-  std::ifstream epd_file("/Users/marvin/CLionProjects/pk1-pruefung/tests/data/perft-positions.epd");
+  std::ifstream epd_file("./data/perft-positions.epd");
   ASSERT_TRUE(epd_file.good()) << "Der Pfad der testing suite ist falsch. Bitte anpassen!";
   Board myBoard;
 
@@ -57,7 +57,7 @@ TEST(MoveGenTest, PerftTest) {
 
 TEST(Board, GenerateFenTest) {
   // Get Perft file!
-  std::ifstream epd_file("/Users/marvin/CLionProjects/pk1-pruefung/tests/data/perft-positions.epd");
+  std::ifstream epd_file("./data/perft-positions.epd");
   ASSERT_TRUE(epd_file.good()) << "Der Pfad der testing suite ist falsch. Bitte anpassen!";
   Board myBoard;
 
@@ -83,7 +83,7 @@ TEST(Board, GenerateFenTest) {
 
 TEST(UserInput, MoveParsing) {
   // Get move file!
-  std::ifstream epd_file("/Users/marvin/CLionProjects/pk1-pruefung/tests/data/input-test.epd");
+  std::ifstream epd_file("./data/input-test.epd");
   ASSERT_TRUE(epd_file.good()) << "Der Pfad der testing suite ist falsch. Bitte anpassen!";
   Board myBoard;
 
