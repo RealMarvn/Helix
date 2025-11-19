@@ -11,7 +11,7 @@ void ChessGame::start() const {
     parser_init();
 }
 
-void ChessGame::handlePositionCommand(const std::string& line) const {
+void ChessGame::parser_uci_handle_position(const std::string& line) const {
     std::string token;
     std::istringstream iss(line);
 
@@ -44,6 +44,27 @@ void ChessGame::handlePositionCommand(const std::string& line) const {
     }
 }
 
+void ChessGame::parser_uci_handle_go(const std::string& line) const {
+    int move_time = -1;
+
+    std::istringstream iss(line);
+    std::string token;
+    iss >> token; // "go"
+
+    while (iss >> token) {
+        if (token == "movetime") {
+            iss >> move_time;
+        }
+    }
+
+    if (move_time <= 0) {
+        move_time = 2000; // Default: 2s
+    }
+
+    const Move best = ChessBot::generateBestNextMove(*board, move_time);
+    std::cout << "bestmove " << best.to_uci_string() << std::endl;
+}
+
 void ChessGame::parser_parse_uci(const std::string& line) const {
     if (line == "uci") {
         std::cout << "id name Helix" << std::endl;
@@ -57,11 +78,10 @@ void ChessGame::parser_parse_uci(const std::string& line) const {
         board->reset();
     }
     if (line.rfind("position ", 0) == 0) {
-        handlePositionCommand(line);
+        parser_uci_handle_position(line);
     }
     if (line.rfind("go", 0) == 0) {
-        const Move best = ChessBot::generateBestNextMove(*board);
-        std::cout << "bestmove " << best.to_uci_string() << std::endl;
+        parser_uci_handle_go(line);
     }
     if (line == "quit") {
         exit(0);
@@ -108,7 +128,7 @@ void ChessGame::parser_parse_classic(const std::string& line) const {
 
         // Bot can only move legal so no need to check if the move is legal.
         // Check if opponent is in check mate after bots turn.
-        Move move = ChessBot::generateBestNextMove(*board);
+        Move move = ChessBot::generateBestNextMove(*board, 2000);
         board->makeMove(move);
         board->printCurrentBoard();
 

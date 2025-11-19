@@ -15,15 +15,18 @@ public:
      * @brief Performs an iterative deepening search to find the best move for the given board.
      *
      * @param board The chess board to search for the best move.
+     * @param TIME_CONSTRAINT The time in ms the bot has to search.
      * @return The best move found.
      */
-    static Move generateBestNextMove(Board& board);
+    static Move generateBestNextMove(Board& board, int TIME_CONSTRAINT);
 
 private:
     static std::array<Move, tt_size> tt_array;
 
     // Represents the time the ID started.
     static std::chrono::high_resolution_clock::time_point iterativeTimePoint;
+    // Represents the maximum time ID has. Default 2000
+    static int iterative_time_constraint;
 
     /**
      * @brief Checks if the time has elapsed.
@@ -34,9 +37,10 @@ private:
      * @return true if the time has elapsed, false otherwise.
      */
     static bool isTimeUp() {
-        std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
-        long long elapsed_time = std::chrono::duration_cast<std::chrono::seconds>(end - iterativeTimePoint).count();
-        return (elapsed_time >= 2);
+        const std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+        const long long elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end - iterativeTimePoint).
+                count();
+        return (elapsed_time >= iterative_time_constraint);
     }
 
     /**

@@ -2,6 +2,7 @@
 
 std::chrono::high_resolution_clock::time_point ChessBot::iterativeTimePoint;
 std::array<Move, tt_size> ChessBot::tt_array;
+int ChessBot::iterative_time_constraint = 2000;
 
 int ChessBot::eval(Board& board) {
     int mg[2] = {0};
@@ -81,14 +82,15 @@ int ChessBot::eval(Board& board) {
     return (evaluation + 20);
 }
 
-Move ChessBot::generateBestNextMove(Board& board) {
+Move ChessBot::generateBestNextMove(Board& board, const int TIME_CONSTRAINT) {
     // Set the time to now.
     iterativeTimePoint = std::chrono::high_resolution_clock::now();
+    iterative_time_constraint = TIME_CONSTRAINT;
     Move bestMove{};
     // Run until the timeout returns true.
     for (int i = 1;; i++) {
         // Search the best move for depth i.
-        Move move = searchBestNextMove(board, i);
+        const Move move = searchBestNextMove(board, i);
         if (isTimeUp()) {
             // If the time is up, break the loop and don't apply the not fully evaluated move.
             break;

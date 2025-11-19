@@ -42,5 +42,7 @@ private:
 
   void parser_parse_classic(const std::string& line) const;
 
-  void handlePositionCommand(const std::string& line) const;
+  void parser_uci_handle_position(const std::string& line) const;
+
+  void parser_uci_handle_go(const std::string& line) const;
 };
