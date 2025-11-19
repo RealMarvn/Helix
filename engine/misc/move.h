@@ -54,6 +54,28 @@ struct Move {
     }
 
     /**
+     * @brief Converts the Move object to a readable uci string for moves
+     *
+     * This function takes the square and moveSquare coordinates of a Move object and converts them to X and Y
+     * coordinates. The X coordinate is obtained by adding the ASCII value of 'a' to the remainder of square divided by 8,
+     * and casting it to a character. The Y coordinate is obtained by adding 1 to the result of square divided by 8. The
+     * same process is applied to the moveSquare coordinates to obtain the second set of X and Y coordinates. The
+     * resulting X and Y coordinates are then concatenated together as a string and returned.
+     *
+     * @return A uci string representation of the X and Y coordinates of the Move object.
+     */
+    [[nodiscard]] std::string to_uci_string() const {
+        std::ostringstream out;
+        out << movingPiece.toChar();
+        out << static_cast<char>((square) % 8 + 'a') << (square) / 8 + 1;
+        out << static_cast<char>((moveSquare) % 8 + 'a') << (moveSquare) / 8 + 1;
+        if (moveType == PROMOTION) {
+            out << promotionPiece.toChar();
+        }
+        return out.str();
+    }
+
+    /**
      * @brief Overloaded equality operator for comparing two Move objects.
      *
      * @param other The other Move object to compare with.
