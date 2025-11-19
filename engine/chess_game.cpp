@@ -76,6 +76,7 @@ void ChessGame::parser_parse_uci(const std::string& line) const {
     }
     if (line == "ucinewgame") {
         board->reset();
+        ChessBot::reset_tt();
     }
     if (line.rfind("position ", 0) == 0) {
         parser_uci_handle_position(line);
