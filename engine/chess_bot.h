@@ -20,6 +20,8 @@ public:
      */
     static Move generateBestNextMove(Board& board, int TIME_CONSTRAINT);
 
+    static void reset_tt();
+
 private:
     static std::array<Move, tt_size> tt_array;
 

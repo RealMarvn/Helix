@@ -4,6 +4,10 @@ std::chrono::high_resolution_clock::time_point ChessBot::iterativeTimePoint;
 std::array<Move, tt_size> ChessBot::tt_array;
 int ChessBot::iterative_time_constraint = 2000;
 
+void ChessBot::reset_tt() {
+    tt_array.fill(Move{});
+}
+
 int ChessBot::eval(Board& board) {
     int mg[2] = {0};
     int eg[2] = {0};
