@@ -133,6 +133,7 @@ void ChessGame::parser_init() const {
         if (input == "uci")
             uci_mode = true;
         else if (input == "classic") {
+            uci_mode = false;
             board->printCurrentBoard();
             continue;
         }
