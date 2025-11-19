@@ -27,7 +27,6 @@ void ChessGame::handlePositionCommand(const std::string& line) const {
                 Move m = board->parseMove(token);
                 board->tryToMovePiece(m);
             }
-            board->printCurrentBoard();
         }
     } else if (token == "fen") {
         std::string fen, part;
