@@ -292,34 +292,24 @@ bool Board::isCheckMate(bool isWhite) {
 }
 
 Move Board::parseMove(const std::string& input) const {
-    bool capture = false;
     char promotion_figure = ' ';
 
-    // Figure is input[0].
-    char figure = input[0];
-
     // Use the ascii code of the char to subtract a number to get the correct number.
-    int x = input[1] - 96;
-    int y = input[2] - 48;
-    int position = calculateSquare(x, y);
+    const int x = input[0] - 96;
+    const int y = input[1] - 48;
+    const int position = calculateSquare(x, y);
 
-    int move_x = input[3] - 96;
-    int move_y = input[4] - 48;
+    const char figure = board[position].toChar();
 
-    // Capture can be lower or upper case.
-    if (input[3] == 'x' || input[3] == 'X') {
-        move_x = input[4] - 96;
-        move_y = input[5] - 48;
-        capture = true;
+    const int move_x = input[2] - 96;
+    const int move_y = input[3] - 48;
+
+    const int movePosition = calculateSquare(move_x, move_y);
+
+    if (input.length() == 5) {
+        promotion_figure = input[4];
     }
-    int movePosition = calculateSquare(move_x, move_y);
 
-    // If there is a capture the promotion is moved.
-    if ((capture && input.length() == 8 && input[6] == '=')) {
-        promotion_figure = input[7];
-    } else if (input.length() == 7 && input[5] == '=') {
-        promotion_figure = input[6];
-    }
     MoveType moveType = NORMAL;
 
     // If figure is a king.
@@ -344,6 +334,9 @@ Move Board::parseMove(const std::string& input) const {
     // If the promotion is given set the move to a promotion.
     if (promotion_figure != ' ') {
         moveType = PROMOTION;
+        promotion_figure = player == WHITE
+                               ? static_cast<char>(std::toupper(promotion_figure))
+                               : promotion_figure;
     }
 
     // Initialize the move with all data.
