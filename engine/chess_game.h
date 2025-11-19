@@ -20,8 +20,7 @@ public:
   /**
    * @brief Starts the chess game and handles the input and gameplay.
    *
-   * This function starts the chess game and continuously reads input from the user.
-   * It supports several commands and performs the corresponding actions based on the input.
+   * This function starts the chess game and initializes the parser to read the input.
    * The game continues until a checkmate occurs.
    */
   void start() const;
@@ -29,4 +28,19 @@ public:
 private:
   std::unique_ptr<Board> board;
   ChessBot chessBot;
+
+  /**
+   * @brief Initializes the parser
+   *
+   * This function continuously reads input from the user.
+   * It supports several commands and performs the corresponding actions based on the input.
+   * The parser continues until a checkmate occurs.
+   */
+  void parser_init() const;
+
+  void parser_parse_uci(const std::string& line) const;
+
+  void parser_parse_classic(const std::string& line) const;
+
+  void handlePositionCommand(const std::string& line) const;
 };
