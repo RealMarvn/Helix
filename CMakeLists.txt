@@ -22,7 +22,6 @@ add_executable(chess-engine engine/main.cpp
         engine/exceptions/fen_exception.h
         engine/exceptions/board_exception.h
         engine/misc/zobrist.h
-        engine/parser.h
 )
 
 include(FetchContent)
@@ -50,7 +49,6 @@ add_executable(tests tests/tests.cpp
         engine/misc/player.h
         engine/exceptions/fen_exception.h
         engine/exceptions/board_exception.h
-        engine/parser.h
 )
 
 # Link the Google libraries to your test executable
