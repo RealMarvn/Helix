@@ -15,20 +15,23 @@ public:
      * @brief Performs an iterative deepening search to find the best move for the given board.
      *
      * @param board The chess board to search for the best move.
-     * @param TIME_CONSTRAINT The time in ms the bot has to search.
+     * @param time_constraint The time in ms the bot has to search.
      * @return The best move found.
      */
-    static Move generateBestNextMove(Board& board, int TIME_CONSTRAINT);
+    Move generate_best_next_move(Board& board, int time_constraint);
 
-    static void reset_tt();
+    /**
+     * @brief Resets the whole transposition table
+     */
+    void reset_tt();
 
 private:
-    static std::array<Move, tt_size> tt_array;
+    std::array<Move, tt_size> tt_array;
 
     // Represents the time the ID started.
-    static std::chrono::high_resolution_clock::time_point iterativeTimePoint;
+    std::chrono::high_resolution_clock::time_point iterative_time_point;
     // Represents the maximum time ID has. Default 2000
-    static int iterative_time_constraint;
+    int iterative_time_constraint = 2000;
 
     /**
      * @brief Checks if the time has elapsed.
@@ -38,11 +41,12 @@ private:
      *
      * @return true if the time has elapsed, false otherwise.
      */
-    static bool isTimeUp() {
+    [[nodiscard]] bool is_time_up() const {
         const std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
-        const long long elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end - iterativeTimePoint).
+        const long long elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end - iterative_time_point)
+                .
                 count();
-        return (elapsed_time >= iterative_time_constraint);
+        return elapsed_time >= iterative_time_constraint;
     }
 
     /**
@@ -57,7 +61,7 @@ private:
      *
      * @return The best move found by the search algorithm.
      */
-    static Move searchBestNextMove(Board& board, int depth);
+    Move search_best_next_move(Board& board, int depth);
 
     /**
      * @brief Performs a search for the best move using the negamax algorithm with alpha-beta pruning.
@@ -67,10 +71,10 @@ private:
      * @param alpha The alpha value representing the best lower bound found so far.
      * @param beta The beta value representing the best upper bound found so far.
      * @param ply The current ply (half-move) count.
-     * @param bestMove The reference to the best move found so far.
+     * @param best_move The reference to the best move found so far.
      * @return The score of the best move found.
      */
-    static int search(Board& board, int depth, int alpha, int beta, int ply, Move& bestMove);
+    int search(Board& board, int depth, int alpha, int beta, int ply, Move& best_move);
 
     /**
      * Perform a quiescence search on the chess board to evaluate the best move.
@@ -82,7 +86,7 @@ private:
      * @param beta The beta value representing the upper bound of the search window.
      * @return The best score found by the search.
      */
-    static int quiescenceSearch(Board& board, int alpha, int beta);
+    int quiescence_search(Board& board, int alpha, int beta);
 
     /**
      * @brief Evaluates the position on the chess board.

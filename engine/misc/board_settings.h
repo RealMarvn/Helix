@@ -6,14 +6,14 @@
 
 struct board_setting {
   // EP square
-  int epSquare{100};
+  int ep_square{100};
   // Castling moves.
-  bool whiteQueenSide{false};
-  bool whiteKingSide{false};
-  bool blackQueenSide{false};
-  bool blackKingSide{false};
+  bool white_queen_side{false};
+  bool white_king_side{false};
+  bool black_queen_side{false};
+  bool black_king_side{false};
 
   // For FEN
-  int lastMovesSincePawnOrCapture{0};
+  int last_moves_since_pawn_or_capture{0};
   int turns{1};
 };

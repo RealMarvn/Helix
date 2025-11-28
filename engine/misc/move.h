@@ -15,21 +15,21 @@
 #define MAX_MOVES 218
 
 // Normal can be seen as a capture or a move.
-enum MoveType { NORMAL, EN_PASSANT, PROMOTION, CASTLING };
+enum MoveType : uint8_t { NORMAL, EN_PASSANT, PROMOTION, CASTLING };
 
 struct Move {
     // The square a piece want's to move to.
-    int moveSquare{0};
+    int move_square{0};
     // The square the piece is on.
     int square{0};
     // The moving piece.
-    Piece movingPiece;
+    Piece moving_piece;
     // The piece which gets captured (If it is a normal move it will be EMPTY)
-    Piece capturedPiece;
+    Piece captured_piece;
     // The piece a pawn can be promoted to. Can be empty.
-    Piece promotionPiece;
+    Piece promotion_piece;
     // The type of move.
-    MoveType moveType{NORMAL};
+    MoveType move_type{NORMAL};
 
     /**
      * @brief Converts the Move object's square and moveSquare coordinates to corresponding X and Y coordinates.
@@ -42,12 +42,12 @@ struct Move {
      *
      * @return A string representation of the X and Y coordinates of the Move object.
      */
-    [[nodiscard]] std::string toString() const {
+    [[nodiscard]] std::string to_string() const {
         std::ostringstream out;
         out << static_cast<char>((square) % 8 + 'a') << (square) / 8 + 1;
-        out << static_cast<char>((moveSquare) % 8 + 'a') << (moveSquare) / 8 + 1;
-        if (moveType == PROMOTION) {
-            out << static_cast<char>(std::tolower(promotionPiece.toChar()));
+        out << static_cast<char>((move_square) % 8 + 'a') << (move_square) / 8 + 1;
+        if (move_type == PROMOTION) {
+            out << static_cast<char>(std::tolower(promotion_piece.to_char()));
         }
         return out.str();
     }
@@ -66,9 +66,9 @@ struct Move {
     [[nodiscard]] std::string to_uci_string() const {
         std::ostringstream out;
         out << static_cast<char>((square) % 8 + 'a') << (square) / 8 + 1;
-        out << static_cast<char>((moveSquare) % 8 + 'a') << (moveSquare) / 8 + 1;
-        if (moveType == PROMOTION) {
-            out << static_cast<char>(std::tolower(promotionPiece.toChar()));
+        out << static_cast<char>((move_square) % 8 + 'a') << (move_square) / 8 + 1;
+        if (move_type == PROMOTION) {
+            out << static_cast<char>(std::tolower(promotion_piece.to_char()));
         }
         return out.str();
     }
@@ -80,10 +80,10 @@ struct Move {
      * @return True if the two Move objects are equal, false otherwise.
      */
     bool operator==(const Move& other) const {
-        return moveSquare == other.moveSquare && square == other.square &&
-               movingPiece.pieceType == other.movingPiece.pieceType &&
-               capturedPiece.pieceType == other.capturedPiece.pieceType &&
-               promotionPiece.pieceType == other.promotionPiece.pieceType && moveType == other.moveType;
+        return move_square == other.move_square && square == other.square &&
+               moving_piece.piece_type == other.moving_piece.piece_type &&
+               captured_piece.piece_type == other.captured_piece.piece_type &&
+               promotion_piece.piece_type == other.promotion_piece.piece_type && move_type == other.move_type;
     }
 };
 
@@ -138,7 +138,7 @@ public:
      * @pre Number must be less than the index.
      * @post None.
      */
-    Move& operator[](int number) {
+    Move& operator[](const int number) {
         assert(number < index);
         return move_list[number];
     }
@@ -182,9 +182,9 @@ public:
      *
      * @return None.
      */
-    inline void sortMoveListMvvLva(const Move& ttMove) {
+    void sort_move_list_mvv_lva(const Move& ttMove) {
         std::sort(begin(), end(), [&](const Move& left, const Move& right) {
-            return scoreMove(left, ttMove) > scoreMove(right, ttMove);
+            return score_move(left, ttMove) > score_move(right, ttMove);
         });
     }
 
@@ -201,9 +201,9 @@ private:
      * @param ttMove The move from the transposition table
      * @return The score of the move.
      */
-    static int scoreMove(const Move& move, const Move& ttMove) {
+    static int score_move(const Move& move, const Move& ttMove) {
         if (move == ttMove) return 1000;
-        if (move.capturedPiece.pieceType == EMPTY) return 0;
-        return (move.capturedPiece.pieceType % BP) * 10 - (move.movingPiece.pieceType % BP) + 10;
+        if (move.captured_piece.piece_type == EMPTY) return 0;
+        return move.captured_piece.piece_type % BP * 10 - move.moving_piece.piece_type % BP + 10;
     }
 };

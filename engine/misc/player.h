@@ -5,4 +5,4 @@
 #pragma once
 
 // Represents the STM.
-enum player_type { WHITE, BLACK };
+enum player_type : uint8_t { WHITE, BLACK };

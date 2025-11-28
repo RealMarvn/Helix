@@ -5,7 +5,7 @@
 #pragma once
 
 // Represents the pieces with colors. Color + Piece = White + Pawn = WP
-enum PieceType { WP, WN, WB, WR, WQ, WK, BP, BN, BB, BR, BQ, BK, EMPTY };
+enum PieceType : uint8_t { WP, WN, WB, WR, WQ, WK, BP, BN, BB, BR, BQ, BK, EMPTY };
 
 /**
  * @brief The Piece class represents a chess piece.
@@ -21,27 +21,26 @@ public:
     /**
      * @brief Constructs a new Piece object with the given piece type.
      *
-     * @param piece The PieceType representing the piece type.
+     * @param PIECE The PieceType representing the piece type.
      */
-    explicit Piece(PieceType piece) : pieceType{piece} {
-    };
+    explicit Piece(const PieceType PIECE) : piece_type{PIECE} {
+    }
 
     /**
      * @brief Constructs a new Piece object with the given piece type.
      *
-     * @param piece The character representing the piece type.
+     * @param PIECE The character representing the piece type.
      */
-    explicit Piece(char piece) : pieceType{findKeyByValue(piece)} {
+    explicit Piece(const char PIECE) : piece_type{find_key_by_value(PIECE)} {
     };
 
     /**
      * @class Piece
      * Represents an EMPTY piece.
      */
-    Piece() : pieceType{EMPTY} {
-    };
+    Piece() = default;
 
-    PieceType pieceType{EMPTY};
+    PieceType piece_type{EMPTY};
 
     /**
      * @brief Checks if the piece is white.
@@ -50,7 +49,7 @@ public:
      *
      * @return True if the piece is white, false otherwise.
      */
-    [[nodiscard]] inline bool isWhite() const { return (pieceType < BP); }
+    [[nodiscard]] bool is_white() const { return (piece_type < BP); }
 
     /**
      * @brief Returns the character representation of the piece.
@@ -59,7 +58,7 @@ public:
      *
      * @return The character representation of the piece.
      */
-    [[nodiscard]] inline char toChar() const { return pieceToChar[pieceType]; }
+    [[nodiscard]] char to_char() const { return piece_to_char[piece_type]; }
 
     /**
      * @brief Retrieves the material value of the piece.
@@ -74,9 +73,9 @@ public:
      *
      * @return The material value of the piece.
      */
-    [[nodiscard]] int getMaterialValue(bool endGame) const {
-        if (pieceType == EMPTY) return 0;
-        return ((endGame ? eg_pieceValue[pieceType % BP] : mg_pieceValue[pieceType % BP]));
+    [[nodiscard]] int get_material_value(const bool endGame) const {
+        if (piece_type == EMPTY) return 0;
+        return endGame ? eg_piece_value[piece_type % BP] : mg_piece_value[piece_type % BP];
     }
 
     /**
@@ -93,20 +92,20 @@ public:
      *
      * @return The game phase value of the piece.
      */
-    [[nodiscard]] int getGamePhaseValue() const {
-        if (pieceType == EMPTY) return 0;
-        return gamePhaseValue[pieceType % BP];
+    [[nodiscard]] int get_game_phase_value() const {
+        if (piece_type == EMPTY) return 0;
+        return game_phase_value[piece_type % BP];
     }
 
 private:
     // Values from (https://www.chessprogramming.org/PeSTO's_Evaluation_Function)
-    constexpr static int gamePhaseValue[6] = {0, 1, 1, 2, 4, 0};
+    constexpr static int game_phase_value[6] = {0, 1, 1, 2, 4, 0};
     // End game value for BP, BK, BB, BR, BQ and BK
-    constexpr static int eg_pieceValue[6] = {94, 281, 297, 512, 936, 0};
+    constexpr static int eg_piece_value[6] = {94, 281, 297, 512, 936, 0};
     // Mid game value for BP, BK, BB, BR, BQ and BK
-    constexpr static int mg_pieceValue[6] = {82, 337, 365, 477, 1025, 0};
+    constexpr static int mg_piece_value[6] = {82, 337, 365, 477, 1025, 0};
     // Array to get the chars.
-    constexpr static char pieceToChar[13] = {'P', 'N', 'B', 'R', 'Q', 'K', 'p', 'n', 'b', 'r', 'q', 'k', ' '};
+    constexpr static char piece_to_char[13] = {'P', 'N', 'B', 'R', 'Q', 'K', 'p', 'n', 'b', 'r', 'q', 'k', ' '};
 
     /**
      * @brief Finds the PieceType based on the given character value.
@@ -118,10 +117,10 @@ private:
      * @param value The character value representing the piece.
      * @return The PieceType corresponding to the character value.
      */
-    static PieceType findKeyByValue(char value) {
+    static PieceType find_key_by_value(const char value) {
         // Go through the array and find the matching piece.
         for (int i = 0; i < 13; ++i) {
-            if (pieceToChar[i] == value) return static_cast<PieceType>(i);
+            if (piece_to_char[i] == value) return static_cast<PieceType>(i);
         }
         return EMPTY;
     }

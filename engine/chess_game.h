@@ -14,8 +14,8 @@ public:
    * @class ChessGame
    * Represents a chess game.
    */
-  ChessGame() : board{new Board} {
-  };
+  ChessGame() : board{new Board}, chessBot{ChessBot()} {
+  }
 
   /**
    * @brief Starts the chess game and handles the input and gameplay.
@@ -23,7 +23,7 @@ public:
    * This function starts the chess game and initializes the parser to read the input.
    * The game continues until a checkmate occurs.
    */
-  void start() const;
+  void start();
 
 private:
   std::unique_ptr<Board> board;
@@ -36,13 +36,13 @@ private:
    * It supports several commands and performs the corresponding actions based on the input.
    * The parser continues until a checkmate occurs.
    */
-  void parser_init() const;
+  void parser_init();
 
-  void parser_parse_uci(const std::string& line) const;
+  void parser_parse_uci(const std::string& LINE);
 
-  void parser_parse_classic(const std::string& line) const;
+  void parser_parse_classic(const std::string& LINE);
 
-  void parser_uci_handle_position(const std::string& line) const;
+  void parser_uci_handle_position(const std::string& LINE) const;
 
-  void parser_uci_handle_go(const std::string& line) const;
+  void parser_uci_handle_go(const std::string& LINE);
 };

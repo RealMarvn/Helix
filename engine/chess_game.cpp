@@ -6,14 +6,14 @@
 
 #include "./chess_game.h"
 
-void ChessGame::start() const {
+void ChessGame::start() {
     // First print the board.
     parser_init();
 }
 
-void ChessGame::parser_uci_handle_position(const std::string& line) const {
+void ChessGame::parser_uci_handle_position(const std::string& LINE) const {
     std::string token;
-    std::istringstream iss(line);
+    std::istringstream iss(LINE);
 
     iss >> token; // "position"
     iss >> token; // "startpos" oder "fen"
@@ -24,8 +24,8 @@ void ChessGame::parser_uci_handle_position(const std::string& line) const {
         // Prüfe, ob moves folgen
         if (iss >> token && token == "moves") {
             while (iss >> token) {
-                Move m = board->parseMove(token);
-                board->tryToMovePiece(m);
+                Move m = board->parse_move(token);
+                board->try_to_move_piece(m);
             }
         }
     } else if (token == "fen") {
@@ -33,21 +33,21 @@ void ChessGame::parser_uci_handle_position(const std::string& line) const {
         while (iss >> part && part != "moves") {
             fen += part + " ";
         }
-        board->readFen(fen);
+        board->read_fen(fen);
 
         if (part == "moves") {
             while (iss >> token) {
-                Move m = board->parseMove(token);
-                board->tryToMovePiece(m);
+                Move m = board->parse_move(token);
+                board->try_to_move_piece(m);
             }
         }
     }
 }
 
-void ChessGame::parser_uci_handle_go(const std::string& line) const {
+void ChessGame::parser_uci_handle_go(const std::string& LINE) {
     int move_time = -1;
 
-    std::istringstream iss(line);
+    std::istringstream iss(LINE);
     std::string token;
     iss >> token; // "go"
 
@@ -61,67 +61,66 @@ void ChessGame::parser_uci_handle_go(const std::string& line) const {
         move_time = 2000; // Default: 2s
     }
 
-    const Move best = ChessBot::generateBestNextMove(*board, move_time);
-    std::cout << "bestmove " << best.to_uci_string() << std::endl;
+    const Move BEST = chessBot.generate_best_next_move(*board, move_time);
+    std::cout << "bestmove " << BEST.to_uci_string() << std::endl;
 }
 
-void ChessGame::parser_parse_uci(const std::string& line) const {
-    if (line == "uci") {
+void ChessGame::parser_parse_uci(const std::string& LINE) {
+    if (LINE == "uci") {
         std::cout << "id name Helix" << std::endl;
         std::cout << "id author Marvin Becker" << std::endl;
         std::cout << "uciok" << std::endl;
     }
-    if (line == "isready") {
+    if (LINE == "isready") {
         std::cout << "readyok" << std::endl;
     }
-    if (line == "ucinewgame") {
+    if (LINE == "ucinewgame") {
         board->reset();
-        ChessBot::reset_tt();
+        chessBot.reset_tt();
     }
-    if (line.rfind("position ", 0) == 0) {
-        parser_uci_handle_position(line);
+    if (LINE.rfind("position ", 0) == 0) {
+        parser_uci_handle_position(LINE);
     }
-    if (line.rfind("go", 0) == 0) {
-        parser_uci_handle_go(line);
+    if (LINE.rfind("go", 0) == 0) {
+        parser_uci_handle_go(LINE);
     }
-    if (line == "quit") {
+    if (LINE == "quit") {
         exit(0);
     }
 }
 
-void ChessGame::parser_parse_classic(const std::string& line) const {
-    if (line[0] == 'F') {
+void ChessGame::parser_parse_classic(const std::string& LINE) {
+    if (LINE[0] == 'F') {
         // Read in FEN notation.
-        board->readFen(line.substr(1, line.length()));
-        board->printCurrentBoard();
+        board->read_fen(LINE.substr(1, LINE.length()));
+        board->print_current_board();
         return;
     }
-    if (line[0] == 'f') {
+    if (LINE[0] == 'f') {
         // Get the FEN.
-        std::cout << "Your FEN: " << board->getFen() << std::endl;
+        std::cout << "Your FEN: " << board->get_fen() << std::endl;
         return;
     }
 
     // undo the last two moves. (Bot did also move that's why)
-    if (line == "undo") {
-        board->popLastMove();
-        board->popLastMove();
-        board->printCurrentBoard();
+    if (LINE == "undo") {
+        board->pop_last_move();
+        board->pop_last_move();
+        board->print_current_board();
         return;
     }
 
     // Check if input has the correct length.
-    if (line.length() < 4) {
+    if (LINE.length() < 4) {
         std::cout << "invalid" << std::endl;
         return;
     }
 
     // Parse the move.
-    Move playerMove = board->parseMove(line);
 
-    if (board->tryToMovePiece(playerMove)) {
+    if (const Move PLAYER_MOVE = board->parse_move(LINE); board->try_to_move_piece(PLAYER_MOVE)) {
         // Make the move.
-        if (board->isCheckMate(board->player == WHITE)) {
+        if (board->is_check_mate(board->player == WHITE)) {
             // Check the opponent for check mate.
             std::cout << "CHECK MATE!" << std::endl;
             return;
@@ -129,13 +128,13 @@ void ChessGame::parser_parse_classic(const std::string& line) const {
 
         // Bot can only move legal so no need to check if the move is legal.
         // Check if opponent is in check mate after bots turn.
-        Move move = ChessBot::generateBestNextMove(*board, 2000);
-        board->makeMove(move);
-        board->printCurrentBoard();
+        const Move MOVE = chessBot.generate_best_next_move(*board, 2000);
+        board->make_move(MOVE);
+        board->print_current_board();
 
-        if (board->isCheckMate(board->player == WHITE)) {
+        if (board->is_check_mate(board->player == WHITE)) {
             // Check the opponent for check mate.
-            board->printCurrentBoard();
+            board->print_current_board();
             std::cout << "CHECK MATE!" << std::endl;
         }
     } else {
@@ -143,7 +142,7 @@ void ChessGame::parser_parse_classic(const std::string& line) const {
     }
 }
 
-void ChessGame::parser_init() const {
+void ChessGame::parser_init() {
     bool uci_mode = false;
 
     // Loop through the input.
@@ -154,7 +153,7 @@ void ChessGame::parser_init() const {
             uci_mode = true;
         else if (input == "classic") {
             uci_mode = false;
-            board->printCurrentBoard();
+            board->print_current_board();
             continue;
         }
 
