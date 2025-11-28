@@ -10,39 +10,94 @@
 
 class ChessGame {
 public:
-  /**
-   * @class ChessGame
-   * Represents a chess game.
-   */
-  ChessGame() : board{new Board}, chessBot{ChessBot()} {
-  }
+    /**
+     * @class ChessGame
+     * Represents a chess game.
+     */
+    ChessGame() : board{new Board}, chessBot{ChessBot()} {
+    }
 
-  /**
-   * @brief Starts the chess game and handles the input and gameplay.
-   *
-   * This function starts the chess game and initializes the parser to read the input.
-   * The game continues until a checkmate occurs.
-   */
-  void start();
+    /**
+     * @brief Starts the chess game and handles the input and gameplay.
+     *
+     * This function starts the chess game and initializes the parser to read the input.
+     * The game continues until a checkmate occurs.
+     */
+    void start();
 
 private:
-  std::unique_ptr<Board> board;
-  ChessBot chessBot;
+    std::unique_ptr<Board> board;
+    ChessBot chessBot;
 
-  /**
-   * @brief Initializes the parser
-   *
-   * This function continuously reads input from the user.
-   * It supports several commands and performs the corresponding actions based on the input.
-   * The parser continues until a checkmate occurs.
-   */
-  void parser_init();
+    /**
+     * @brief Initializes the parser
+     *
+     * This function continuously reads input from the user.
+     * It supports several commands and performs the corresponding actions based on the input.
+     * The parser continues until a checkmate occurs.
+     */
+    void parser_init();
 
-  void parser_parse_uci(const std::string& LINE);
+    /**
+     * @brief Parses and processes a single input line in UCI mode.
+     *
+     * Interprets the given line according to the UCI protocol specification.
+     * Dispatches the command to the corresponding UCI handler (e.g. "uci", "isready",
+     * "position", "go", "quit", etc.).
+     *
+     * Unknown or malformed commands are safely ignored or reported depending on
+     * the parser configuration.
+     *
+     * @param LINE The raw input line received from stdin in UCI format.
+     */
+    void parser_parse_uci(const std::string& LINE);
 
-  void parser_parse_classic(const std::string& LINE);
+    /**
+     * @brief Parses and processes a single input line in classic (human) mode.
+     *
+     * Interprets the given line as a command entered by a human user.
+     * Supports commands such as move input, board display, game reset,
+     * quitting the application, and debugging commands.
+     *
+     * This mode is primarily intended for testing and interactive play
+     * outside graphical chess GUIs.
+     *
+     * @param LINE The raw input line entered by the user.
+     */
+    void parser_parse_classic(const std::string& LINE);
 
-  void parser_uci_handle_position(const std::string& LINE) const;
 
-  void parser_uci_handle_go(const std::string& LINE);
+    /**
+     * @brief Handles the UCI "position" command.
+     *
+     * Parses and applies a FEN string or "startpos" followed by a sequence
+     * of optional moves, and sets up the internal board state accordingly.
+     *
+     * Supported formats:
+     *   - "position startpos"
+     *   - "position startpos moves e2e4 e7e5 ..."
+     *   - "position fen <FEN string>"
+     *   - "position fen <FEN string> moves ..."
+     *
+     * @param LINE The full input line containing the "position" command.
+     */
+    void parser_uci_handle_position(const std::string& LINE) const;
+
+
+    /**
+     * @brief Handles the UCI "go" command.
+     *
+     * Parses search-related parameters and starts the engine calculation.
+     * May include time controls, depth limits, node limits, or infinite search.
+     *
+     * Supported parameters may include:
+     *   - depth <n>
+     *   - movetime <ms>
+     *   - wtime / btime
+     *   - winc / binc
+     *   - infinite
+     *
+     * @param LINE The full input line containing the "go" command.
+     */
+    void parser_uci_handle_go(const std::string& LINE);
 };
