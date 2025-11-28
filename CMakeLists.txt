@@ -88,6 +88,13 @@ target_link_libraries(chess-tests PRIVATE
         GTest::gtest_main
 )
 
+add_custom_command(TARGET chess-tests POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/tests/data
+        $<TARGET_FILE_DIR:chess-tests>/data
+        COMMENT "Copying test data directory to build folder"
+)
+
 include(GoogleTest)
 gtest_discover_tests(chess-tests)
 
