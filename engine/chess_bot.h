@@ -26,7 +26,7 @@ public:
     void reset_tt();
 
 private:
-    std::array<Move, tt_size> tt_array;
+    std::unique_ptr<std::array<Move, tt_size>> tt_array = std::make_unique<std::array<Move, tt_size>>();
 
     // Represents the time the ID started.
     std::chrono::high_resolution_clock::time_point iterative_time_point;

@@ -69,11 +69,10 @@ bool Board::is_square_attacked(const std::pair<int, int>& SQUARE, bool piece_col
 
     // Specifically check if there is a king near you.
     std::pair<int, int> directions[8] = {{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1}};
-    for (const auto& dir: directions) {
-        int x = SQUARE.first + dir.first;
-        int y = SQUARE.second + dir.second;
-        if (x > 0 && y > 0 && x < 9 && y < 9) {
-            if (board[calculateSquare(x, y)].piece_type == (piece_color ? BK : WK)) {
+    for (const auto& [FST, SND]: directions) {
+        const int X = SQUARE.first + FST;
+        if (const int Y = SQUARE.second + SND; X > 0 && Y > 0 && X < 9 && Y < 9) {
+            if (board[calculateSquare(X, Y)].piece_type == (piece_color ? BK : WK)) {
                 return true;
             }
         }

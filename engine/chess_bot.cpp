@@ -1,7 +1,7 @@
 #include "./chess_bot.h"
 
 void ChessBot::reset_tt() {
-    tt_array.fill(Move{});
+    tt_array->fill(Move{});
 }
 
 int ChessBot::eval(Board& board) {
@@ -116,7 +116,7 @@ int ChessBot::search(Board& board, int depth, int alpha, int beta, int ply, Move
     // Get all possible moves.
     auto moveList = moveGenUtils::get_all_pseudo_legal_moves(board, board.player == WHITE);
     // Sort so the best moves are first.
-    moveList.sort_move_list_mvv_lva(tt_array[board.get_hash() & tt_size]);
+    moveList.sort_move_list_mvv_lva((*tt_array)[board.get_hash() % tt_size]);
 
     int legalMoves = 0;
 
@@ -139,7 +139,7 @@ int ChessBot::search(Board& board, int depth, int alpha, int beta, int ply, Move
         if (score > bestScore) {
             bestScore = score;
             // Add the best move for a position.
-            tt_array[board.get_hash() % tt_size] = move;
+            (*tt_array)[board.get_hash() % tt_size] = move;
             if (ply == 0) {
                 // Set best move if it is the root.
                 best_move = move;
@@ -181,7 +181,7 @@ int ChessBot::quiescence_search(Board& board, int alpha, int beta) {
 
     // Get all possible moves.
     auto moveList = moveGenUtils::get_all_pseudo_legal_moves(board, board.player == WHITE);
-    moveList.sort_move_list_mvv_lva(tt_array[board.get_hash() % tt_size]);
+    moveList.sort_move_list_mvv_lva((*tt_array)[board.get_hash() % tt_size]);
 
     // First best score should be the worst.
     int bestScore = stand_pat;
