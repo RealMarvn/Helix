@@ -50,7 +50,7 @@ This script will:
 
 ---
 
-## ▶️ Common Commands (Debug Build)
+## ▶️ Common Commands
 
 All commands should be executed from the **project root directory**.
 
