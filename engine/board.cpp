@@ -26,7 +26,7 @@ bool Board::is_king_in_check(bool piece_color) {
     throw BoardInterruptException("No king found!");
 }
 
-bool Board::is_square_attacked(const std::pair<int, int>& SQUARE, bool piece_color) {
+bool Board::is_square_attacked(const std::pair<int, int>& SQUARE, const bool PIECE_COLOR) {
     PseudoLegalMoves allKnightMoves;
     PseudoLegalMoves allPawnMoves;
     PseudoLegalMoves allBishopMoves;
@@ -35,14 +35,14 @@ bool Board::is_square_attacked(const std::pair<int, int>& SQUARE, bool piece_col
     // getALlPossible###Moves does only return captures of the opponent pieces. So no need to check again if you capture
     // your own piece
 
-    moveGenUtils::get_all_possible_knight_moves(SQUARE, *this, allKnightMoves, piece_color);
+    moveGenUtils::get_all_possible_knight_moves(SQUARE, *this, allKnightMoves, PIECE_COLOR);
     for (Move& move: allKnightMoves) {
         if (move.captured_piece.piece_type == WN || move.captured_piece.piece_type == BN) {
             return true;
         }
     }
 
-    moveGenUtils::get_all_possible_pawn_moves(SQUARE, *this, allPawnMoves, piece_color);
+    moveGenUtils::get_all_possible_pawn_moves(SQUARE, *this, allPawnMoves, PIECE_COLOR);
     for (Move& move: allPawnMoves) {
         if (move.captured_piece.piece_type == WP || move.captured_piece.piece_type == BP) {
             return true;
@@ -50,7 +50,7 @@ bool Board::is_square_attacked(const std::pair<int, int>& SQUARE, bool piece_col
     }
 
     // You also have to check for Queens because they can move like the bishop too!
-    moveGenUtils::get_all_possible_bishop_moves(SQUARE, *this, allBishopMoves, piece_color);
+    moveGenUtils::get_all_possible_bishop_moves(SQUARE, *this, allBishopMoves, PIECE_COLOR);
     for (Move& move: allBishopMoves) {
         if (move.captured_piece.piece_type == WB || move.captured_piece.piece_type == BB ||
             move.captured_piece.piece_type == WQ || move.captured_piece.piece_type == BQ) {
@@ -59,7 +59,7 @@ bool Board::is_square_attacked(const std::pair<int, int>& SQUARE, bool piece_col
     }
 
     // You also have to check for Queens because they can move like the rook too!
-    moveGenUtils::get_all_possible_rook_moves(SQUARE, *this, allRookMoves, piece_color);
+    moveGenUtils::get_all_possible_rook_moves(SQUARE, *this, allRookMoves, PIECE_COLOR);
     for (Move& move: allRookMoves) {
         if (move.captured_piece.piece_type == WR || move.captured_piece.piece_type == BR ||
             move.captured_piece.piece_type == WQ || move.captured_piece.piece_type == BQ) {
@@ -72,7 +72,7 @@ bool Board::is_square_attacked(const std::pair<int, int>& SQUARE, bool piece_col
     for (const auto& [FST, SND]: directions) {
         const int X = SQUARE.first + FST;
         if (const int Y = SQUARE.second + SND; X > 0 && Y > 0 && X < 9 && Y < 9) {
-            if (board[calculateSquare(X, Y)].piece_type == (piece_color ? BK : WK)) {
+            if (board[calculateSquare(X, Y)].piece_type == (PIECE_COLOR ? BK : WK)) {
                 return true;
             }
         }
