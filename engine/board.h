@@ -79,10 +79,10 @@ public:
      * in the adjacent positions.
      *
      * @param SQUARE The square to check.
-     * @param piece_color The color of the piece to check (true for white, false for black).
+     * @param PIECE_COLOR The color of the piece to check (true for white, false for black).
      * @return True if the square is attacked, false otherwise.
      */
-    bool is_square_attacked(const std::pair<int, int>& SQUARE, bool piece_color);
+    bool is_square_attacked(const std::pair<int, int>& SQUARE, bool PIECE_COLOR);
 
     /**
      * @brief Attempts to move a chess piece on the board.
