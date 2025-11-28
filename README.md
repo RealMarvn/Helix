@@ -1,6 +1,6 @@
-# ♟️ ChessBot
+# ♟️ Helix | ChessBot
 
-**ChessBot** is a chess bot developed as part of my first programming project (PK1) and my bachelor project at the
+**Helix** is a chess bot developed as part of my first programming project (PK1) and my bachelor project at the
 University of Konstanz. This project dives into the complexities of chess move generation, including pseudolegal moves,
 castling, en passant, and iterative deepening for move depth evaluation.
 
@@ -32,6 +32,71 @@ ChessBot uses the following strategies:
 
 - Under ``/engine/`` you can find the whole bot with board logic and much more.
 - Under ``/tests/`` you can find all tests I used to prove the MoveMaking is correct.
+
+## ⚙️ Build & Setup
+
+After cloning the repository, run the setup script **once**:
+
+```bash
+./setup.sh
+```
+
+This script will:
+
+- Configure a Debug build in `build/debug`
+- Build the engine and tests
+- Configure a Release build in `build/release`
+- Install a `pre-commit` Git hook (if this is a Git repository)
+
+---
+
+## ▶️ Common Commands (Debug Build)
+
+All commands should be executed from the **project root directory**.
+
+### Build only the engine
+
+```bash
+# To build the optimized release version:
+cmake --build build/release --target chess-engine
+
+# Build only the engine
+cmake --build build/debug --target chess-engine
+
+# Build and run the engine
+cmake --build build/debug --target run
+
+# Run all tests
+cmake --build build/debug --target test_all
+
+# Format all source files
+cmake --build build/debug --target format
+
+# Check formatting only (no changes)
+cmake --build build/debug --target format-check
+
+# Run clang-tidy
+cmake --build build/debug --target tidy
+```
+
+---
+
+## 🛠️ Notes
+
+- All commands use the CMake build directory (`build/debug` or `build/release`).
+- If you see:
+
+  ```
+  Error: not a CMake build directory
+  ```
+
+  make sure you are calling:
+
+  ```bash
+  cmake --build build/debug --target <command>
+  ```
+
+- Git hooks are local to your machine and must be installed once via `./setup.sh`.
 
 ## 🕹️ Usage
 
@@ -76,6 +141,14 @@ e7e8q    # promotion (always lowercase)
 
 UCI moves **do not contain piece letters**; the engine determines the moving piece from the board state.
 
-## 📝 Libaries
+## Prerequisites
 
-- Gtest from Google for automated tests
+Make sure the following tools are installed:
+
+- **CMake ≥ 3.27**
+- **C++17-compatible compiler** (clang, GCC, or MSVC)
+- (Recommended)
+   - `clang-format` for code formatting
+   - `clang-tidy` for static analysis
+
+GoogleTest is downloaded automatically by CMake via `FetchContent`. No manual installation is required.
