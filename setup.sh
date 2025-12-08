@@ -2,100 +2,125 @@
 set -e
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 DEBUG_BUILD_DIR="${PROJECT_ROOT}/build/debug"
 RELEASE_BUILD_DIR="${PROJECT_ROOT}/build/release"
 
-echo "[setup] Project root: ${PROJECT_ROOT}"
+echo "[setup] Project root: $PROJECT_ROOT"
 
-# Detect CMake
-if ! command -v cmake >/dev/null 2>&1; then
-  echo "[setup] ERROR: cmake not found. Please install CMake (>= 3.27) and retry."
+# ------------------------------------------------------------
+# Ensure Meson + Ninja exist
+# ------------------------------------------------------------
+if ! command -v meson >/dev/null 2>&1; then
+  echo "[ERROR] Meson not found. Install via:"
+  echo "  pip install meson ninja"
   exit 1
 fi
 
-
+# ------------------------------------------------------------
+# Detect available CPU cores for parallel builds
+# ------------------------------------------------------------
 if command -v sysctl >/dev/null 2>&1; then
-  JOBS=$(sysctl -n hw.logicalcpu 2>/dev/null || echo 4)
+  JOBS=$(sysctl -n hw.logicalcpu || echo 4)
 elif command -v nproc >/dev/null 2>&1; then
   JOBS=$(nproc)
 else
   JOBS=4
 fi
 
+echo "[setup] Parallel jobs: $JOBS"
+
+# ------------------------------------------------------------
+# Helper: configure build directory only if missing
+# ------------------------------------------------------------
+configure_build_dir() {
+  local BUILD_DIR="$1"
+  local BUILDTYPE="$2"
+
+  if [ ! -f "$BUILD_DIR/meson-private/coredata.dat" ]; then
+    echo "[setup] Configuring Meson build: $BUILD_DIR (type=$BUILDTYPE)"
+    mkdir -p "$BUILD_DIR"
+    meson setup "$BUILD_DIR" "$PROJECT_ROOT" --buildtype "$BUILDTYPE"
+  else
+    echo "[setup] Build dir exists: $BUILD_DIR"
+  fi
+}
+
+# ------------------------------------------------------------
+# Build Debug
+# ------------------------------------------------------------
 echo
 echo "==============================="
-echo "[setup] Configuring Debug build"
+echo "[setup] DEBUG BUILD"
 echo "==============================="
-mkdir -p "${DEBUG_BUILD_DIR}"
-cmake -S "${PROJECT_ROOT}" -B "${DEBUG_BUILD_DIR}" -DCMAKE_BUILD_TYPE=Debug
-cmake --build "${DEBUG_BUILD_DIR}" -j"${JOBS}"
+configure_build_dir "$DEBUG_BUILD_DIR" "debug"
+meson compile -C "$DEBUG_BUILD_DIR" -j "$JOBS"
 
+# ------------------------------------------------------------
+# Build Release
+# ------------------------------------------------------------
 echo
-echo "================================="
-echo "[setup] (Optional) Release build"
-echo "================================="
-mkdir -p "${RELEASE_BUILD_DIR}"
-cmake -S "${PROJECT_ROOT}" -B "${RELEASE_BUILD_DIR}" -DCMAKE_BUILD_TYPE=Release
-cmake --build "${RELEASE_BUILD_DIR}" -j"${JOBS}"
+echo "==============================="
+echo "[setup] RELEASE BUILD"
+echo "==============================="
+configure_build_dir "$RELEASE_BUILD_DIR" "release"
+meson compile -C "$RELEASE_BUILD_DIR" -j "$JOBS"
 
-if [ -d "${PROJECT_ROOT}/.git" ]; then
-  HOOKS_DIR="${PROJECT_ROOT}/.git/hooks"
-  PRE_COMMIT_HOOK="${HOOKS_DIR}/pre-commit"
+# ------------------------------------------------------------
+# Install Git hooks for clang-format + clang-tidy
+# ------------------------------------------------------------
+HOOKS_DIR="$PROJECT_ROOT/.git/hooks"
+PRE_COMMIT="$HOOKS_DIR/pre-commit"
 
+if [ -d "$PROJECT_ROOT/.git" ]; then
   echo
-  echo "================================"
-  echo "[setup] Installing pre-commit hook"
-  echo "================================"
+  echo "==============================="
+  echo "[setup] Installing Git hooks"
+  echo "==============================="
 
-  mkdir -p "${HOOKS_DIR}"
+  mkdir -p "$HOOKS_DIR"
 
-  cat > "${PRE_COMMIT_HOOK}" << 'EOF'
-  #!/usr/bin/env bash
+  cat > "$PRE_COMMIT" << 'EOF'
+#!/usr/bin/env bash
+set -e
 
-  BUILD_DIR="build/debug"
+BUILD_DIR="build/debug"
 
-  echo "[pre-commit] Ensuring build directory exists..."
-  if [ ! -d "$BUILD_DIR" ]; then
-    echo "[pre-commit] Build directory '$BUILD_DIR' not found."
-    echo "Run first:"
-    echo "  mkdir -p $BUILD_DIR"
-    echo "  cd $BUILD_DIR && cmake -DCMAKE_BUILD_TYPE=Debug ../.."
-    exit 1
-  fi
-
-  echo "[pre-commit] Running clang-format (auto-fix)..."
-  cmake --build "$BUILD_DIR" --target format
-
-  if [ $? -ne 0 ]; then
-    echo "[pre-commit] clang-format failed."
-    exit 1
-  fi
-
-  # Re-add formatted files automatically
-  echo "[pre-commit] Re-adding formatted files..."
-  git add -u
-
-  echo "[pre-commit] Running clang-tidy (optional)..."
-  cmake --build "$BUILD_DIR" --target tidy || \
-  echo "[pre-commit] clang-tidy reported issues (not blocking commit)"
-
-  echo "[pre-commit] OK (formatted automatically)"
-  exit 0
-EOF
-
-  chmod +x "${PRE_COMMIT_HOOK}"
-  echo "[setup] pre-commit hook installed at .git/hooks/pre-commit"
-else
-  echo
-  echo "[setup] No .git directory found, skipping hook installation."
+if [ ! -d "$BUILD_DIR" ]; then
+  echo "[pre-commit] Debug build directory missing."
+  echo "Run ./setup.sh first."
+  exit 1
 fi
 
+echo "[pre-commit] Running clang-format..."
+meson compile -C "$BUILD_DIR" format
+git add -u
+
+echo "[pre-commit] Running clang-tidy..."
+meson compile -C "$BUILD_DIR" tidy || true
+
+echo "[pre-commit] OK"
+exit 0
+EOF
+
+  chmod +x "$PRE_COMMIT"
+  echo "[setup] Git hook installed: $PRE_COMMIT"
+else
+  echo "[setup] No .git directory found – skipping hook install"
+fi
+
+# ------------------------------------------------------------
+# Summary
+# ------------------------------------------------------------
 echo
-echo "[setup] Done."
-echo "[setup] Debug binary:   ${DEBUG_BUILD_DIR}/helix"
-echo "[setup] Release binary: ${RELEASE_BUILD_DIR}/helix"
+echo "==============================="
+echo "[setup] DONE"
+echo "==============================="
+echo "Debug binary:   $DEBUG_BUILD_DIR/helix"
+echo "Release binary: $RELEASE_BUILD_DIR/helix"
 echo
-echo "You can now run, for example:"
-echo "  cd ${DEBUG_BUILD_DIR}"
-echo "  cmake --build . --target run"
+echo "Run debug build:"
+echo "  meson compile -C build/debug helix && ./build/debug/helix"
+echo
+echo "Run tests:"
+echo "  meson test -C build/release"
+echo

@@ -118,5 +118,9 @@ fabric.properties
 
 /engine/.DS_Store
 
+# Ignore all subprojects except the gtest.wrap file
+subprojects/*
+!subprojects/gtest.wrap
+
 build/
 

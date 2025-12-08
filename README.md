@@ -1,126 +1,180 @@
-# ♟️ Helix | ChessBot
+# ♟️ Helix — High‑Performance Chess Engine
 
-**Helix** is a chess bot developed as part of my first programming project (PK1) and my bachelor project at the
-University of Konstanz. This project dives into the complexities of chess move generation, including pseudolegal moves,
-castling, en passant, and iterative deepening for move depth evaluation.
+**Helix** is a modern C++ chess engine that began as a university programming project (PK1) and evolved into a full,
+research‑driven bachelor thesis at the University of Konstanz.  
+It is designed as a clean, transparent, and academically rigorous engine that prioritizes correctness and clarity over
+low‑level micro‑optimizations — making it an ideal platform for experimenting with search algorithms, evaluation
+strategies, and engine architecture.
+
+Rather than relying on complex bitboard tricks, Helix uses a refined **Mailbox representation**, providing exceptional
+readability and debuggability while still supporting all essential chess mechanics.  
+On top of this foundation, Helix implements a robust **NegaMax + Alpha‑Beta** search framework enhanced with iterative
+deepening and move ordering techniques — allowing it to explore game trees efficiently while remaining easy to extend
+and reason about.
+
+Helix can be run directly via a simple CLI or integrated into chess GUIs through a **UCI protocol** implementation.
+
+Helix supports both **CLI testing mode** and **UCI protocol** for integration with chess GUIs like CuteChess or
+Banksia.
+
+---
+
+## 📌 Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Technical Design](#technical-design)
+- [Project Structure](#project-structure)
+- [Build & Setup](#build--setup)
+- [Common Meson Commands](#common-meson-commands)
+- [Usage](#usage)
+    - [CLI Mode](#cli-mode)
+    - [UCI Mode](#uci-mode)
+- [Prerequisites](#prerequisites)
+- [Notes](#notes)
+
+---
+
+## 🧭 Overview
+
+Helix is designed to explore the computational complexity of chess decision‑making.  
+It emphasizes correctness, clarity, and a research‑oriented design suitable for algorithmic experimentation and
+performance evaluation.
+
+---
 
 ## 🚀 Features
 
-- **Pseudolegal Move Generation**: Generates moves without considering check, enhancing speed.
-- **Castling and En Passant**: Supports special moves, providing a more complete set of chess rules.
-- **Alpha-Beta Pruning**: Optimization of depth evaluation for faster computation.
-- **Iterative Deepening**: Uses progressive depth evaluation to find the best move efficiently.
+### ✔️ Move Generation
 
-## 🏫 Project Background
+- **Pseudolegal move generation** (correctness‑oriented; not bitboard‑based)
+- Uses a **Mailbox representation** rather than Bitboards
+- Full support for:
+    - **Castling**
+    - **En passant**
+    - **Pawn promotion**
+- Clear and maintainable data structures ideal for algorithmic experimentation
 
-This project was created as an introduction to programming concepts and problem-solving strategies. It combines classic
-chess rules with computational methods to give a practical application to theoretical programming knowledge from the
-University of Konstanz’s PK1 course. Later this project was used for my bachelor project with more advanced improvements
-like iterative deepening and other optimizations.
+### ✔️ Search Algorithm
 
-## 🔍 How It Works
+- **NegaMax** search formulation  
+  (clean and elegant variant of Minimax for zero‑sum games)
+- **Alpha‑Beta pruning** to drastically reduce the search tree
+- **Iterative deepening** for stable move ordering and time management
+- **Move ordering heuristics** to improve pruning efficiency
 
-ChessBot uses the following strategies:
+### ✔️ Engine Modes
 
-1. **Pseudolegal Moves**: Generates potential moves quickly by not checking for attacks on the king at first.
-2. **Special Move Support**: Includes special moves like castling and en passant for a realistic move set including most
-   of the classic chess rules.
-3. **Iterative Deepening**: Allows the bot to make decisions under time constraints, prioritizing moves as it explores
-   deeper levels.
+- **CLI input** for fast manual testing
+- **UCI protocol** for interaction with external GUIs
+
+---
+
+## 🧱 Technical Design
+
+1. **Board Representation (Mailbox System)**
+    - Classic **Mailbox (0×88‑style) representation** for clarity and ease of debugging
+    - Tracks castling rights, en passant squares, move history, and full board state
+    - Utility functions for FEN parsing and state inspection
+
+2. **Move Generation**
+    - Generates pseudolegal moves efficiently
+    - Handles all non‑trivial move types (castling, promotions, en passant)
+
+3. **Search System (NegaMax)**
+    - Core of the engine built around NegaMax recursion
+    - Enhanced with:
+        - **Alpha‑Beta pruning**
+        - **Iterative deepening**
+        - **Move ordering**
+    - Designed for evaluation experiments regarding search depth and accuracy
+
+4. **Evaluation Function**
+    - Lightweight material‑based evaluation with piece‑value heuristics
+    - Easily extendable for future enhancements
+
+---
 
 ## 🏗️ Project Structure
 
-- Under ``/engine/`` you can find the whole bot with board logic and much more.
-- Under ``/tests/`` you can find all tests I used to prove the MoveMaking is correct.
+```
+/engine/   → Core engine, board logic, move generation, search, exceptions
+/tests/    → Unit tests for move generation and FEN/state validation
+```
+
+---
 
 ## ⚙️ Build & Setup
 
-After cloning the repository, run the setup script **once**:
+After cloning the repository, run:
 
 ```bash
 ./setup.sh
 ```
 
-This script will:
+This script:
 
-- Configure a Debug build in `build/debug`
-- Build the engine and tests
-- Configure a Release build in `build/release`
-- Install a `pre-commit` Git hook (if this is a Git repository)
+- Configures `build/debug` and `build/release`
+- Builds the engine and (Release‑only) tests
+- Installs clang‑format / clang‑tidy Git hooks when applicable
 
 ---
 
-## ▶️ Common Commands
+## ▶️ Common Meson Commands
 
-All commands should be executed from the **project root directory**.
-
-### Build only the engine
+### Build the engine
 
 ```bash
-# To build the optimized release version:
-cmake --build build/release --target chess-engine
+meson compile -C build/debug
+meson compile -C build/release
+```
 
-# Build only the engine
-cmake --build build/debug --target chess-engine
+### Run the engine
 
-# Build and run the engine
-cmake --build build/debug --target run
+```bash
+meson compile -C build/debug helix && ./build/debug/helix
+```
 
-# Run all tests
-cmake --build build/debug --target test_all
+### Run tests (Release mode only)
 
-# Format all source files
-cmake --build build/debug --target format
+```bash
+meson test -C build/release
+```
 
-# Check formatting only (no changes)
-cmake --build build/debug --target format-check
+### Format and lint
 
-# Run clang-tidy
-cmake --build build/debug --target tidy
+```bash
+meson compile -C build/debug format
+meson compile -C build/debug format-check
+meson compile -C build/debug tidy
 ```
 
 ---
-
-## 🛠️ Notes
-
-- All commands use the CMake build directory (`build/debug` or `build/release`).
-- If you see:
-
-  ```
-  Error: not a CMake build directory
-  ```
-
-  make sure you are calling:
-
-  ```bash
-  cmake --build build/debug --target <command>
-  ```
-
-- Git hooks are local to your machine and must be installed once via `./setup.sh`.
 
 ## 🕹️ Usage
 
-### 🧑‍💻 CLI Mode (local manual testing)
+### 🧑‍💻 CLI Mode
 
-The CLI mode now uses **UCI-style move notation** for manual input.
-The engine automatically switches to CLI mode when the GUI sends the `classic` command.
-This means moves are entered the same way as in UCI:
+The CLI mode uses **UCI‑style coordinate notation**:
 
 ```
-e2e4      # Pawn from e2 to e4
-b1c3      # Knight from b1 to c3
-e7e8q     # Pawn promotes to a queen (promotion always lowercase)
+e2e4      # Pawn moves from e2 to e4
+b1c3      # Knight moves from b1 to c3
+e7e8q     # Pawn promotes to queen (promotion letter always lowercase)
 ```
 
-- No piece letters (`P, N, B, R, Q, K`) are required.
-- Promotion uses **lowercase** letters, identical to UCI.
-- The engine determines the moving piece from the board state.
+- No piece letters required
+- The engine infers the moving piece from board state
 
-### ♟️ UCI Mode (for chess GUIs)
+### ♟️ UCI Mode
 
-The engine automatically switches to UCI mode when the GUI sends the `uci` command.
+The engine automatically switches to UCI mode when the GUI sends:
 
-Minimal example interaction:
+```
+uci
+```
+
+Minimal example:
 
 ```
 uci
@@ -131,24 +185,33 @@ go movetime 2000
 bestmove e2e4
 ```
 
-In UCI mode, moves follow standard UCI notation:
+---
 
-```
-e2e4
-b1c3
-e7e8q    # promotion (always lowercase)
-```
+## 🛠️ Notes
 
-UCI moves **do not contain piece letters**; the engine determines the moving piece from the board state.
+- Meson uses out‑of‑tree builds in `build/debug` and `build/release`
+- If you see:
 
-## Prerequisites
+  ```
+  Error: not a Meson build directory
+  ```
 
-Make sure the following tools are installed:
+  ensure you are running:
 
-- **CMake ≥ 3.27**
-- **C++17-compatible compiler** (clang, GCC, or MSVC)
-- (Recommended)
-   - `clang-format` for code formatting
-   - `clang-tidy` for static analysis
+  ```bash
+  meson compile -C build/debug <target>
+  ```
 
-GoogleTest is downloaded automatically by CMake via `FetchContent`. No manual installation is required.
+- Git hooks must be installed once by running `./setup.sh`
+- The Git hooks automatically run **clang-format** and **clang-tidy** on every commit.  
+  This enforces consistent style and static analysis across the entire codebase.
+
+---
+
+## 📦 Prerequisites
+
+- **Meson ≥ 1.3** and **Ninja**
+- **C++17 compiler** (Clang / GCC / MSVC)
+- Important tooling used in this project:
+    - **clang-format** (automatic formatting; required via Git hooks)
+    - **clang-tidy** (static analysis and linting; required via Git hooks)

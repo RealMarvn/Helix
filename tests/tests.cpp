@@ -5,9 +5,13 @@
 #include <gtest/gtest.h>
 
 #include <fstream>
+#include <sstream>
 #include <string>
+#include <vector>
 
 #include "../engine/chess_bot.h"
+
+static std::string data_path(const std::string& filename) { return std::string(TEST_DATA_DIR) + "/" + filename; }
 
 uint64_t perft(Board& boardManager, const int DEPTH, const bool PLAYER) {
   if (DEPTH == 0) {
@@ -30,8 +34,8 @@ uint64_t perft(Board& boardManager, const int DEPTH, const bool PLAYER) {
 
 TEST(MoveGenTest, PerftTest) {
   // Get Perft file!
-  std::ifstream epd_file("./data/perft-positions.epd");
-  ASSERT_TRUE(epd_file.good()) << "Der Pfad der testing suite ist falsch. Bitte anpassen!";
+  std::ifstream epd_file(data_path("perft-positions.epd"));
+  ASSERT_TRUE(epd_file.good()) << "The path of the testing suite is wrong. Please change!";
   Board myBoard;
 
   std::string line;
@@ -57,8 +61,8 @@ TEST(MoveGenTest, PerftTest) {
 
 TEST(Board, GenerateFenTest) {
   // Get Perft file!
-  std::ifstream epd_file("./data/perft-positions.epd");
-  ASSERT_TRUE(epd_file.good()) << "Der Pfad der testing suite ist falsch. Bitte anpassen!";
+  std::ifstream epd_file(data_path("perft-positions.epd"));
+  ASSERT_TRUE(epd_file.good()) << "The path of the testing suite is wrong. Please change!";
   Board myBoard;
 
   std::string line;
@@ -83,8 +87,8 @@ TEST(Board, GenerateFenTest) {
 
 TEST(UserInput, MoveParsing) {
   // Get move file!
-  std::ifstream epd_file("./data/input-test.epd");
-  ASSERT_TRUE(epd_file.good()) << "Der Pfad der testing suite ist falsch. Bitte anpassen!";
+  std::ifstream epd_file(data_path("input-test.epd"));
+  ASSERT_TRUE(epd_file.good()) << "The path of the testing suite is wrong. Please change!";
   Board myBoard;
 
   std::string line;
