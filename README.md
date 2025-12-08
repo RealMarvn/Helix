@@ -35,7 +35,7 @@ Banksia.
 
 ---
 
-## 🧭 Overview
+## Overview
 
 Helix is designed to explore the computational complexity of chess decision‑making.  
 It emphasizes correctness, clarity, and a research‑oriented design suitable for algorithmic experimentation and
@@ -43,7 +43,7 @@ performance evaluation.
 
 ---
 
-## 🚀 Features
+## Features
 
 ### ✔️ Move Generation
 
@@ -70,7 +70,7 @@ performance evaluation.
 
 ---
 
-## 🧱 Technical Design
+## Technical Design
 
 1. **Board Representation (Mailbox System)**
     - Classic **Mailbox (0×88‑style) representation** for clarity and ease of debugging
@@ -95,7 +95,7 @@ performance evaluation.
 
 ---
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 /engine/   → Core engine, board logic, move generation, search, exceptions
@@ -104,7 +104,7 @@ performance evaluation.
 
 ---
 
-## ⚙️ Build & Setup
+## Build & Setup
 
 After cloning the repository, run:
 
@@ -120,7 +120,7 @@ This script:
 
 ---
 
-## ▶️ Common Meson Commands
+## Common Meson Commands
 
 ### Build the engine
 
@@ -151,9 +151,9 @@ meson compile -C build/debug tidy
 
 ---
 
-## 🕹️ Usage
+## Usage
 
-### 🧑‍💻 CLI Mode
+### CLI Mode
 
 The CLI mode uses **UCI‑style coordinate notation**:
 
@@ -166,7 +166,7 @@ e7e8q     # Pawn promotes to queen (promotion letter always lowercase)
 - No piece letters required
 - The engine infers the moving piece from board state
 
-### ♟️ UCI Mode
+### UCI Mode
 
 The engine automatically switches to UCI mode when the GUI sends:
 
@@ -187,7 +187,7 @@ bestmove e2e4
 
 ---
 
-## 🛠️ Notes
+## Notes
 
 - Meson uses out‑of‑tree builds in `build/debug` and `build/release`
 - If you see:
@@ -208,7 +208,7 @@ bestmove e2e4
 
 ---
 
-## 📦 Prerequisites
+## Prerequisites
 
 - **Meson ≥ 1.3** and **Ninja**
 - **C++17 compiler** (Clang / GCC / MSVC)
