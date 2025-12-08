@@ -1,6 +1,6 @@
 #include "./chess_bot.h"
 
-void ChessBot::reset_tt()
+void ChessBot::reset_tt() const
 {
     tt_array->fill(Move{});
 }
@@ -72,19 +72,20 @@ int ChessBot::eval(Board& board)
     }
 
     // Calculate PSQT and game phase with tampered eval
-    // (https://www.chessprogramming.org/PeSTO's_Evaluation_Function) (MODIFIED by MARVIN).
-    int mgScore = mg[board.player != WHITE] - mg[board.player == WHITE];
-    int egScore = eg[board.player != WHITE] - eg[board.player == WHITE];
+    // (https://www.chessprogramming.org/PeSTO's_Evaluation_Function) (MODIFIED by
+    // MARVIN).
+    const int MG_SCORE = mg[board.player != WHITE] - mg[board.player == WHITE];
+    const int EG_SCORE = eg[board.player != WHITE] - eg[board.player == WHITE];
     // Calculate the game phase.
     int mgPhase = gamePhase;
     if (mgPhase > 24)
         mgPhase = 24;
-    int egPhase = 24 - mgPhase;
+    const int EG_PHASE = 24 - mgPhase;
 
-    int evaluation = (((mgScore * mgPhase) + (egScore * egPhase)) / 24);
+    const int EVALUATION = (((MG_SCORE * mgPhase) + (EG_SCORE * EG_PHASE)) / 24);
 
     // Give a bonus to side to move (TEMPO).
-    return (evaluation + 20);
+    return (EVALUATION + 20);
 }
 
 Move ChessBot::generate_best_next_move(Board& board, const int time_constraint)
@@ -100,7 +101,8 @@ Move ChessBot::generate_best_next_move(Board& board, const int time_constraint)
         const Move move = search_best_next_move(board, i);
         if (is_time_up())
         {
-            // If the time is up, break the loop and don't apply the not fully evaluated move.
+            // If the time is up, break the loop and don't apply the not fully
+            // evaluated move.
             break;
         }
         // Set the move if the search is fully done.
@@ -110,12 +112,24 @@ Move ChessBot::generate_best_next_move(Board& board, const int time_constraint)
     return bestMove;
 }
 
-int ChessBot::search(Board& board, int depth, int alpha, int beta, int ply, Move& best_move)
+Move ChessBot::generate_best_next_move_fixed_depth(Board& board, const int DEPTH)
 {
-    if (depth <= 0)
+    // Timelimit to inf, because we now limit with DEPTH.
+    iterative_time_constraint = std::numeric_limits<int>::max();
+    iterative_time_point = std::chrono::high_resolution_clock::now();
+
+    // Search to specific depth.
+    return search_best_next_move(board, DEPTH);
+}
+
+int ChessBot::search(Board& board, const int DEPTH, int alpha, const int BETA, const int PLY,
+                     Move& best_move)
+{
+    if (DEPTH <= 0)
     {
-        // If depth reached, run qsearch so you don't sacrifice your piece and eval the board.
-        return quiescence_search(board, alpha, beta);
+        // If depth reached, run qsearch so you don't sacrifice your piece and eval
+        // the board.
+        return quiescence_search(board, alpha, BETA);
     }
 
     // If time is up kill the prozess by returning anything.
@@ -141,7 +155,7 @@ int ChessBot::search(Board& board, int depth, int alpha, int beta, int ply, Move
         // Make every move and gather the value of the opponent.
         if (board.make_move(move))
         {
-            score = -search(board, depth - 1, -beta, -alpha, ply + 1, best_move);
+            score = -search(board, DEPTH - 1, -BETA, -alpha, PLY + 1, best_move);
             legalMoves++;
             board.pop_last_move();
         }
@@ -156,7 +170,7 @@ int ChessBot::search(Board& board, int depth, int alpha, int beta, int ply, Move
             bestScore = score;
             // Add the best move for a position.
             (*tt_array)[board.get_hash() % tt_size] = move;
-            if (ply == 0)
+            if (PLY == 0)
             {
                 // Set best move if it is the root.
                 best_move = move;
@@ -169,7 +183,7 @@ int ChessBot::search(Board& board, int depth, int alpha, int beta, int ply, Move
             alpha = bestScore;
         }
 
-        if (alpha >= beta)
+        if (alpha >= BETA)
         {
             break; // beta kill
         }
@@ -180,7 +194,7 @@ int ChessBot::search(Board& board, int depth, int alpha, int beta, int ply, Move
     {
         if (board.is_king_in_check(board.player == WHITE))
         {
-            return -INT_MAX + ply; // checkmate
+            return -INT_MAX + PLY; // checkmate
         }
         else
         {
@@ -191,18 +205,18 @@ int ChessBot::search(Board& board, int depth, int alpha, int beta, int ply, Move
     return bestScore;
 }
 
-int ChessBot::quiescence_search(Board& board, int alpha, int beta)
+int ChessBot::quiescence_search(Board& board, int alpha, const int BETA)
 {
     // Eval the position.
-    int stand_pat = eval(board);
+    const int STAND_PAT = eval(board);
 
-    if (stand_pat >= beta)
+    if (STAND_PAT >= BETA)
     {
-        return beta;
+        return BETA;
     }
-    if (alpha < stand_pat)
+    if (alpha < STAND_PAT)
     {
-        alpha = stand_pat;
+        alpha = STAND_PAT;
     }
 
     // Get all possible moves.
@@ -210,7 +224,7 @@ int ChessBot::quiescence_search(Board& board, int alpha, int beta)
     moveList.sort_move_list_mvv_lva((*tt_array)[board.get_hash() % tt_size]);
 
     // First best score should be the worst.
-    int bestScore = stand_pat;
+    int bestScore = STAND_PAT;
 
     for (Move& move : moveList)
     {
@@ -225,7 +239,7 @@ int ChessBot::quiescence_search(Board& board, int alpha, int beta)
         // Make every move and gather the value of the opponent.
         if (board.make_move(move))
         {
-            score = -quiescence_search(board, -beta, -alpha);
+            score = -quiescence_search(board, -BETA, -alpha);
             board.pop_last_move();
         }
         else
@@ -240,7 +254,7 @@ int ChessBot::quiescence_search(Board& board, int alpha, int beta)
             continue;
         // set the score
         alpha = score;
-        if (score >= beta)
+        if (score >= BETA)
         {
             break;
         }
@@ -249,9 +263,9 @@ int ChessBot::quiescence_search(Board& board, int alpha, int beta)
     return bestScore;
 }
 
-Move ChessBot::search_best_next_move(Board& board, int depth)
+Move ChessBot::search_best_next_move(Board& board, const int DEPTH)
 {
     Move move;
-    search(board, depth, -INT_MAX, INT_MAX, 0, move);
+    search(board, DEPTH, -INT_MAX, INT_MAX, 0, move);
     return move;
 }

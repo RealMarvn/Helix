@@ -2,13 +2,12 @@
 // Created by Marvin Becker on 16.03.24.
 //
 
-#include "./chess_game.h"
-
 #include <iostream>
+
+#include "./chess_game.h"
 
 void ChessGame::start()
 {
-    // First print the board.
     parser_init();
 }
 
@@ -57,6 +56,9 @@ void ChessGame::parser_uci_handle_position(const std::string& LINE) const
 void ChessGame::parser_uci_handle_go(const std::string& LINE)
 {
     int move_time = -1;
+    int depth = -1;
+
+    Move BEST_MOVE{};
 
     std::istringstream iss(LINE);
     std::string token;
@@ -67,16 +69,16 @@ void ChessGame::parser_uci_handle_go(const std::string& LINE)
         if (token == "movetime")
         {
             iss >> move_time;
+            BEST_MOVE = chessBot.generate_best_next_move(*board, move_time);
+        }
+        else if (token == "depth")
+        {
+            iss >> depth;
+            BEST_MOVE = chessBot.generate_best_next_move_fixed_depth(*board, depth);
         }
     }
 
-    if (move_time <= 0)
-    {
-        move_time = 2000; // Default: 2s
-    }
-
-    const Move BEST = chessBot.generate_best_next_move(*board, move_time);
-    std::cout << "bestmove " << BEST.to_uci_string() << std::endl;
+    std::cout << "bestmove " << BEST_MOVE.to_string() << std::endl;
 }
 
 void ChessGame::parser_parse_uci(const std::string& LINE)

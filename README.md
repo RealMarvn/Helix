@@ -12,9 +12,9 @@ On top of this foundation, Helix implements a robust **NegaMax + Alpha‑Beta** 
 deepening and move ordering techniques — allowing it to explore game trees efficiently while remaining easy to extend
 and reason about.
 
-Helix can be run directly via a simple CLI or integrated into chess GUIs through a **UCI protocol** implementation.
+Helix can be run directly via a simple CLI or integrated into chess GUIs through a basic **UCI protocol** implementation.
 
-Helix supports both **CLI testing mode** and **UCI protocol** for integration with chess GUIs like CuteChess or
+Helix supports both **CLI testing mode** and basic **UCI protocol** for integration with chess GUIs like CuteChess or
 Banksia.
 
 ---
@@ -66,7 +66,7 @@ performance evaluation.
 ### ✔️ Engine Modes
 
 - **CLI input** for fast manual testing
-- **UCI protocol** for interaction with external GUIs
+- **Basic UCI protocol** for interaction with external GUIs
 
 ---
 
