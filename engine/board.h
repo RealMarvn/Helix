@@ -2,6 +2,16 @@
 // Created by Marvin Becker on 15.12.23.
 //
 
+/**
+ * @file board.h
+ * @brief Defines the Board class representing a chess position.
+ *
+ * The Board class stores piece placement, side to move, auxiliary state
+ * (castling, en-passant, move counters) and the Zobrist hash. It provides
+ * helper functions for move making/unmaking, FEN I/O, check detection and
+ * basic game-state queries used by the search.
+ */
+
 #pragma once
 
 #include <cassert>
@@ -20,22 +30,52 @@
 
 /**
  * @class Board
- * @brief Represents a chessboard.
+ * @brief Represents a full chess position including side to move and metadata.
  *
- * The Board class represents a chessboard and provides functions for managing the state of the board and making moves.
+ * The Board class owns the 64-square mailbox representation, the side to move,
+ * a history of moves and board settings, and a Zobrist hash of the current
+ * state. It offers functionality for move generation clients such as
+ * making/unmaking moves, checking for check/checkmate, and converting to/from
+ * FEN.
  */
 class Board {
 public:
-    // Represents the current side to move.
+
+    /**
+     * @brief Side to move on the current board.
+     *
+     * WHITE or BLACK depending on whose turn it is.
+     */
     player_type player{WHITE};
-    // Represents all moves so far.
+
+    /**
+     * @brief History of all moves that have been played on this board.
+     *
+     * Used mainly for undoing moves and for debugging/printing purposes.
+     */
     std::vector<Move> moves;
-    // Represents all settings so far.
+
+    /**
+     * @brief History of board settings corresponding to each move.
+     *
+     * Stores auxiliary state (castling rights, en-passant, counters) for
+     * each ply to support precise undo operations.
+     */
     std::vector<board_setting> history;
-    // Represents the current settings.
+
+    /**
+     * @brief Current auxiliary board settings.
+     *
+     * Contains castling rights, en-passant square and move counters as in FEN.
+     */
     board_setting board_settings;
 
-    // To access the board at the given index directly.
+    /**
+     * @brief Direct access to a square of the internal board array.
+     *
+     * @param INDEX Mailbox index in [0, 63].
+     * @return Reference to the Piece on that square.
+     */
     Piece& operator[](const int INDEX) {
         assert(INDEX < 64 && INDEX >= 0);
         return board[INDEX];
@@ -131,7 +171,7 @@ public:
      * @brief Reads a FEN string and sets up the board accordingly.
      *
      * This function reads a FEN (Forsyth-Edwards Notation) string and sets up the chessboard based on the provided FEN
-     * string. Then FEN has to be correct. Otherwise the programm will crash!
+     * string. Then FEN has to be correct. Otherwise the programm will throw an exception!
      *
      * @param INPUT The FEN string to parse.
      */
@@ -174,14 +214,43 @@ public:
      */
     [[nodiscard]] Move parse_move(const std::string& INPUT) const;
 
+    /**
+     * @brief Returns the Zobrist hash of the current board state.
+     *
+     * The hash uniquely encodes piece placement, side to move, en-passant
+     * file and castling rights, and is used for transposition table lookups
+     * and repetition detection.
+     *
+     * @return 64-bit Zobrist hash of the position.
+     */
     [[nodiscard]] uint64_t get_hash() const { return board_hash; }
 
 private:
-    // Represents the board.
+
+    /**
+     * @brief Mailbox representation of the board (0..63).
+     *
+     * Each entry stores a Piece corresponding to a square on the board.
+     */
     std::array<Piece, 64> board{Piece(EMPTY)};
+
+    /**
+     * @brief Precomputed Zobrist keys used to hash the board state.
+     */
     const Zobrist ZOBRIST_TABLES;
+
+    /**
+     * @brief Cached Zobrist hash for the current position.
+     */
     uint64_t board_hash{0};
 
+    /**
+     * @brief Recomputes the Zobrist hash from scratch based on the board state.
+     *
+     * Iterates over all squares, side to move, en-passant file and castling
+     * rights to rebuild the 64-bit hash. Typically used after setting a
+     * position from FEN.
+     */
     void build_hash_for_board() {
         uint64_t hash = 0;
         // add all pieces with the square to the hash.

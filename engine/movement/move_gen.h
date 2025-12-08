@@ -1,6 +1,15 @@
 //
 // Created by Marvin Becker on 05.03.24.
 //
+/**
+ * @file move_gen.h
+ * @brief Declares move generation utilities for pseudo-legal chess moves.
+ *
+ * This header provides functions to generate pseudo-legal moves for each
+ * piece type as well as a convenience function to gather all moves for a
+ * given side on a Board. The functions operate on mailbox coordinates and
+ * fill a PseudoLegalMoves container used later by the search.
+ */
 
 #pragma once
 #include <array>
@@ -9,8 +18,29 @@
 
 #include "../board.h"
 
+/**
+ * @namespace moveGenUtils
+ * @brief Helper routines for generating pseudo-legal chess moves.
+ *
+ * Contains per-piece move generators and small lookup tables for pawn
+ * promotions. All functions assume a consistent Board state and do not
+ * perform legality checks such as leaving the king in check.
+ */
 namespace moveGenUtils {
+
+    /**
+     * @brief List of promotion piece types for white pawns.
+     *
+     * Ordered as queen, rook, knight, bishop to match typical
+     * engine/GUI expectations when iterating promotion choices.
+     */
     constexpr static std::array<PieceType, 4> white_pawn_possible_promotions = {WQ, WR, WN, WB};
+
+    /**
+     * @brief List of promotion piece types for black pawns.
+     *
+     * Mirrors white_pawn_possible_promotions but with black pieces.
+     */
     constexpr static std::array<PieceType, 4> black_pawn_possible_promotions = {BQ, BR, BN, BB};
 
     /**

@@ -1,6 +1,15 @@
 //
 // Created by Marvin Becker on 10.02.24.
 //
+/**
+ * @file chess_bot.h
+ * @brief Declares the ChessBot class implementing search logic for the engine.
+ *
+ * The ChessBot class provides iterative deepening, fixed-depth searches,
+ * negamax with alpha-beta pruning, quiescence search, evaluation, and a
+ * transposition-table interface. It forms the core decision-making component
+ * of the engine.
+ */
 
 #pragma once
 #include <chrono>
@@ -9,8 +18,19 @@
 
 #define tt_size 1048576
 
+/**
+ * @class ChessBot
+ * @brief Core search engine responsible for selecting the best move.
+ *
+ * The class handles iterative deepening time management, transposition table
+ * handling, negamax search with alpha-beta pruning, quiescence search, and
+ * move evaluation. It exposes two main search entry points:
+ * - generate_best_next_move() for time‑limited search
+ * - generate_best_next_move_fixed_depth() for depth‑limited search
+ */
 class ChessBot {
 public:
+
     /**
      * @brief Performs an iterative deepening search to find the best move for the given board.
      *
@@ -30,16 +50,31 @@ public:
     Move generate_best_next_move_fixed_depth(Board& board, int DEPTH);
 
     /**
-     * @brief Resets the whole transposition table
+     * @brief Resets the transposition table to an empty state.
+     *
+     * Clears all stored entries so the next search starts without reused
+     * move suggestions from previous positions.
      */
     void reset_tt()const;
 
 private:
+
+    /**
+     * @brief Transposition table storing previously searched positions.
+     *
+     * Indexed by Zobrist hash modulo tt_size. Stores moves to improve move
+     * ordering and prune repeated subtrees during search.
+     */
     std::unique_ptr<std::array<Move, tt_size>> tt_array = std::make_unique<std::array<Move, tt_size>>();
 
-    // Represents the time the ID started.
+    /**
+     * @brief Timestamp marking the beginning of an iterative deepening search.
+     */
     std::chrono::high_resolution_clock::time_point iterative_time_point;
-    // Represents the maximum time ID has. Default 2000
+
+    /**
+     * @brief Maximum allowed time for iterative deepening in milliseconds.
+     */
     int iterative_time_constraint = 2000;
 
     /**

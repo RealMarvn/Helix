@@ -490,10 +490,10 @@ void Board::read_fen(const std::string& INPUT)
     int squares = 0;
     bool whiteKing = false;
     bool blackKing = false;
-    for (char& character : fenSettings[0])
+    for (const char& CHARACTER : fenSettings[0])
     {
         // Row change if '/'.
-        if (character == '/')
+        if (CHARACTER == '/')
         {
             y--;
             // Reset x to 1.
@@ -501,10 +501,10 @@ void Board::read_fen(const std::string& INPUT)
             continue;
         }
 
-        if (std::isdigit(character))
+        if (std::isdigit(CHARACTER))
         {
             // If it is a digit.
-            for (int i = character - '0'; i > 0; --i)
+            for (int i = CHARACTER - '0'; i > 0; --i)
             {
                 // Loop through the squares which will be empty.
                 // Set them empty.
@@ -518,7 +518,7 @@ void Board::read_fen(const std::string& INPUT)
         }
 
         // Check if kings are present.
-        if (character == 'k')
+        if (CHARACTER == 'k')
         {
             if (blackKing)
             {
@@ -526,7 +526,7 @@ void Board::read_fen(const std::string& INPUT)
             }
             blackKing = true;
         }
-        else if (character == 'K')
+        else if (CHARACTER == 'K')
         {
             if (whiteKing)
             {
@@ -536,7 +536,7 @@ void Board::read_fen(const std::string& INPUT)
         }
 
         // Just set on the square that piece.
-        board[calculateSquare(x, y)] = Piece(character);
+        board[calculateSquare(x, y)] = Piece(CHARACTER);
         x++;
         squares++;
     }

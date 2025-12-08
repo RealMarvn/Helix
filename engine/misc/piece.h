@@ -2,8 +2,24 @@
 // Created by Marvin Becker on 05.03.24.
 //
 
+/**
+ * @file piece.h
+ * @brief Defines PieceType and the Piece class used to represent chess pieces.
+ *
+ * This file provides an enumeration of all colored piece types and the Piece
+ * class, which encapsulates piece identity, material values, game-phase values,
+ * character conversion, and utility functions used throughout the engine.
+ */
+
 #pragma once
 
+/**
+ * @brief Enumeration of all chess piece types including color.
+ *
+ * White pieces are listed first (WP..WK), followed by black pieces (BP..BK),
+ * and finally EMPTY. The numeric ordering allows color checks using simple
+ * comparisons (e.g., piece_type < BP means white).
+ */
 // Represents the pieces with colors. Color + Piece = White + Pawn = WP
 enum PieceType : uint8_t { WP, WN, WB, WR, WQ, WK, BP, BN, BB, BR, BQ, BK, EMPTY };
 
@@ -18,6 +34,7 @@ enum PieceType : uint8_t { WP, WN, WB, WR, WQ, WK, BP, BN, BB, BR, BQ, BK, EMPTY
  */
 class Piece {
 public:
+
     /**
      * @brief Constructs a new Piece object with the given piece type.
      *
@@ -27,7 +44,7 @@ public:
     }
 
     /**
-     * @brief Constructs a new Piece object with the given piece type.
+     * @brief Constructs a new Piece object from a character representation.
      *
      * @param PIECE The character representing the piece type.
      */
@@ -35,11 +52,18 @@ public:
     };
 
     /**
-     * @class Piece
-     * Represents an EMPTY piece.
+     * @brief Constructs an EMPTY piece.
+     *
+     * Used when initializing empty squares on the board or representing
+     * an absence of a piece.
      */
     Piece() = default;
 
+    /**
+     * @brief The underlying piece type stored by this Piece instance.
+     *
+     * Defaults to EMPTY when using the default constructor.
+     */
     PieceType piece_type{EMPTY};
 
     /**
@@ -98,13 +122,34 @@ public:
     }
 
 private:
-    // Values from (https://www.chessprogramming.org/PeSTO's_Evaluation_Function)
+
+    /**
+     * @brief Game‑phase contribution values for each piece type.
+     *
+     * Used to calculate the overall game phase (opening → endgame)
+     * following PeSTO-style evaluation.
+     */
     constexpr static int game_phase_value[6] = {0, 1, 1, 2, 4, 0};
-    // End game value for BP, BK, BB, BR, BQ and BK
+
+    /**
+     * @brief Endgame material values indexed by base piece type (pawn..king).
+     *
+     * These values are applied when the engine detects an endgame phase.
+     */
     constexpr static int eg_piece_value[6] = {94, 281, 297, 512, 936, 0};
-    // Mid game value for BP, BK, BB, BR, BQ and BK
+
+    /**
+     * @brief Midgame material values indexed by base piece type (pawn..king).
+     *
+     * Used for evaluating positions during the midgame phase.
+     */
     constexpr static int mg_piece_value[6] = {82, 337, 365, 477, 1025, 0};
-    // Array to get the chars.
+
+    /**
+     * @brief Mapping from PieceType to corresponding FEN character.
+     *
+     * Uppercase = white pieces, lowercase = black pieces, ' ' = EMPTY.
+     */
     constexpr static char piece_to_char[13] = {'P', 'N', 'B', 'R', 'Q', 'K', 'p', 'n', 'b', 'r', 'q', 'k', ' '};
 
     /**

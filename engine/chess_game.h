@@ -2,6 +2,16 @@
 // Created by Marvin Becker on 16.03.24.
 //
 
+/**
+ * @file chess_game.h
+ * @brief High-level game controller for running the chess engine.
+ *
+ * The ChessGame class manages a Board instance, a ChessBot search engine,
+ * and user interaction via UCI and classic input modes. It acts as the
+ * entry point for engine execution, handling commands, move input, and
+ * game flow until termination.
+ */
+
 #pragma once
 
 #include <memory>
@@ -10,9 +20,17 @@
 
 class ChessGame {
 public:
+
     /**
      * @class ChessGame
-     * Represents a chess game.
+     * @brief Orchestrates the gameplay, input parsing, and engine interaction.
+     *
+     * ChessGame owns a Board and a ChessBot instance. It supports two modes:
+     *  - UCI mode for GUI/engine communication
+     *  - Classic mode for direct human interaction (debug/testing)
+     *
+     * It continuously processes input, updates the board, and consults the
+     * ChessBot to compute engine moves.
      */
     ChessGame() : board{new Board}, chessBot{ChessBot()} {
     }
@@ -26,7 +44,21 @@ public:
     void start();
 
 private:
+
+    /**
+     * @brief The current game board.
+     *
+     * Owns all position-related data including pieces, side to move,
+     * castling/en-passant state, and move history.
+     */
     std::unique_ptr<Board> board;
+
+    /**
+     * @brief Search engine responsible for selecting best moves.
+     *
+     * Used whenever the engine must generate a response to a UCI "go"
+     * command or when running automated move calculations.
+     */
     ChessBot chessBot;
 
     /**
@@ -93,9 +125,6 @@ private:
      * Supported parameters may include:
      *   - depth <n>
      *   - movetime <ms>
-     *   - wtime / btime
-     *   - winc / binc
-     *   - infinite
      *
      * @param LINE The full input line containing the "go" command.
      */
