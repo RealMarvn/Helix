@@ -2,7 +2,6 @@
 // Created by Marvin Becker on 05.03.24.
 //
 #include "./move_gen.h"
-
 #include "../utils.h"
 
 PseudoLegalMoves moveGenUtils::get_all_pseudo_legal_moves(Board& board, const bool PLAYER)

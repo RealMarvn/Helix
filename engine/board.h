@@ -57,10 +57,10 @@ public:
      * This function iterates through the board to find the king of the given piece color.
      * Once the king is found, it calls the isSquareAttacked function to check if the king is being attacked.
      *
-     * @param piece_color The color of the king to check (true for white, false for black).
+     * @param PIECE_COLOR The color of the king to check (true for white, false for black).
      * @return True if the king is in check, false otherwise.
      */
-    bool is_king_in_check(bool piece_color);
+    bool is_king_in_check(bool PIECE_COLOR);
 
     /**
      * @brief Resets the board to the starting position;
