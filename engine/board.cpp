@@ -41,18 +41,18 @@ bool Board::is_square_attacked(const std::pair<int, int>& SQUARE, const bool PIE
     // no need to check again if you capture your own piece
 
     moveGenUtils::get_all_possible_knight_moves(SQUARE, *this, allKnightMoves, PIECE_COLOR);
-    for (Move& move : allKnightMoves)
+    for (const Move& MOVE : allKnightMoves)
     {
-        if (move.captured_piece.piece_type == WN || move.captured_piece.piece_type == BN)
+        if (MOVE.captured_piece.piece_type == WN || MOVE.captured_piece.piece_type == BN)
         {
             return true;
         }
     }
 
     moveGenUtils::get_all_possible_pawn_moves(SQUARE, *this, allPawnMoves, PIECE_COLOR);
-    for (Move& move : allPawnMoves)
+    for (const Move& MOVE : allPawnMoves)
     {
-        if (move.captured_piece.piece_type == WP || move.captured_piece.piece_type == BP)
+        if (MOVE.captured_piece.piece_type == WP || MOVE.captured_piece.piece_type == BP)
         {
             return true;
         }
@@ -61,10 +61,10 @@ bool Board::is_square_attacked(const std::pair<int, int>& SQUARE, const bool PIE
     // You also have to check for Queens because they can move like the bishop
     // too!
     moveGenUtils::get_all_possible_bishop_moves(SQUARE, *this, allBishopMoves, PIECE_COLOR);
-    for (Move& move : allBishopMoves)
+    for (const Move& MOVE : allBishopMoves)
     {
-        if (move.captured_piece.piece_type == WB || move.captured_piece.piece_type == BB ||
-            move.captured_piece.piece_type == WQ || move.captured_piece.piece_type == BQ)
+        if (MOVE.captured_piece.piece_type == WB || MOVE.captured_piece.piece_type == BB ||
+            MOVE.captured_piece.piece_type == WQ || MOVE.captured_piece.piece_type == BQ)
         {
             return true;
         }
@@ -72,10 +72,10 @@ bool Board::is_square_attacked(const std::pair<int, int>& SQUARE, const bool PIE
 
     // You also have to check for Queens because they can move like the rook too!
     moveGenUtils::get_all_possible_rook_moves(SQUARE, *this, allRookMoves, PIECE_COLOR);
-    for (Move& move : allRookMoves)
+    for (const Move& MOVE : allRookMoves)
     {
-        if (move.captured_piece.piece_type == WR || move.captured_piece.piece_type == BR ||
-            move.captured_piece.piece_type == WQ || move.captured_piece.piece_type == BQ)
+        if (MOVE.captured_piece.piece_type == WR || MOVE.captured_piece.piece_type == BR ||
+            MOVE.captured_piece.piece_type == WQ || MOVE.captured_piece.piece_type == BQ)
         {
             return true;
         }
@@ -193,8 +193,9 @@ bool Board::make_move(const Move& MOVE)
     // If move is EP then replace the square in front of the move with empty.
     if (MOVE.move_type == EN_PASSANT)
     {
-        int enPassantSquare = MOVE.move_square + (MOVE.moving_piece.piece_type == WP ? -8 : +8);
-        board[enPassantSquare].piece_type = EMPTY;
+        const int EN_PASSANT_SQUARE =
+            MOVE.move_square + (MOVE.moving_piece.piece_type == WP ? -8 : +8);
+        board[EN_PASSANT_SQUARE].piece_type = EMPTY;
     }
 
     // If it is a castling move just set the rook at the correct spot.
@@ -601,16 +602,7 @@ void Board::read_fen(const std::string& INPUT)
 void Board::print_current_board() const
 {
     // Print the current turn.
-    if (player == WHITE)
-    {
-        std::cout << "Current turn: "
-                  << "White" << std::endl;
-    }
-    else
-    {
-        std::cout << "Current turn: "
-                  << "Black" << std::endl;
-    }
+    std::cout << "Current turn: " << (player == WHITE ? "White" : "Black") << std::endl;
 
     // Print the board.
     for (int y = 8; y >= 1; y--)
