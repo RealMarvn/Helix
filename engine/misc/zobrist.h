@@ -60,7 +60,7 @@ public:
      */
     Zobrist() {
         for (auto& piece: zobrist_squares) {
-            for (unsigned long long& square: piece) {
+            for (auto& square: piece) {
                 square = generate_random_64_bit_number();
             }
         }

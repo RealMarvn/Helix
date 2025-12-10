@@ -13,6 +13,9 @@
 
 #pragma once
 #include <chrono>
+#include <memory>
+#include <climits>
+#include <array>
 
 #include "./movement/move_gen.h"
 
