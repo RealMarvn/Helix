@@ -4,11 +4,11 @@
 
 #include <iostream>
 
-#include "./board.h"
-#include "./chess_bot.h"
-#include "./exceptions/board_exception.h"
-#include "./exceptions/fen_exception.h"
-#include "utils.h"
+#include "../exceptions/board_exception.h"
+#include "../exceptions/fen_exception.h"
+#include "../search/chess_bot.h"
+#include "../utils.h"
+#include "board.h"
 
 bool Board::is_king_in_check(const bool PIECE_COLOR)
 {

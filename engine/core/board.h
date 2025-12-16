@@ -22,11 +22,11 @@
 #include <utility>
 #include <vector>
 
-#include "./misc/board_settings.h"
-#include "./misc/move.h"
-#include "./misc/piece.h"
-#include "./misc/player.h"
-#include "./misc/zobrist.h"
+#include "board_settings.h"
+#include "move.h"
+#include "piece.h"
+#include "player.h"
+#include "zobrist.h"
 
 /**
  * @class Board
@@ -77,6 +77,11 @@ public:
      * @return Reference to the Piece on that square.
      */
     Piece& operator[](const int INDEX) {
+        assert(INDEX < 64 && INDEX >= 0);
+        return board[INDEX];
+    }
+
+    const Piece& operator[](const int INDEX) const {
         assert(INDEX < 64 && INDEX >= 0);
         return board[INDEX];
     }

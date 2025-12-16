@@ -16,7 +16,7 @@
 #include <utility>
 #include <vector>
 
-#include "../board.h"
+#include "../core/board.h"
 
 /**
  * @namespace moveGenUtils

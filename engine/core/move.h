@@ -18,7 +18,7 @@
 #include <sstream>
 #include <string>
 
-#include "./piece.h"
+#include "./core/piece.h"
 
 // Represents the maximum of moves someone could possibly do.
 #define MAX_MOVES 218

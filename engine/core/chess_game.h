@@ -16,7 +16,7 @@
 
 #include <memory>
 
-#include "./chess_bot.h"
+#include "./search/chess_bot.h"
 
 class ChessGame {
 public:

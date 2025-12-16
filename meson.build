@@ -16,27 +16,31 @@ is_debug = get_option('buildtype') == 'debug'
 # --------------------------------------------------------------------
 
 engine_sources = files(
-    'engine/board.cpp',
+    'engine/main.cpp',
+    'engine/core/board.cpp',
+    'engine/core/chess_game.cpp',
+    'engine/eval/eval.cpp',
     'engine/movement/move_gen.cpp',
-    'engine/chess_bot.cpp',
-    'engine/chess_game.cpp',
-    'engine/core/tt.cpp',
+    'engine/search/chess_bot.cpp',
+    'engine/search/tt.cpp',
 )
 
 engine_headers = files(
-    'engine/board.h',
-    'engine/movement/move_gen.h',
-    'engine/misc/move.h',
-    'engine/misc/piece.h',
-    'engine/chess_bot.h',
-    'engine/misc/board_settings.h',
-    'engine/chess_game.h',
-    'engine/misc/player.h',
+    'engine/core/board.h',
+    'engine/core/board_settings.h',
+    'engine/core/chess_game.h',
+    'engine/core/move.h',
+    'engine/core/piece.h',
+    'engine/core/player.h',
+    'engine/core/zobrist.h',
+    'engine/eval/eval.h',
+    'engine/eval/psqt_tables.h',
     'engine/exceptions/fen_exception.h',
     'engine/exceptions/board_exception.h',
-    'engine/misc/zobrist.h',
+    'engine/movement/move_gen.h',
+    'engine/search/chess_bot.h',
+    'engine/search/tt.h',
     'engine/utils.h',
-    'engine/core/tt.h',
 )
 
 engine_inc = include_directories('engine')
@@ -120,12 +124,13 @@ endif
 
 all_source_files = files(
     'engine/main.cpp',
-    'engine/board.cpp',
+    'engine/core/board.cpp',
+    'engine/core/chess_game.cpp',
+    'engine/eval/eval.cpp',
     'engine/movement/move_gen.cpp',
-    'engine/chess_bot.cpp',
-    'engine/chess_game.cpp',
-    'engine/core/tt.cpp',
-    'tests/tests.cpp'
+    'engine/search/chess_bot.cpp',
+    'engine/search/tt.cpp',
+    'tests/tests.cpp',
 )
 
 clang_format = find_program('clang-format', required : false)

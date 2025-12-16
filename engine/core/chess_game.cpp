@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-#include "./chess_game.h"
+#include "chess_game.h"
 
 void ChessGame::start()
 {
