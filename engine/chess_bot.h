@@ -18,8 +18,7 @@
 #include <array>
 
 #include "./movement/move_gen.h"
-
-#define tt_size 1048576
+#include "core/tt.h"
 
 /**
  * @class ChessBot
@@ -58,17 +57,17 @@ public:
      * Clears all stored entries so the next search starts without reused
      * move suggestions from previous positions.
      */
-    void reset_tt()const;
+    void reset_tt();
 
 private:
 
     /**
-     * @brief Transposition table storing previously searched positions.
+     * @brief Transposition table (hash table) for searched positions.
      *
      * Indexed by Zobrist hash modulo tt_size. Stores moves to improve move
      * ordering and prune repeated subtrees during search.
      */
-    std::unique_ptr<std::array<Move, tt_size>> tt_array = std::make_unique<std::array<Move, tt_size>>();
+    TranspositionTable tt_{1u << 20}; // ~1M entries (power of two)
 
     /**
      * @brief Timestamp marking the beginning of an iterative deepening search.

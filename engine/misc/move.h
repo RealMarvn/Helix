@@ -23,6 +23,9 @@
 // Represents the maximum of moves someone could possibly do.
 #define MAX_MOVES 218
 
+// The Bonus a TT Move gets when ordering.
+constexpr int TT_BONUS = 1000000;
+
 /**
  * @brief Enumeration describing the type of a chess move.
  *
@@ -199,8 +202,18 @@ private:
      * @return Integer score used for descending sort order.
      */
     static int score_move(const Move& move, const Move& ttMove) {
-        if (move == ttMove) return 1000;
+        if (is_valid_tt_move(ttMove) && move == ttMove) return TT_BONUS;
         if (move.captured_piece.piece_type == EMPTY) return 0;
         return move.captured_piece.piece_type % BP * 10 - move.moving_piece.piece_type % BP + 10;
+    }
+
+    /**
+     * @brief Checks if a move is really a valid Move
+     *
+     * @param m Move to check
+     * @return True if Move is valid
+     */
+    static bool is_valid_tt_move(const Move& m) {
+        return m.square != m.move_square;
     }
 };

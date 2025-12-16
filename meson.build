@@ -20,6 +20,7 @@ engine_sources = files(
     'engine/movement/move_gen.cpp',
     'engine/chess_bot.cpp',
     'engine/chess_game.cpp',
+    'engine/core/tt.cpp',
 )
 
 engine_headers = files(
@@ -35,6 +36,7 @@ engine_headers = files(
     'engine/exceptions/board_exception.h',
     'engine/misc/zobrist.h',
     'engine/utils.h',
+    'engine/core/tt.h',
 )
 
 engine_inc = include_directories('engine')
@@ -122,6 +124,7 @@ all_source_files = files(
     'engine/movement/move_gen.cpp',
     'engine/chess_bot.cpp',
     'engine/chess_game.cpp',
+    'engine/core/tt.cpp',
     'tests/tests.cpp'
 )
 
