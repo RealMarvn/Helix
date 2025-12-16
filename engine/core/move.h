@@ -21,10 +21,7 @@
 #include "./core/piece.h"
 
 // Represents the maximum of moves someone could possibly do.
-#define MAX_MOVES 218
-
-// The Bonus a TT Move gets when ordering.
-constexpr int TT_BONUS = 1000000;
+constexpr int MAX_MOVES = 218;
 
 /**
  * @brief Enumeration describing the type of a chess move.
@@ -175,45 +172,4 @@ public:
      * @return True if the move list contains the specified move, false otherwise.
      */
     bool contains(const Move& mv) { return std::find(begin(), end(), mv) != end(); }
-
-    /**
-     * @brief Sorts the move list in descending order based on mvv-lva.
-     *
-     * This function sorts the move list in descending order based on the score of each move.
-     * It uses the std::sort algorithm with a lambda function as the comparison criterion.
-     * The lambda function compares the scores of two moves and returns true if the score of the left move is greater than
-     * the score of the right move. mvv-lva = most valuable victim, least valuable attacker
-     *
-     * @return None.
-     */
-    void sort_move_list_mvv_lva(const Move& ttMove) {
-        std::sort(begin(), end(), [&](const Move& left, const Move& right) {
-            return score_move(left, ttMove) > score_move(right, ttMove);
-        });
-    }
-
-private:
-
-    /**
-     * @brief Computes a heuristic score for move ordering (MVV-LVA + TT move bonus).
-     *
-     * @param move   Move to evaluate.
-     * @param ttMove The transposition table move; if equal, this move receives a large bonus.
-     * @return Integer score used for descending sort order.
-     */
-    static int score_move(const Move& move, const Move& ttMove) {
-        if (is_valid_tt_move(ttMove) && move == ttMove) return TT_BONUS;
-        if (move.captured_piece.piece_type == EMPTY) return 0;
-        return move.captured_piece.piece_type % BP * 10 - move.moving_piece.piece_type % BP + 10;
-    }
-
-    /**
-     * @brief Checks if a move is really a valid Move
-     *
-     * @param m Move to check
-     * @return True if Move is valid
-     */
-    static bool is_valid_tt_move(const Move& m) {
-        return m.square != m.move_square;
-    }
 };

@@ -200,10 +200,10 @@ public:
      * It generates all possible pseudo-legal moves for the current player and checks if any of them result in a
      * non-checkmate position. If there are no such moves, then checkmate is detected.
      *
-     * @param isWhite True if the current player is white, false otherwise.
+     * @param IS_WHITE True if the current player is white, false otherwise.
      * @return True if the current player is in checkmate, false otherwise.
      */
-    bool is_check_mate(bool isWhite);
+    bool is_check_mate(bool IS_WHITE);
 
     /**
      * @brief Parses a chess move from a string input.

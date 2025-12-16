@@ -6,7 +6,7 @@
 
 #include "../exceptions/board_exception.h"
 #include "../exceptions/fen_exception.h"
-#include "../search/chess_bot.h"
+#include "../search/search.h"
 #include "../utils.h"
 #include "board.h"
 
@@ -338,11 +338,11 @@ void Board::handle_castling_permissions(const Move& MOVE)
     }
 }
 
-bool Board::is_check_mate(bool isWhite)
+bool Board::is_check_mate(const bool IS_WHITE)
 {
     // Count if there are no possible moves anymore.
     int counter = 0;
-    for (Move& move : moveGenUtils::get_all_pseudo_legal_moves(*this, isWhite))
+    for (Move& move : moveGenUtils::get_all_pseudo_legal_moves(*this, IS_WHITE))
     {
         if (make_move(move))
         {
@@ -632,8 +632,7 @@ std::string Board::get_fen() const
         int emptyFields = 0;
         for (int x = 1; x < 9; x++)
         {
-            Piece piece = board[calculateSquare(x, y)];
-            if (piece.piece_type == EMPTY)
+            if (Piece piece = board[calculateSquare(x, y)]; piece.piece_type == EMPTY)
             {
                 emptyFields++;
                 // If the whole row is Empty fields it should print it after hitting the

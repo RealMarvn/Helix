@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "../engine/search/chess_bot.h"
+#include "../engine/search/search.h"
 
 static std::string data_path(const std::string& filename)
 {

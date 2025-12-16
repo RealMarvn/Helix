@@ -21,7 +21,8 @@ engine_sources = files(
     'engine/core/chess_game.cpp',
     'engine/eval/eval.cpp',
     'engine/movement/move_gen.cpp',
-    'engine/search/chess_bot.cpp',
+    'engine/search/heuristics.cpp',
+    'engine/search/search.cpp',
     'engine/search/tt.cpp',
 )
 
@@ -38,7 +39,8 @@ engine_headers = files(
     'engine/exceptions/fen_exception.h',
     'engine/exceptions/board_exception.h',
     'engine/movement/move_gen.h',
-    'engine/search/chess_bot.h',
+    'engine/search/heuristics.h',
+    'engine/search/search.h',
     'engine/search/tt.h',
     'engine/utils.h',
 )
@@ -128,7 +130,8 @@ all_source_files = files(
     'engine/core/chess_game.cpp',
     'engine/eval/eval.cpp',
     'engine/movement/move_gen.cpp',
-    'engine/search/chess_bot.cpp',
+    'engine/search/heuristics.cpp',
+    'engine/search/search.cpp',
     'engine/search/tt.cpp',
     'tests/tests.cpp',
 )

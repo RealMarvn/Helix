@@ -19,6 +19,7 @@
 
 #include "../movement/move_gen.h"
 #include "./tt.h"
+#include "./search/heuristics.h"
 
 /**
  * @class ChessBot
@@ -70,6 +71,23 @@ private:
     TranspositionTable tt{1u << 20}; // ~1M entries (power of two)
 
     /**
+     * @brief Killer move heuristic table.
+     *
+     * Stores up to two quiet moves per ply that previously caused a beta-cutoff.
+     * Used only for move ordering (does not affect correctness).
+     */
+    search::heuristics::KillerTable killers;
+
+    /**
+     * @brief History heuristic table.
+     *
+     * Accumulates quiet-move statistics (side, from, to) on beta-cutoffs.
+     * Higher values indicate moves that tend to cause cutoffs and should be
+     * searched earlier.
+     */
+    search::heuristics::HistoryTable history;
+
+    /**
      * @brief Timestamp marking the beginning of an iterative deepening search.
      */
     std::chrono::high_resolution_clock::time_point iterative_time_point;
@@ -83,15 +101,14 @@ private:
      * @brief Checks if the time has elapsed.
      *
      * This function calculates the elapsed time between the iterativeTimePoint time and the current time,
-     * and checks if the elapsed time is greater than or equal to 2 seconds.
+     * and checks if the elapsed time is greater than or equal to the configured time constraint.
      *
      * @return true if the time has elapsed, false otherwise.
      */
     [[nodiscard]] bool is_time_up() const {
         const std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
         const long long elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end - iterative_time_point)
-                .
-                count();
+                                           .count();
         return elapsed_time >= iterative_time_constraint;
     }
 
@@ -133,4 +150,23 @@ private:
      * @return The best score found by the search.
      */
     int quiescence_search(Board& board, int alpha, int BETA);
+
+
+    /**
+     * @brief Resets all search-related state before starting a new root search.
+     *
+     * This function prepares the engine for a fresh search by resetting all
+     * data structures that are local to a single root search:
+     *  - Clears the transposition table search state (via tt.new_search()).
+     *  - Clears the killer move table.
+     *  - Clears the history heuristic table.
+     *
+     * It must be called exactly once at the beginning of a new search
+     * (e.g. before iterative deepening or fixed-depth search starts),
+     * and must NOT be called inside the recursive search itself.
+     *
+     * Keeping this logic in a dedicated function avoids code duplication
+     * and ensures consistent initialization of all search heuristics.
+     */
+    void reset_search_state();
 };

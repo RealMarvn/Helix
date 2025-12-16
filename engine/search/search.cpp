@@ -1,7 +1,11 @@
-#include "chess_bot.h"
+//
+// Created by Marvin Becker on 10.02.24.
+//
+#include "search.h"
 
 #include "./eval/eval.h"
 
+#include <csignal>
 #include <iostream>
 
 void ChessBot::reset_tt()
@@ -9,12 +13,21 @@ void ChessBot::reset_tt()
     tt.clear();
 }
 
+void ChessBot::reset_search_state()
+{
+    tt.new_search();
+    killers.clear();
+    history.clear();
+}
+
 Move ChessBot::generate_best_next_move(Board& board, const int time_constraint)
 {
     // Set the time to now.
     iterative_time_point = std::chrono::high_resolution_clock::now();
     iterative_time_constraint = time_constraint;
-    tt.new_search();
+
+    reset_search_state();
+
     Move bestMove{};
     // Run until the timeout returns true.
     for (int i = 1;; i++)
@@ -39,7 +52,8 @@ Move ChessBot::generate_best_next_move_fixed_depth(Board& board, const int DEPTH
     // Timelimit to inf, because we now limit with DEPTH.
     iterative_time_constraint = std::numeric_limits<int>::max();
     iterative_time_point = std::chrono::high_resolution_clock::now();
-    tt.new_search();
+
+    reset_search_state();
 
     // Search to specific depth.
     return search_next_move(board, DEPTH);
@@ -68,8 +82,9 @@ int ChessBot::search(Board& board, const int DEPTH, int alpha, const int BETA, c
 
     // Get all possible moves.
     auto moveList = moveGenUtils::get_all_pseudo_legal_moves(board, board.player == WHITE);
-    // Sort so the best moves are first (TT move first, then MVV-LVA).
-    moveList.sort_move_list_mvv_lva(tt_move);
+
+    // Sort so the best moves are first (TT move + captures + killer/history heuristics)
+    search::heuristics::order_moves(moveList, tt_move, PLY, board.player, killers, history);
 
     int legalMoves = 0;
 
@@ -84,7 +99,8 @@ int ChessBot::search(Board& board, const int DEPTH, int alpha, const int BETA, c
         // Make every move and gather the value of the opponent.
         if (board.make_move(move))
         {
-            score = -search(board, DEPTH - 1, -BETA, -alpha, PLY + 1, best_move);
+            Move child_best{};
+            score = -search(board, DEPTH - 1, -BETA, -alpha, PLY + 1, child_best);
             legalMoves++;
             board.pop_last_move();
         }
@@ -113,6 +129,14 @@ int ChessBot::search(Board& board, const int DEPTH, int alpha, const int BETA, c
 
         if (alpha >= BETA)
         {
+
+            // Beta-cutoff: update quiet-move heuristics (killer + history)
+            if (search::heuristics::is_quiet(move))
+            {
+                killers.add(PLY, move);
+                history.add(board.player, move.square, move.move_square, DEPTH);
+            }
+
             break; // beta kill
         }
     }
@@ -160,7 +184,9 @@ int ChessBot::quiescence_search(Board& board, int alpha, const int BETA)
     Move tt_move{};
     tt.probe_move(board.get_hash(), tt_move);
     auto moveList = moveGenUtils::get_all_pseudo_legal_moves(board, board.player == WHITE);
-    moveList.sort_move_list_mvv_lva(tt_move);
+
+    // Sort so the best moves are first (TT move + captures + killer/history heuristics)
+    search::heuristics::order_moves(moveList, tt_move, 0, board.player, killers, history);
 
     // First best score should be the worst.
     int bestScore = STAND_PAT;
