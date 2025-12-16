@@ -2,6 +2,9 @@
 
 #include <iostream>
 
+using score_constants::kInfinity;
+using score_constants::kMate;
+
 void ChessBot::reset_tt()
 {
     tt_.clear();
@@ -135,7 +138,7 @@ int ChessBot::search(Board& board, const int DEPTH, int alpha, const int BETA, c
 
     // Global time limit check
     if (is_time_up())
-        return -INT_MAX;
+        return -kInfinity;
 
     const int ORIGINAL_ALPHA = alpha;
     const std::uint64_t key = board.get_hash();
@@ -155,7 +158,7 @@ int ChessBot::search(Board& board, const int DEPTH, int alpha, const int BETA, c
     int legalMoves = 0;
 
     // First best score should be the worst.
-    int bestScore = -INT_MAX;
+    int bestScore = -kInfinity;
     Move localBestMove{};
 
     for (Move& move : moveList)
@@ -203,7 +206,7 @@ int ChessBot::search(Board& board, const int DEPTH, int alpha, const int BETA, c
     {
         if (board.is_king_in_check(board.player == WHITE))
         {
-            return -INT_MAX + PLY; // checkmate
+            return -kMate + PLY; // checkmate
         }
         else
         {
@@ -286,6 +289,6 @@ int ChessBot::quiescence_search(Board& board, int alpha, const int BETA)
 Move ChessBot::search_best_next_move(Board& board, const int DEPTH)
 {
     Move move;
-    search(board, DEPTH, -INT_MAX, INT_MAX, 0, move);
+    search(board, DEPTH, -kInfinity, kInfinity, 0, move);
     return move;
 }
