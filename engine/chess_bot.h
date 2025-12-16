@@ -67,7 +67,7 @@ private:
      * Indexed by Zobrist hash modulo tt_size. Stores moves to improve move
      * ordering and prune repeated subtrees during search.
      */
-    TranspositionTable tt_{1u << 20}; // ~1M entries (power of two)
+    TranspositionTable tt{1u << 20}; // ~1M entries (power of two)
 
     /**
      * @brief Timestamp marking the beginning of an iterative deepening search.

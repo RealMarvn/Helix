@@ -16,7 +16,7 @@
  * - kMateWindow: Range around ±kMate that is treated as a mate score.
  * - kInfinity: Safe alpha/beta bound, larger than any evaluation or mate score.
  */
-namespace score_constants
+namespace tt_score_constants
 {
 inline constexpr int kMate = 32000;       // must be >> any evaluation score
 inline constexpr int kMateWindow = 1000;  // window to detect mate scores
@@ -189,8 +189,8 @@ private:
      */
     static int to_tt_score(const int SCORE, const int PLY)
     {
-        if (SCORE > score_constants::kMate - score_constants::kMateWindow) return SCORE + PLY;
-        if (SCORE < -score_constants::kMate + score_constants::kMateWindow) return SCORE - PLY;
+        if (SCORE > tt_score_constants::kMate - tt_score_constants::kMateWindow) return SCORE + PLY;
+        if (SCORE < -tt_score_constants::kMate + tt_score_constants::kMateWindow) return SCORE - PLY;
         return SCORE;
     }
 
@@ -199,8 +199,8 @@ private:
      */
     static int from_tt_score(const int SCORE, const int PLY)
     {
-        if (SCORE > score_constants::kMate - score_constants::kMateWindow) return SCORE - PLY;
-        if (SCORE < -score_constants::kMate + score_constants::kMateWindow) return SCORE + PLY;
+        if (SCORE > tt_score_constants::kMate - tt_score_constants::kMateWindow) return SCORE - PLY;
+        if (SCORE < -tt_score_constants::kMate + tt_score_constants::kMateWindow) return SCORE + PLY;
         return SCORE;
     }
 

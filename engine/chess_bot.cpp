@@ -2,12 +2,9 @@
 
 #include <iostream>
 
-using score_constants::kInfinity;
-using score_constants::kMate;
-
 void ChessBot::reset_tt()
 {
-    tt_.clear();
+    tt.clear();
 }
 
 int ChessBot::eval(Board& board)
@@ -98,7 +95,7 @@ Move ChessBot::generate_best_next_move(Board& board, const int time_constraint)
     // Set the time to now.
     iterative_time_point = std::chrono::high_resolution_clock::now();
     iterative_time_constraint = time_constraint;
-    tt_.new_search();
+    tt.new_search();
     Move bestMove{};
     // Run until the timeout returns true.
     for (int i = 1;; i++)
@@ -123,7 +120,7 @@ Move ChessBot::generate_best_next_move_fixed_depth(Board& board, const int DEPTH
     // Timelimit to inf, because we now limit with DEPTH.
     iterative_time_constraint = std::numeric_limits<int>::max();
     iterative_time_point = std::chrono::high_resolution_clock::now();
-    tt_.new_search();
+    tt.new_search();
 
     // Search to specific depth.
     return search_best_next_move(board, DEPTH);
@@ -138,14 +135,14 @@ int ChessBot::search(Board& board, const int DEPTH, int alpha, const int BETA, c
 
     // Global time limit check
     if (is_time_up())
-        return -kInfinity;
+        return -tt_score_constants::kInfinity;
 
     const int ORIGINAL_ALPHA = alpha;
     const std::uint64_t key = board.get_hash();
 
     // Transposition table probe (may return exact score or safe cutoff)
     Move tt_move{};
-    if (int tt_score = 0; tt_.probe(key, DEPTH, alpha, BETA, PLY, tt_score, tt_move))
+    if (int tt_score = 0; tt.probe(key, DEPTH, alpha, BETA, PLY, tt_score, tt_move))
     {
         return tt_score;
     }
@@ -158,7 +155,7 @@ int ChessBot::search(Board& board, const int DEPTH, int alpha, const int BETA, c
     int legalMoves = 0;
 
     // First best score should be the worst.
-    int bestScore = -kInfinity;
+    int bestScore = -tt_score_constants::kInfinity;
     Move localBestMove{};
 
     for (Move& move : moveList)
@@ -206,7 +203,7 @@ int ChessBot::search(Board& board, const int DEPTH, int alpha, const int BETA, c
     {
         if (board.is_king_in_check(board.player == WHITE))
         {
-            return -kMate + PLY; // checkmate
+            return -tt_score_constants::kMate + PLY; // checkmate
         }
         else
         {
@@ -221,7 +218,7 @@ int ChessBot::search(Board& board, const int DEPTH, int alpha, const int BETA, c
     else if (bestScore >= BETA)
         flag = TTFlag::LowerBound;
 
-    tt_.store(key, DEPTH, bestScore, flag, PLY, localBestMove);
+    tt.store(key, DEPTH, bestScore, flag, PLY, localBestMove);
 
     return bestScore;
 }
@@ -242,7 +239,7 @@ int ChessBot::quiescence_search(Board& board, int alpha, const int BETA)
 
     // Get all possible moves.
     Move tt_move{};
-    tt_.probe_move(board.get_hash(), tt_move);
+    tt.probe_move(board.get_hash(), tt_move);
     auto moveList = moveGenUtils::get_all_pseudo_legal_moves(board, board.player == WHITE);
     moveList.sort_move_list_mvv_lva(tt_move);
 
@@ -289,6 +286,6 @@ int ChessBot::quiescence_search(Board& board, int alpha, const int BETA)
 Move ChessBot::search_best_next_move(Board& board, const int DEPTH)
 {
     Move move;
-    search(board, DEPTH, -kInfinity, kInfinity, 0, move);
+    search(board, DEPTH, -tt_score_constants::kInfinity, tt_score_constants::kInfinity, 0, move);
     return move;
 }
