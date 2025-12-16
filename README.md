@@ -39,7 +39,8 @@ Banksia.
 
 Helix is designed to explore the computational complexity of chess decision‑making.  
 It emphasizes correctness, clarity, and a research‑oriented design suitable for algorithmic experimentation and
-performance evaluation.
+performance evaluation.  
+The engine integrates a modern alpha‑beta search enhanced with transposition tables and well‑established move‑ordering heuristics, allowing meaningful depth and performance experiments without sacrificing code readability.
 
 ---
 
@@ -60,8 +61,15 @@ performance evaluation.
 - **NegaMax** search formulation  
   (clean and elegant variant of Minimax for zero‑sum games)
 - **Alpha‑Beta pruning** to drastically reduce the search tree
-- **Iterative deepening** for stable move ordering and time management
-- **Move ordering heuristics** to improve pruning efficiency
+- **Iterative deepening** for stable move ordering and robust time management
+- **Transposition Table (TT)** with depth‑sensitive bounds (Exact / Lower / Upper)
+    - Avoids re‑searching previously evaluated positions
+    - Stores best moves to guide future search (PV / TT move ordering)
+- **Advanced move ordering heuristics** to maximize pruning efficiency:
+    - **TT / PV move first** (principal variation prioritization)
+    - **MVV‑LVA** ordering for captures
+    - **Killer move heuristic** (per‑ply quiet moves causing beta cutoffs)
+    - **History heuristic** (global quiet‑move statistics accumulated during search)
 
 ### ✔️ Engine Modes
 
@@ -82,15 +90,22 @@ performance evaluation.
     - Handles all non‑trivial move types (castling, promotions, en passant)
 
 3. **Search System (NegaMax)**
-    - Core of the engine built around NegaMax recursion
+    - Core of the engine built around a recursive NegaMax formulation
     - Enhanced with:
         - **Alpha‑Beta pruning**
         - **Iterative deepening**
-        - **Move ordering**
-    - Designed for evaluation experiments regarding search depth and accuracy
+        - **Transposition Table** for caching evaluated positions
+        - **Heuristic‑driven move ordering**
+    - Move ordering is implemented as a dedicated search‑heuristics module and includes:
+        - TT / principal‑variation move prioritization
+        - Capture ordering (MVV‑LVA)
+        - Killer moves (quiet moves remembered per ply)
+        - History heuristic (global quiet‑move success statistics)
+    - Designed as a clean, modular system suitable for empirical evaluation of search behavior
 
 4. **Evaluation Function**
     - Lightweight material‑based evaluation with piece‑value heuristics
+    - Position-based evaluation (PESTO)
     - Easily extendable for future enhancements
 
 ---
