@@ -65,8 +65,7 @@ void TranspositionTable::store(const std::uint64_t KEY, const int DEPTH, const i
 
     if (e.key != KEY && e.generation != 0)
     {
-        // anderer Key in diesem Bucket; wir nutzen simples 1-slot replacement
-        // (ok für den Anfang – später kann man 2-way/4-way machen)
+        // Replacement Policy modified here for later usage
     }
 
     const std::uint8_t gen = generation_;
