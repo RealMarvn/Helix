@@ -12,14 +12,14 @@
  */
 
 #pragma once
-#include <array>
 #include <chrono>
-#include <climits>
 #include <memory>
+#include <climits>
+#include <array>
 
 #include "../movement/move_gen.h"
-#include "./search/heuristics.h"
 #include "./tt.h"
+#include "./search/heuristics.h"
 
 /**
  * @class ChessBot
@@ -31,9 +31,9 @@
  * - generate_best_next_move() for time‑limited search
  * - generate_best_next_move_fixed_depth() for depth‑limited search
  */
-class ChessBot
-{
-  public:
+class ChessBot {
+public:
+
     /**
      * @brief Performs an iterative deepening search to find the best move for the given board.
      *
@@ -45,11 +45,11 @@ class ChessBot
 
     /**
      * @brief Performs a fixed depth search to find the best move for the given board.
-     *
-     * @param board The chess board to search for the best move.
+    *
+    * @param board The chess board to search for the best move.
      * @param DEPTH The depth the bot has to reach.
-     * @return The best move found.
-     */
+    * @return The best move found.
+    */
     Move generate_best_next_move_fixed_depth(Board& board, int DEPTH);
 
     /**
@@ -60,7 +60,8 @@ class ChessBot
      */
     void reset_tt();
 
-  private:
+private:
+
     /**
      * @brief Transposition table (hash table) for searched positions.
      *
@@ -99,19 +100,15 @@ class ChessBot
     /**
      * @brief Checks if the time has elapsed.
      *
-     * This function calculates the elapsed time between the iterativeTimePoint time and the current
-     * time, and checks if the elapsed time is greater than or equal to the configured time
-     * constraint.
+     * This function calculates the elapsed time between the iterativeTimePoint time and the current time,
+     * and checks if the elapsed time is greater than or equal to the configured time constraint.
      *
      * @return true if the time has elapsed, false otherwise.
      */
-    [[nodiscard]] bool is_time_up() const
-    {
-        const std::chrono::high_resolution_clock::time_point end =
-            std::chrono::high_resolution_clock::now();
-        const long long elapsed_time =
-            std::chrono::duration_cast<std::chrono::milliseconds>(end - iterative_time_point)
-                .count();
+    [[nodiscard]] bool is_time_up() const {
+        const std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+        const long long elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end - iterative_time_point)
+                                           .count();
         return elapsed_time >= iterative_time_constraint;
     }
 
@@ -119,21 +116,18 @@ class ChessBot
      * @brief Search for the best next move in a chess game.
      *
      * This function performs a search for the best next move in a given chess board configuration.
-     * The search is based on a specified depth, which determines the level of exploration of
-     * possible game positions. The function implements the negamax algorithm with alpha-beta
-     * pruning to make the search more efficient.
+     * The search is based on a specified depth, which determines the level of exploration of possible game positions.
+     * The function implements the negamax algorithm with alpha-beta pruning to make the search more efficient.
      *
      * @param board The current board configuration.
-     * @param DEPTH The depth of the search. Determines the level of exploration of possible game
-     * positions.
+     * @param DEPTH The depth of the search. Determines the level of exploration of possible game positions.
      *
      * @return The best move found by the search algorithm.
      */
     Move search_next_move(Board& board, int DEPTH);
 
     /**
-     * @brief Performs a search for the best move using the negamax algorithm with alpha-beta
-     * pruning.
+     * @brief Performs a search for the best move using the negamax algorithm with alpha-beta pruning.
      *
      * @param board The board object representing the current game state.
      * @param DEPTH The maximum depth for the search.
@@ -148,8 +142,7 @@ class ChessBot
     /**
      * Perform a quiescence search on the chess board to evaluate the best move.
      *
-     * It only searches the captures to ensure that a piece is not sacrificed by the negamax's
-     * reached depth.
+     * It only searches the captures to ensure that a piece is not sacrificed by the negamax's reached depth.
      *
      * @param board The current chess board.
      * @param alpha The alpha value representing the lower bound of the search window.
@@ -157,6 +150,7 @@ class ChessBot
      * @return The best score found by the search.
      */
     int quiescence_search(Board& board, int alpha, int BETA);
+
 
     /**
      * @brief Resets all search-related state before starting a new root search.

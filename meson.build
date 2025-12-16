@@ -23,6 +23,7 @@ engine_sources = files(
     'engine/movement/move_gen.cpp',
     'engine/search/heuristics.cpp',
     'engine/search/search.cpp',
+    'engine/search/time_manager.cpp',
     'engine/search/tt.cpp',
 )
 
@@ -41,6 +42,7 @@ engine_headers = files(
     'engine/movement/move_gen.h',
     'engine/search/heuristics.h',
     'engine/search/search.h',
+    'engine/search/time_manager.h',
     'engine/search/tt.h',
     'engine/utils.h',
 )
@@ -132,6 +134,7 @@ all_source_files = files(
     'engine/movement/move_gen.cpp',
     'engine/search/heuristics.cpp',
     'engine/search/search.cpp',
+    'engine/search/time_manager.cpp',
     'engine/search/tt.cpp',
     'tests/tests.cpp',
 )

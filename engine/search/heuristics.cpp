@@ -7,78 +7,6 @@
 
 #include <algorithm>
 
-void search::heuristics::KillerTable::clear()
-{
-    for (auto& k : killers)
-    {
-        k[0] = Move{};
-        k[1] = Move{};
-    }
-}
-
-void search::heuristics::KillerTable::add(const int PLY, const Move& m)
-{
-    if (PLY < 0 || PLY >= HEUR_MAX_PLY)
-        return;
-
-    // Avoid duplicates
-    if (killers[PLY][0] == m)
-        return;
-
-    killers[PLY][1] = killers[PLY][0];
-    killers[PLY][0] = m;
-}
-
-bool search::heuristics::KillerTable::is_killer1(const int PLY, const Move& m) const
-{
-    if (PLY < 0 || PLY >= HEUR_MAX_PLY)
-        return false;
-    return killers[PLY][0] == m;
-}
-
-bool search::heuristics::KillerTable::is_killer2(const int PLY, const Move& m) const
-{
-    if (PLY < 0 || PLY >= HEUR_MAX_PLY)
-        return false;
-    return killers[PLY][1] == m;
-}
-
-void search::heuristics::HistoryTable::clear()
-{
-    for (auto& side : h)
-        for (auto& from : side)
-            from.fill(0);
-}
-
-void search::heuristics::HistoryTable::add(const int SIDE, const int FROM, const int TO,
-                                           const int DEPTH)
-{
-    if (SIDE < 0 || SIDE > 1)
-        return;
-    if (FROM < 0 || FROM >= 64 || TO < 0 || TO >= 64)
-        return;
-    if (DEPTH <= 0)
-        return;
-
-    const int bonus = DEPTH * DEPTH;
-    int& cell = h[SIDE][FROM][TO];
-
-    // Saturating add (avoid runaway/overflow)
-    if (constexpr int MAX_H = 1'000'000; cell > MAX_H - bonus)
-        cell = MAX_H;
-    else
-        cell += bonus;
-}
-
-int search::heuristics::HistoryTable::get(const int SIDE, const int FROM, const int TO) const
-{
-    if (SIDE < 0 || SIDE > 1)
-        return 0;
-    if (FROM < 0 || FROM >= 64 || TO < 0 || TO >= 64)
-        return 0;
-    return h[SIDE][FROM][TO];
-}
-
 static int score_move_heuristic(const Move& M, const Move& TT_MOVE, const int PLY, const int SIDE,
                                 const search::heuristics::KillerTable& KILLERS,
                                 const search::heuristics::HistoryTable& HISTORY)
@@ -111,9 +39,82 @@ static int score_move_heuristic(const Move& M, const Move& TT_MOVE, const int PL
     return score;
 }
 
-void search::heuristics::order_moves(PseudoLegalMoves& moves, const Move& tt_move, const int ply,
-                                     const int side, const search::heuristics::KillerTable& killers,
-                                     const search::heuristics::HistoryTable& history)
+namespace search::heuristics
+{
+
+void KillerTable::clear()
+{
+    for (auto& k : killers)
+    {
+        k[0] = Move{};
+        k[1] = Move{};
+    }
+}
+
+void KillerTable::add(const int PLY, const Move& m)
+{
+    if (PLY < 0 || PLY >= HEUR_MAX_PLY)
+        return;
+
+    // Avoid duplicates
+    if (killers[PLY][0] == m)
+        return;
+
+    killers[PLY][1] = killers[PLY][0];
+    killers[PLY][0] = m;
+}
+
+bool KillerTable::is_killer1(const int PLY, const Move& m) const
+{
+    if (PLY < 0 || PLY >= HEUR_MAX_PLY)
+        return false;
+    return killers[PLY][0] == m;
+}
+
+bool KillerTable::is_killer2(const int PLY, const Move& m) const
+{
+    if (PLY < 0 || PLY >= HEUR_MAX_PLY)
+        return false;
+    return killers[PLY][1] == m;
+}
+
+void HistoryTable::clear()
+{
+    for (auto& side : h)
+        for (auto& from : side)
+            from.fill(0);
+}
+
+void HistoryTable::add(const int SIDE, const int FROM, const int TO, const int DEPTH)
+{
+    if (SIDE < 0 || SIDE > 1)
+        return;
+    if (FROM < 0 || FROM >= 64 || TO < 0 || TO >= 64)
+        return;
+    if (DEPTH <= 0)
+        return;
+
+    const int bonus = DEPTH * DEPTH;
+    int& cell = h[SIDE][FROM][TO];
+
+    // Saturating add (avoid runaway/overflow)
+    if (constexpr int MAX_H = 1'000'000; cell > MAX_H - bonus)
+        cell = MAX_H;
+    else
+        cell += bonus;
+}
+
+int HistoryTable::get(const int SIDE, const int FROM, const int TO) const
+{
+    if (SIDE < 0 || SIDE > 1)
+        return 0;
+    if (FROM < 0 || FROM >= 64 || TO < 0 || TO >= 64)
+        return 0;
+    return h[SIDE][FROM][TO];
+}
+
+void order_moves(PseudoLegalMoves& moves, const Move& tt_move, const int ply, const int side,
+                 const KillerTable& killers, const HistoryTable& history)
 {
     std::sort(moves.begin(), moves.end(), [&](const Move& a, const Move& b) {
         const int sa = score_move_heuristic(a, tt_move, ply, side, killers, history);
@@ -121,3 +122,5 @@ void search::heuristics::order_moves(PseudoLegalMoves& moves, const Move& tt_mov
         return sa > sb;
     });
 }
+
+} // namespace search::heuristics
