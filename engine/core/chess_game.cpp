@@ -3,7 +3,11 @@
 //
 
 #include <iostream>
+#include <sstream>
 
+#include "../search/time/time_manager.h"
+#include "./search/time/search_constraints.h"
+#include "./search/time/uci_time_control.h"
 #include "chess_game.h"
 
 void ChessGame::start()
@@ -55,10 +59,20 @@ void ChessGame::parser_uci_handle_position(const std::string& LINE) const
 
 void ChessGame::parser_uci_handle_go(const std::string& LINE)
 {
-    int move_time = -1;
-    int depth = -1;
+    // Parse the UCI "go" command into search constraints + raw time control.
+    // See: https://backscattering.de/chess/uci/
 
-    Move BEST_MOVE{};
+    SearchConstraints constraints{};
+    UciTimeControl utc{};
+
+    // Defaults: no explicit constraints.
+    constraints.mode = SearchType::Normal;
+    constraints.movetime_ms = -1;
+    constraints.depth = -1;
+    constraints.nodes = -1;
+
+    // Track whether any time-related token was provided.
+    bool saw_any_time_token = false;
 
     std::istringstream iss(LINE);
     std::string token;
@@ -66,18 +80,70 @@ void ChessGame::parser_uci_handle_go(const std::string& LINE)
 
     while (iss >> token)
     {
-        if (token == "movetime")
+        if (token == "infinite")
         {
-            iss >> move_time;
-            BEST_MOVE = chessBot.generate_best_next_move(*board, move_time);
+            constraints.mode = SearchType::Infinite;
+        }
+        else if (token == "ponder")
+        {
+            constraints.mode = SearchType::Ponder;
         }
         else if (token == "depth")
         {
-            iss >> depth;
-            BEST_MOVE = chessBot.generate_best_next_move_fixed_depth(*board, depth);
+            iss >> constraints.depth;
+            constraints.mode = SearchType::FixedDepth;
+        }
+        else if (token == "nodes")
+        {
+            iss >> constraints.nodes;
+            constraints.mode = SearchType::NodeLimit;
+        }
+        else if (token == "movetime")
+        {
+            iss >> constraints.movetime_ms;
+            constraints.mode = SearchType::FixedTime;
+        }
+        else if (token == "wtime")
+        {
+            iss >> utc.wtime;
+            saw_any_time_token = true;
+        }
+        else if (token == "btime")
+        {
+            iss >> utc.btime;
+            saw_any_time_token = true;
+        }
+        else if (token == "winc")
+        {
+            iss >> utc.winc;
+            saw_any_time_token = true;
+        }
+        else if (token == "binc")
+        {
+            iss >> utc.binc;
+            saw_any_time_token = true;
+        }
+        else if (token == "movestogo")
+        {
+            iss >> utc.movestogo;
+            saw_any_time_token = true;
+        }
+        else
+        {
+            // Other UCI go-parameters are currently ignored:
+            // - searchmoves, mate
+            // - wtime/btime already handled
+            // - etc.
         }
     }
 
+    // If a tournament clock was provided, compute a per-move budget.
+    // (FixedTime/FixedDepth/NodeLimit/Infinite/Ponder do not require tc.)
+    if (constraints.mode == SearchType::Normal && saw_any_time_token)
+        constraints.budget = search::time::TimeManager::compute_budget(board->player, utc);
+
+    // Run the search.
+    const Move BEST_MOVE = chessBot.think(*board, constraints);
     std::cout << "bestmove " << BEST_MOVE.to_string() << std::endl;
 }
 
@@ -156,9 +222,11 @@ void ChessGame::parser_parse_classic(const std::string& LINE)
             return;
         }
 
+        auto limit = SearchConstraints{SearchType::Normal, -1, -1, -1, {1800, 2000, 2000}};
+
         // Bot can only move legal so no need to check if the move is legal.
         // Check if opponent is in check mate after bots turn.
-        const Move MOVE = chessBot.generate_best_next_move(*board, 2000);
+        const Move MOVE = chessBot.think(*board, limit);
         board->make_move(MOVE);
         board->print_current_board();
 
