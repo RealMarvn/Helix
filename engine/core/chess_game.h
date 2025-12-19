@@ -51,10 +51,13 @@ private:
 
     std::mutex search_mutex;
 
+    /// True while a search worker thread is active.
     bool search_running = false;
 
+    /// True if the engine is currently pondering (UCI "go ponder").
     bool ponder_active = false;
 
+    /// Best move found during pondering, emitted on "ponderhit".
     Move ponder_best{};
 
     /**
@@ -134,13 +137,51 @@ private:
      * Parses search-related parameters and starts the engine calculation.
      * May include time controls, depth limits, node limits, or infinite search.
      *
-     * Supported parameters may include:
-     *   - depth <n>
-     *   - movetime <ms>
+     * Supported parameters include (UCI):
+     *  - depth <n>        : Fixed-depth search.
+     *  - nodes <n>        : Node-limited search.
+     *  - movetime <ms>    : Fixed time per move.
+     *  - wtime <ms> btime <ms> winc <ms> binc <ms> [movestogo <n>]
+     *                    : Tournament time control; converted into an internal TimeBudget.
+     *  - infinite         : Search until a "stop" command is received.
+     *  - ponder           : Ponder search; no immediate bestmove output until "ponderhit".
      *
      * @param LINE The full input line containing the "go" command.
      */
     void parser_uci_handle_go(const std::string& LINE);
 
+    /**
+     * @brief Stops the currently running search worker thread.
+     *
+     * Requests the active search to stop (if any) and joins the worker thread
+     * to ensure a clean and deterministic shutdown of the search.
+     *
+     * This function is safe to call even if no search is currently running.
+     * After completion, no search thread will be active.
+     *
+     * Note:
+     *  - This function does NOT clear ponder-related state.
+     *  - Ponder state is managed separately to keep concerns isolated.
+     */
     void stop_search_worker();
+
+    /**
+     * @brief Clears the internal ponder state (locked variant).
+     *
+     * Resets all ponder-related flags and stored moves.
+     * This function assumes that the caller already holds `search_mutex`.
+     *
+     * Intended for internal use in performance-critical or compound operations
+     * where the mutex is already acquired.
+     */
+    void clear_ponder_state_locked();
+
+    /**
+     * @brief Clears the internal ponder state in a thread-safe manner.
+     *
+     * Acquires `search_mutex` and resets all ponder-related flags and cached moves.
+     * This should be used whenever ponder state needs to be invalidated from
+     * outside a locked context (e.g. on "stop", "position", or "ucinewgame").
+     */
+    void clear_ponder_state();
 };

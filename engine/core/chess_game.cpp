@@ -12,6 +12,16 @@
 #include "./search/time/uci_time_control.h"
 #include "chess_game.h"
 
+namespace
+{
+
+[[nodiscard]] bool starts_with(const std::string& s, const char* prefix)
+{
+    return s.rfind(prefix, 0) == 0;
+}
+
+} // namespace
+
 void ChessGame::start()
 {
     parser_init();
@@ -33,6 +43,19 @@ void ChessGame::stop_search_worker()
     }
 
     search_running = false;
+}
+
+void ChessGame::clear_ponder_state_locked()
+{
+    // Caller must hold search_mutex.
+    ponder_active = false;
+    ponder_best = Move{};
+}
+
+void ChessGame::clear_ponder_state()
+{
+    std::lock_guard<std::mutex> lk(search_mutex);
+    clear_ponder_state_locked();
 }
 
 void ChessGame::parser_uci_handle_position(const std::string& LINE) const
@@ -151,8 +174,6 @@ void ChessGame::parser_uci_handle_go(const std::string& LINE)
         {
             // Other UCI go-parameters are currently ignored:
             // - searchmoves, mate
-            // - wtime/btime already handled
-            // - etc.
         }
     }
 
@@ -164,7 +185,7 @@ void ChessGame::parser_uci_handle_go(const std::string& LINE)
     // Stop previous search if exists.
     stop_search_worker();
 
-    // Start search and set ponder if needed.
+    // Start search and set pondering if needed.
     {
         std::lock_guard<std::mutex> lk(search_mutex);
         search_running = true;
@@ -197,31 +218,30 @@ void ChessGame::parser_uci_handle_go(const std::string& LINE)
 
 void ChessGame::parser_parse_uci(const std::string& LINE)
 {
+    if (LINE.empty())
+        return;
+
     if (LINE == "uci")
     {
         std::cout << "id name Helix" << std::endl;
         std::cout << "id author Marvin Becker" << std::endl;
         std::cout << "uciok" << std::endl;
+        return;
     }
     if (LINE == "isready")
     {
         std::cout << "readyok" << std::endl;
+        return;
     }
     if (LINE == "stop")
     {
         stop_search_worker();
-        {
-            std::lock_guard<std::mutex> lk(search_mutex);
-            ponder_active = false;
-            ponder_best = Move{};
-        }
-
+        clear_ponder_state();
         return;
     }
     if (LINE == "ponderhit")
     {
-        // Convert ponder search into a normal move output: stop the worker and
-        // output the best move found during pondering.
+        // Only meaningful if a ponder search is active.
         {
             std::lock_guard<std::mutex> lk(search_mutex);
             if (!ponder_active)
@@ -230,15 +250,14 @@ void ChessGame::parser_parse_uci(const std::string& LINE)
 
         stop_search_worker();
 
-        Move best{};
+        Move best;
         {
             std::lock_guard<std::mutex> lk(search_mutex);
             best = ponder_best;
-            ponder_active = false;
-            ponder_best = Move{};
+            clear_ponder_state_locked();
         }
 
-        // Could be null if ponderhit is to fast.
+        // Could be null if ponderhit is too fast.
         if (best.is_null())
             best = moveGenUtils::get_legal_fallback_move(*board);
 
@@ -248,36 +267,37 @@ void ChessGame::parser_parse_uci(const std::string& LINE)
     if (LINE == "ucinewgame")
     {
         stop_search_worker();
+        clear_ponder_state();
         board->reset();
         chessBot.reset_tt();
         return;
     }
-    if (LINE.rfind("position ", 0) == 0)
+    if (starts_with(LINE, "position "))
     {
         stop_search_worker();
-
-        {
-            std::lock_guard<std::mutex> lk(search_mutex);
-            ponder_active = false;
-            ponder_best = Move{};
-        }
-
+        clear_ponder_state();
         parser_uci_handle_position(LINE);
         return;
     }
-    if (LINE.rfind("go", 0) == 0)
+    if (starts_with(LINE, "go"))
     {
         parser_uci_handle_go(LINE);
+        return;
     }
     if (LINE == "quit")
     {
         stop_search_worker();
         exit(0);
     }
+
+    // Unknown commands are ignored.
 }
 
 void ChessGame::parser_parse_classic(const std::string& LINE)
 {
+    if (LINE.empty())
+        return;
+
     if (LINE[0] == 'F')
     {
         // Read in FEN notation.
