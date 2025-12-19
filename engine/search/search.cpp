@@ -16,11 +16,15 @@ void ChessBot::reset_tt()
 
 bool ChessBot::hard_stop() const
 {
-    // Hard time limit
+    // Stop flag check.
+    if (stop_requested.load(std::memory_order_relaxed))
+        return true;
+
+    // Hard time limit.
     if (constraint.budget.hard_time_up(search::time::TimeManager::now_ms()))
         return true;
 
-    // Node limit
+    // Node limit.
     if (constraint.has_node_limit() && nodes_searched >= constraint.nodes)
         return true;
 
@@ -29,63 +33,52 @@ bool ChessBot::hard_stop() const
 
 void ChessBot::reset_search_state()
 {
-    nodes_searched = 0; // reset the nodes for new search
-    tt.new_search();    // reset transposition table
-    killers.clear();    // reset killer table
-    history.clear();    // reset history table
+    clear_stop();       // resets the stop state.
+    nodes_searched = 0; // reset the nodes for new search.
+    tt.new_search();    // reset transposition table.
+    killers.clear();    // reset killer table.
+    history.clear();    // reset history table.
 }
 
-Move ChessBot::think(Board board, SearchConstraints config)
+Move ChessBot::think(Board board, SearchConstraints config /* intentional copy */)
 {
-    // save constraint as member of ChessBot
+    // save constraint as member of ChessBot.
     this->constraint = config;
 
-    // Reset search state
+    // Reset search state.
     reset_search_state();
 
     switch (config.mode)
     {
     case SearchType::FixedDepth: {
-        // Reset time limit so hard_stop does not kill the search.
+        // Reset the time limit so hard_stop does not kill the search.
         this->constraint.budget = {};
 
-        Move move = pick_fallback_root_move(board);
+        Move move = moveGenUtils::get_legal_fallback_move(board);
         root_search(board, config.depth, move);
         return move;
     }
     case SearchType::NodeLimit:
+    case SearchType::Infinite: {
+        // Rest the time limit so hard_stop does not kill the search.
+        this->constraint.budget = {};
+        return iterative_deepening(board);
+    }
     default: {
-        // Initialize timers for time based search
+        // Initialize timers for time-based search.
         search::time::TimeManager::init_search(constraint);
         return iterative_deepening(board);
     }
     }
 }
 
-Move ChessBot::pick_fallback_root_move(Board& board)
-{
-    auto moves = moveGenUtils::get_all_pseudo_legal_moves(board, board.player == WHITE);
-
-    for (Move& m : moves)
-    {
-        if (board.make_move(m))
-        {
-            board.pop_last_move();
-            return m;
-        }
-    }
-
-    // No legal moves (checkmate or stalemate)
-    return Move{};
-}
-
 Move ChessBot::iterative_deepening(Board& board)
 {
-    Move bestMove = pick_fallback_root_move(board);
+    Move bestMove = moveGenUtils::get_legal_fallback_move(board);
     for (int i = 1;; i++)
     {
         // New move for each iteration.
-        Move move{};
+        Move move = bestMove;
 
         // Search the best move with depth i.
         // root_search returns true if it got aborted (don't trust result).
@@ -124,6 +117,8 @@ ChessBot::SearchResult ChessBot::negamax(Board& board, const int DEPTH, int alph
     Move tt_move{};
     if (int tt_score = 0; tt.probe(key, DEPTH, alpha, BETA, PLY, tt_score, tt_move))
     {
+        if (PLY == 0 && !tt_move.is_null())
+            best_move = tt_move;
         return {tt_score, false};
     }
 

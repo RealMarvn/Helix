@@ -15,6 +15,8 @@
 #pragma once
 
 #include <memory>
+#include <thread>
+#include <mutex>
 
 #include "./search/search.h"
 
@@ -44,6 +46,16 @@ public:
     void start();
 
 private:
+
+    std::thread search_thread;
+
+    std::mutex search_mutex;
+
+    bool search_running = false;
+
+    bool ponder_active = false;
+
+    Move ponder_best{};
 
     /**
      * @brief The current game board.
@@ -129,4 +141,6 @@ private:
      * @param LINE The full input line containing the "go" command.
      */
     void parser_uci_handle_go(const std::string& LINE);
+
+    void stop_search_worker();
 };

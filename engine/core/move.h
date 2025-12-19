@@ -87,6 +87,16 @@ struct Move {
                captured_piece.piece_type == other.captured_piece.piece_type &&
                promotion_piece.piece_type == other.promotion_piece.piece_type && move_type == other.move_type;
     }
+
+    /**
+     * @brief Check if a move is null.
+     *
+     * @return True if the Move is a null move.
+     */
+    [[nodiscard]] bool is_null() const
+    {
+        return move_square == 0 && square == 0;
+    }
 };
 
 /**
@@ -104,6 +114,8 @@ class PseudoLegalMoves {
 
 public:
     using iterator = std::array<Move, MAX_MOVES>::iterator;
+
+    int size() const {return index;}
 
     /**
      * @brief Returns an iterator pointing to the first element in the move list.

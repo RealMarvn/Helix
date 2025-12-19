@@ -16,6 +16,7 @@
 #include <memory>
 #include <climits>
 #include <array>
+#include <atomic>
 
 #include "../movement/move_gen.h"
 #include "./tt.h"
@@ -82,11 +83,19 @@ public:
      */
     void reset_tt();
 
+    /** @brief Request termination of the currently running search (thread-safe). */
+    void request_stop() { stop_requested.store(true, std::memory_order_relaxed); }
+
 private:
 
+    /** @brief The local constraint which was set */
     SearchConstraints constraint;
 
+    /** @brief The nodes which were explored in the last search. */
     long long nodes_searched = 0;
+
+    /** @brief An atomic flag to stop. */
+    std::atomic<bool> stop_requested{false};
 
     /**
      * @brief Transposition table (hash table) for searched positions.
@@ -204,5 +213,6 @@ private:
      */
     [[nodiscard]] bool hard_stop()const;
 
-    static Move pick_fallback_root_move(Board& board);
+    /** @brief Clear a previously requested stop before starting a new search. */
+    void clear_stop() { stop_requested.store(false, std::memory_order_relaxed); }
 };
