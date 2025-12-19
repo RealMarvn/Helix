@@ -17,11 +17,11 @@ void ChessBot::reset_tt()
 bool ChessBot::hard_stop() const
 {
     // Hard time limit
-    if (constraint && constraint->budget.hard_time_up(search::time::TimeManager::now_ms()))
+    if (constraint.budget.hard_time_up(search::time::TimeManager::now_ms()))
         return true;
 
     // Node limit
-    if (constraint && constraint->has_node_limit() && nodes_searched >= constraint->nodes)
+    if (constraint.has_node_limit() && nodes_searched >= constraint.nodes)
         return true;
 
     return false;
@@ -35,10 +35,10 @@ void ChessBot::reset_search_state()
     history.clear();    // reset history table
 }
 
-Move ChessBot::think(Board& board, SearchConstraints& config)
+Move ChessBot::think(Board board, SearchConstraints config)
 {
     // save constraint as member of ChessBot
-    this->constraint = std::addressof(config);
+    this->constraint = config;
 
     // Reset search state
     reset_search_state();
@@ -47,7 +47,7 @@ Move ChessBot::think(Board& board, SearchConstraints& config)
     {
     case SearchType::FixedDepth: {
         // Reset time limit so hard_stop does not kill the search.
-        this->constraint->budget = {};
+        this->constraint.budget = {};
 
         Move move = pick_fallback_root_move(board);
         root_search(board, config.depth, move);
@@ -56,7 +56,7 @@ Move ChessBot::think(Board& board, SearchConstraints& config)
     case SearchType::NodeLimit:
     default: {
         // Initialize timers for time based search
-        search::time::TimeManager::init_search(*constraint);
+        search::time::TimeManager::init_search(constraint);
         return iterative_deepening(board);
     }
     }
@@ -96,7 +96,7 @@ Move ChessBot::iterative_deepening(Board& board)
         bestMove = move;
 
         // Check soft budget.
-        if (constraint && constraint->budget.soft_time_up(search::time::TimeManager::now_ms()))
+        if (constraint.budget.soft_time_up(search::time::TimeManager::now_ms()))
             break;
     }
     return bestMove;

@@ -72,7 +72,7 @@ public:
      * @param config Immutable search constraints controlling termination.
      * @return Best move found by the completed search.
      */
-    Move think(Board& board, SearchConstraints& config);
+    Move think(Board board, SearchConstraints config);
 
     /**
      * @brief Resets the transposition table to an empty state.
@@ -84,7 +84,7 @@ public:
 
 private:
 
-    SearchConstraints* constraint = nullptr;
+    SearchConstraints constraint;
 
     long long nodes_searched = 0;
 
