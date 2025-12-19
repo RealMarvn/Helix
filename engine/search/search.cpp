@@ -7,6 +7,7 @@
 #include "time/time_manager.h"
 
 #include <csignal>
+#include <cstdlib>
 #include <iostream>
 
 void ChessBot::reset_tt()
@@ -51,8 +52,23 @@ void ChessBot::print_info(const int DEPTH, const int SCORE, const Move& PV_MOVE,
 
     std::cout << "info"
               << " depth " << DEPTH << " seldepth " << seldepth << " time " << TIME_MS << " nodes "
-              << nodes_searched << " nps " << NPS << " score cp " << SCORE << " pv "
-              << PV_MOVE.to_string() << std::endl;
+              << nodes_searched << " nps " << NPS;
+
+    if (constexpr int MATE_THRESHOLD = tt_score_constants::kMate - 1000;
+        std::abs(SCORE) >= MATE_THRESHOLD)
+    {
+        // Convert internal mate score (±(kMate - ply)) to "mate N" where N is in full moves.
+        const int PLIES_TO_MATE = tt_score_constants::kMate - std::abs(SCORE);
+        int mate_in = (PLIES_TO_MATE + 1) / 2;
+        if (SCORE < 0)
+            mate_in = -mate_in;
+
+        std::cout << " score mate " << mate_in;
+    }
+    else
+        std::cout << " score cp " << SCORE;
+
+    std::cout << " pv " << PV_MOVE.to_string() << std::endl;
 }
 
 Move ChessBot::think(Board board, SearchConstraints config /* intentional copy */)
