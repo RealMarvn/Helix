@@ -2,7 +2,7 @@
 // Created by Marvin Becker on 16.12.25.
 //
 
-#include "../time_manager.h"
+#include "time_manager.h"
 #include <chrono>
 
 namespace search::time

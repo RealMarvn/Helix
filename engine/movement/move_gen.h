@@ -44,6 +44,13 @@ namespace moveGenUtils {
     constexpr static std::array<PieceType, 4> black_pawn_possible_promotions = {BQ, BR, BN, BB};
 
     /**
+     * @brief Gets a valid move as a fallback.
+     *
+     * Gets the first legal move it can generate.
+     */
+    Move get_legal_fallback_move(Board& board);
+
+    /**
      * @brief Generates all pseudo-legal moves on the given board for a specific player.
      *
      * This function iterates through all the squares on the board and checks the piece on each square.

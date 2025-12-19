@@ -3,7 +3,9 @@
 //
 
 #include <iostream>
+#include <mutex>
 #include <sstream>
+#include <thread>
 
 #include "../search/time/time_manager.h"
 #include "./search/time/search_constraints.h"
@@ -13,6 +15,24 @@
 void ChessGame::start()
 {
     parser_init();
+}
+
+void ChessGame::stop_search_worker()
+{
+    std::unique_lock<std::mutex> lk(search_mutex);
+
+    // Always request stop (harmless if no search is running)
+    chessBot.request_stop();
+
+    // If a worker thread exists, we MUST join it before reusing search_thread.
+    if (search_thread.joinable())
+    {
+        lk.unlock();
+        search_thread.join();
+        lk.lock();
+    }
+
+    search_running = false;
 }
 
 void ChessGame::parser_uci_handle_position(const std::string& LINE) const
@@ -27,7 +47,7 @@ void ChessGame::parser_uci_handle_position(const std::string& LINE) const
     {
         board->reset();
 
-        // Prüfe, ob moves folgen
+        // Check if there are more moves
         if (iss >> token && token == "moves")
         {
             while (iss >> token)
@@ -81,13 +101,11 @@ void ChessGame::parser_uci_handle_go(const std::string& LINE)
     while (iss >> token)
     {
         if (token == "infinite")
-        {
             constraints.mode = SearchType::Infinite;
-        }
+
         else if (token == "ponder")
-        {
             constraints.mode = SearchType::Ponder;
-        }
+
         else if (token == "depth")
         {
             iss >> constraints.depth;
@@ -101,7 +119,8 @@ void ChessGame::parser_uci_handle_go(const std::string& LINE)
         else if (token == "movetime")
         {
             iss >> constraints.movetime_ms;
-            constraints.mode = SearchType::FixedTime;
+            constraints.mode = (constraints.mode == SearchType::Ponder) ? SearchType::Ponder
+                                                                        : SearchType::FixedTime;
         }
         else if (token == "wtime")
         {
@@ -142,9 +161,38 @@ void ChessGame::parser_uci_handle_go(const std::string& LINE)
     if (constraints.mode == SearchType::Normal && saw_any_time_token)
         constraints.budget = search::time::TimeManager::compute_budget(board->player, utc);
 
-    // Run the search.
-    const Move BEST_MOVE = chessBot.think(*board, constraints);
-    std::cout << "bestmove " << BEST_MOVE.to_string() << std::endl;
+    // Stop previous search if exists.
+    stop_search_worker();
+
+    // Start search and set ponder if needed.
+    {
+        std::lock_guard<std::mutex> lk(search_mutex);
+        search_running = true;
+
+        ponder_active = (constraints.mode == SearchType::Ponder);
+        ponder_best = Move{};
+    }
+
+    Board board_copy = *board;
+    SearchConstraints constraints_copy = constraints;
+
+    search_thread = std::thread([this, board_copy, constraints_copy]() mutable {
+        const Move best = chessBot.think(board_copy, constraints_copy);
+
+        // If Ponder, dont print and save the best move.
+        if (constraints_copy.mode == SearchType::Ponder)
+        {
+            std::lock_guard<std::mutex> lk(search_mutex);
+            ponder_best = best;
+            search_running = false;
+            return;
+        }
+
+        std::cout << "bestmove " << best.to_string() << std::endl;
+
+        std::lock_guard<std::mutex> lk(search_mutex);
+        search_running = false;
+    });
 }
 
 void ChessGame::parser_parse_uci(const std::string& LINE)
@@ -159,14 +207,63 @@ void ChessGame::parser_parse_uci(const std::string& LINE)
     {
         std::cout << "readyok" << std::endl;
     }
+    if (LINE == "stop")
+    {
+        stop_search_worker();
+        {
+            std::lock_guard<std::mutex> lk(search_mutex);
+            ponder_active = false;
+            ponder_best = Move{};
+        }
+
+        return;
+    }
+    if (LINE == "ponderhit")
+    {
+        // Convert ponder search into a normal move output: stop the worker and
+        // output the best move found during pondering.
+        {
+            std::lock_guard<std::mutex> lk(search_mutex);
+            if (!ponder_active)
+                return;
+        }
+
+        stop_search_worker();
+
+        Move best{};
+        {
+            std::lock_guard<std::mutex> lk(search_mutex);
+            best = ponder_best;
+            ponder_active = false;
+            ponder_best = Move{};
+        }
+
+        // Could be null if ponderhit is to fast.
+        if (best.is_null())
+            best = moveGenUtils::get_legal_fallback_move(*board);
+
+        std::cout << "bestmove " << best.to_string() << std::endl;
+        return;
+    }
     if (LINE == "ucinewgame")
     {
+        stop_search_worker();
         board->reset();
         chessBot.reset_tt();
+        return;
     }
     if (LINE.rfind("position ", 0) == 0)
     {
+        stop_search_worker();
+
+        {
+            std::lock_guard<std::mutex> lk(search_mutex);
+            ponder_active = false;
+            ponder_best = Move{};
+        }
+
         parser_uci_handle_position(LINE);
+        return;
     }
     if (LINE.rfind("go", 0) == 0)
     {
@@ -174,6 +271,7 @@ void ChessGame::parser_parse_uci(const std::string& LINE)
     }
     if (LINE == "quit")
     {
+        stop_search_worker();
         exit(0);
     }
 }
@@ -222,11 +320,12 @@ void ChessGame::parser_parse_classic(const std::string& LINE)
             return;
         }
 
-        auto limit = SearchConstraints{SearchType::Normal, -1, -1, -1, {1800, 2000, 2000}};
+        constexpr auto LIMIT =
+            SearchConstraints{SearchType::Normal, -1, -1, -1, {1800, 2000, 2000}};
 
         // Bot can only move legal so no need to check if the move is legal.
         // Check if opponent is in check mate after bots turn.
-        const Move MOVE = chessBot.think(*board, limit);
+        const Move MOVE = chessBot.think(*board, LIMIT);
         board->make_move(MOVE);
         board->print_current_board();
 

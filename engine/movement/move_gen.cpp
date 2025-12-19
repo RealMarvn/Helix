@@ -4,6 +4,25 @@
 #include "./move_gen.h"
 #include "../utils.h"
 
+#include <iostream>
+
+Move moveGenUtils::get_legal_fallback_move(Board& board)
+{
+    auto moves = get_all_pseudo_legal_moves(board, board.player == WHITE);
+
+    for (Move& m : moves)
+    {
+        if (board.make_move(m))
+        {
+            board.pop_last_move();
+            return m;
+        }
+    }
+
+    // No legal moves (checkmate or stalemate).
+    return Move{};
+}
+
 PseudoLegalMoves moveGenUtils::get_all_pseudo_legal_moves(Board& board, const bool PLAYER)
 {
     PseudoLegalMoves allPseudoMoves;
