@@ -94,6 +94,9 @@ private:
     /** @brief The nodes which were explored in the last search. */
     long long nodes_searched = 0;
 
+    /** @brief The ply which was explored in the last search. */
+    int seldepth = 0;
+
     /** @brief An atomic flag to stop. */
     std::atomic<bool> stop_requested{false};
 
@@ -135,7 +138,7 @@ private:
      *             if the search completes successfully.
      * @return True if the search was aborted, false otherwise.
      */
-    bool root_search(Board& board, int DEPTH, Move& move);
+    SearchResult root_search(Board& board, int DEPTH, Move& move);
 
     /**
      * @brief Performs an iterative deepening search.
@@ -179,9 +182,10 @@ private:
      * @param board Current board position.
      * @param alpha Alpha bound of the quiescence window.
      * @param BETA Beta bound of the quiescence window.
+     * @param PLY Current ply (half-move) depth from root.
      * @return SearchResult containing the score and abort status.
      */
-    SearchResult quiescence(Board& board, int alpha, int BETA);
+    SearchResult quiescence(Board& board, int alpha, int BETA, int PLY);
 
 
     /**
@@ -215,4 +219,15 @@ private:
 
     /** @brief Clear a previously requested stop before starting a new search. */
     void clear_stop() { stop_requested.store(false, std::memory_order_relaxed); }
+
+    /** @brief Update the stats correctly in negamax. */
+    void updateStats(const int PLY)
+    {
+        ++nodes_searched;
+        if (PLY > seldepth)
+            seldepth = PLY;
+    }
+
+    /** @brief Prints the info in UCI standard. */
+    void print_info(int DEPTH, int SCORE, const Move& PV_MOVE, long long START_TIME_MS) const;
 };

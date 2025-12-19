@@ -35,9 +35,24 @@ void ChessBot::reset_search_state()
 {
     clear_stop();       // resets the stop state.
     nodes_searched = 0; // reset the nodes for new search.
+    seldepth = 0;       // resets the seldepth for a new search.
     tt.new_search();    // reset transposition table.
     killers.clear();    // reset killer table.
     history.clear();    // reset history table.
+}
+
+void ChessBot::print_info(const int DEPTH, const int SCORE, const Move& PV_MOVE,
+                          const long long START_TIME_MS) const
+{
+    const auto NOW = search::time::TimeManager::now_ms();
+    const auto TIME_MS = NOW - START_TIME_MS;
+
+    const long long NPS = TIME_MS > 0 ? (nodes_searched * 1000) / TIME_MS : 0;
+
+    std::cout << "info"
+              << " depth " << DEPTH << " seldepth " << seldepth << " time " << TIME_MS << " nodes "
+              << nodes_searched << " nps " << NPS << " score cp " << SCORE << " pv "
+              << PV_MOVE.to_string() << std::endl;
 }
 
 Move ChessBot::think(Board board, SearchConstraints config /* intentional copy */)
@@ -54,8 +69,13 @@ Move ChessBot::think(Board board, SearchConstraints config /* intentional copy *
         // Reset the time limit so hard_stop does not kill the search.
         this->constraint.budget = {};
 
+        const long long START_TIME_MS = search::time::TimeManager::now_ms();
+
         Move move = moveGenUtils::get_legal_fallback_move(board);
-        root_search(board, config.depth, move);
+
+        if (const auto [SCORE, ABORTED] = root_search(board, config.depth, move); !ABORTED)
+            print_info(config.depth, SCORE, move, START_TIME_MS);
+
         return move;
     }
     case SearchType::NodeLimit:
@@ -75,18 +95,24 @@ Move ChessBot::think(Board board, SearchConstraints config /* intentional copy *
 Move ChessBot::iterative_deepening(Board& board)
 {
     Move bestMove = moveGenUtils::get_legal_fallback_move(board);
+    const long long START_TIME_MS = search::time::TimeManager::now_ms();
+
     for (int i = 1;; i++)
     {
         // New move for each iteration.
         Move move = bestMove;
 
         // Search the best move with depth i.
+        auto [score, aborted] = root_search(board, i, move);
+
         // root_search returns true if it got aborted (don't trust result).
-        if (root_search(board, i, move))
+        if (aborted)
             break;
 
         // Set the move if the search is fully done.
         bestMove = move;
+
+        print_info(i, score, move, START_TIME_MS);
 
         // Check soft budget.
         if (constraint.budget.soft_time_up(search::time::TimeManager::now_ms()))
@@ -98,12 +124,12 @@ Move ChessBot::iterative_deepening(Board& board)
 ChessBot::SearchResult ChessBot::negamax(Board& board, const int DEPTH, int alpha, const int BETA,
                                          const int PLY, Move& best_move)
 {
-    // Count nodes.
-    ++nodes_searched;
+    // Update stats.
+    updateStats(PLY);
 
     // Leaf node? → Quiescence.
     if (DEPTH <= 0)
-        return quiescence(board, alpha, BETA);
+        return quiescence(board, alpha, BETA, PLY);
 
     // Time limit check.
     if (hard_stop())
@@ -213,10 +239,10 @@ ChessBot::SearchResult ChessBot::negamax(Board& board, const int DEPTH, int alph
     return {bestScore, false};
 }
 
-ChessBot::SearchResult ChessBot::quiescence(Board& board, int alpha, const int BETA)
+ChessBot::SearchResult ChessBot::quiescence(Board& board, int alpha, const int BETA, const int PLY)
 {
-    // Count nodes.
-    ++nodes_searched;
+    // update stats
+    updateStats(PLY);
 
     // Hard stop if reached.
     if (hard_stop())
@@ -240,7 +266,7 @@ ChessBot::SearchResult ChessBot::quiescence(Board& board, int alpha, const int B
     auto moveList = moveGenUtils::get_all_pseudo_legal_moves(board, board.player == WHITE);
 
     // Sort so the best moves are first (TT move + captures + killer/history heuristics).
-    search::heuristics::order_moves(moveList, tt_move, 0, board.player, killers, history);
+    search::heuristics::order_moves(moveList, tt_move, PLY, board.player, killers, history);
 
     // The best score should be initialized with the worst value possible.
     int bestScore = STAND_PAT;
@@ -256,7 +282,7 @@ ChessBot::SearchResult ChessBot::quiescence(Board& board, int alpha, const int B
         // Make every move and gather the value of the opponent.
         if (board.make_move(move))
         {
-            const auto [result_score, aborted] = quiescence(board, -BETA, -alpha);
+            const auto [result_score, aborted] = quiescence(board, -BETA, -alpha, PLY + 1);
 
             // Pop last move made.
             board.pop_last_move();
@@ -286,10 +312,8 @@ ChessBot::SearchResult ChessBot::quiescence(Board& board, int alpha, const int B
     return {bestScore, false};
 }
 
-bool ChessBot::root_search(Board& board, const int DEPTH, Move& move)
+ChessBot::SearchResult ChessBot::root_search(Board& board, const int DEPTH, Move& move)
 {
-    const auto [score, aborted] = negamax(board, DEPTH, -tt_score_constants::kInfinity,
-                                          tt_score_constants::kInfinity, 0, move);
-
-    return aborted;
+    return negamax(board, DEPTH, -tt_score_constants::kInfinity, tt_score_constants::kInfinity, 0,
+                   move);
 }

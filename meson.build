@@ -41,7 +41,7 @@ engine_headers = files(
     'engine/exceptions/board_exception.h',
     'engine/movement/move_gen.h',
     'engine/search/time/search_constraints.h',
-    'engine/search/time/time_budget.h',
+    'engine/search/time/time_control.h',
     'engine/search/time/time_manager.h',
     'engine/search/time/uci_time_control.h',
     'engine/search/heuristics.h',
