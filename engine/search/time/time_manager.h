@@ -5,7 +5,7 @@
 
 #include <algorithm>
 #include <cstdint>
-#include "time_budget.h"
+#include "time_control.h"
 #include "search_constraints.h"
 #include "uci_time_control.h"
 

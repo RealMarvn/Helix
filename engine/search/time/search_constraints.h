@@ -5,7 +5,7 @@
 #pragma once
 
 #include <cstdint>
-#include "time_budget.h"
+#include "time_control.h"
 
 /**
  * @brief Defines how the search is controlled and when it should terminate.
