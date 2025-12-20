@@ -34,7 +34,7 @@ public:
      * It continuously processes input, updates the board, and consults the
      * ChessBot to compute engine moves.
      */
-    ChessGame() : board{new Board}, chessBot{ChessBot()} {
+    ChessGame() : board_{new Board}, chess_bot_{ChessBot()} {
     }
 
     /**
@@ -47,18 +47,18 @@ public:
 
 private:
 
-    std::thread search_thread;
+    std::thread search_thread_;
 
-    std::mutex search_mutex;
+    std::mutex search_mutex_;
 
     /// True while a search worker thread is active.
-    bool search_running = false;
+    bool search_running_ = false;
 
     /// True if the engine is currently pondering (UCI "go ponder").
-    bool ponder_active = false;
+    bool ponder_active_ = false;
 
     /// Best move found during pondering, emitted on "ponderhit".
-    Move ponder_best{};
+    Move ponder_best_{};
 
     /**
      * @brief The current game board.
@@ -66,7 +66,7 @@ private:
      * Owns all position-related data including pieces, side to move,
      * castling/en-passant state, and move history.
      */
-    std::unique_ptr<Board> board;
+    std::unique_ptr<Board> board_;
 
     /**
      * @brief Search engine responsible for selecting best moves.
@@ -74,7 +74,7 @@ private:
      * Used whenever the engine must generate a response to a UCI "go"
      * command or when running automated move calculations.
      */
-    ChessBot chessBot;
+    ChessBot chess_bot_;
 
     /**
      * @brief Initializes the parser
@@ -95,9 +95,9 @@ private:
      * Unknown or malformed commands are safely ignored or reported depending on
      * the parser configuration.
      *
-     * @param LINE The raw input line received from stdin in UCI format.
+     * @param line The raw input line received from stdin in UCI format.
      */
-    void parser_parse_uci(const std::string& LINE);
+    void parser_parse_uci(const std::string& line);
 
     /**
      * @brief Parses and processes a single input line in classic (human) mode.
@@ -109,9 +109,9 @@ private:
      * This mode is primarily intended for testing and interactive play
      * outside graphical chess GUIs.
      *
-     * @param LINE The raw input line entered by the user.
+     * @param line The raw input line entered by the user.
      */
-    void parser_parse_classic(const std::string& LINE);
+    void parser_parse_classic(const std::string& line);
 
 
     /**
@@ -126,9 +126,9 @@ private:
      *   - "position fen <FEN string>"
      *   - "position fen <FEN string> moves ..."
      *
-     * @param LINE The full input line containing the "position" command.
+     * @param line The full input line containing the "position" command.
      */
-    void parser_uci_handle_position(const std::string& LINE) const;
+    void parser_uci_handle_position(const std::string& line) const;
 
 
     /**
@@ -146,9 +146,9 @@ private:
      *  - infinite         : Search until a "stop" command is received.
      *  - ponder           : Ponder search; no immediate bestmove output until "ponderhit".
      *
-     * @param LINE The full input line containing the "go" command.
+     * @param line The full input line containing the "go" command.
      */
-    void parser_uci_handle_go(const std::string& LINE);
+    void parser_uci_handle_go(const std::string& line);
 
     /**
      * @brief Stops the currently running search worker thread.

@@ -52,7 +52,7 @@ inline constexpr int HEUR_KILLER2_BONUS = 80000;
 inline bool is_quiet(const Move& m)
 {
     // Castling counts as quiet!
-    return !((m.captured_piece.piece_type != EMPTY) || (m.move_type == EN_PASSANT)) && (m.move_type != PROMOTION);
+    return !((m.captured_piece_.piece_type_ != EMPTY) || (m.move_type_ == EN_PASSANT)) && (m.move_type_ != PROMOTION);
 }
 
 /**
@@ -69,7 +69,7 @@ inline bool is_quiet(const Move& m)
 struct KillerTable
 {
     // Two killer moves per ply.
-    std::array<std::array<Move, 2>, HEUR_MAX_PLY> killers{};
+    std::array<std::array<Move, 2>, HEUR_MAX_PLY> killers_{};
 
     /// Resets all stored killer moves.
     void clear();
@@ -80,12 +80,12 @@ struct KillerTable
      * Call this ONLY on a beta-cutoff and ONLY for quiet moves.
      * The newest killer becomes killers[ply][0] and the previous one shifts to [1].
      */
-    void add(int PLY, const Move& m);
+    void add(int ply, const Move& move);
 
     /// Returns true if @p m equals the primary killer move for @p PLY.
-    [[nodiscard]] bool is_killer1(int PLY, const Move& m) const;
+    [[nodiscard]] bool is_killer1(int ply, const Move& move) const;
     /// Returns true if @p m equals the secondary killer move for @p PLY.
-    [[nodiscard]] bool is_killer2(int PLY, const Move& m) const;
+    [[nodiscard]] bool is_killer2(int ply, const Move& move) const;
 };
 
 /**
@@ -99,22 +99,22 @@ struct KillerTable
 struct HistoryTable
 {
     // [side][from][to]
-    std::array<std::array<std::array<int, 64>, 64>, 2> h{};
+    std::array<std::array<std::array<int, 64>, 64>, 2> history_{};
 
     /// Resets all history values to zero.
     void clear();
 
     /**
      * @brief Adds a history bonus for a quiet move that caused a beta-cutoff.
-     * @param SIDE  Side to move (0 = White, 1 = Black).
-     * @param FROM  Source square index (0..63).
-     * @param TO    Target square index (0..63).
-     * @param DEPTH Remaining search depth at the node where the cutoff occurred.
+     * @param side  Side to move (0 = White, 1 = Black).
+     * @param from  Source square index (0..63).
+     * @param to    Target square index (0..63).
+     * @param depth Remaining search depth at the node where the cutoff occurred.
      */
-    void add(int SIDE, int FROM, int TO, int DEPTH);
+    void add(int side, int from, int to, int depth);
 
     /// Returns the stored history value for (SIDE, FROM, TO). Out-of-range returns 0.
-    [[nodiscard]] int get(int SIDE, int FROM, int TO) const;
+    [[nodiscard]] int get(int side, int from, int to) const;
 };
 
 /**

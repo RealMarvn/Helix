@@ -34,14 +34,14 @@ namespace moveGenUtils {
      * Ordered as queen, rook, knight, bishop to match typical
      * engine/GUI expectations when iterating promotion choices.
      */
-    constexpr static std::array<PieceType, 4> white_pawn_possible_promotions = {WQ, WR, WN, WB};
+    constexpr static std::array<PieceType, 4> WHITE_PAWN_POSSIBLE_PROMOTIONS = {WQ, WR, WN, WB};
 
     /**
      * @brief List of promotion piece types for black pawns.
      *
      * Mirrors white_pawn_possible_promotions but with black pieces.
      */
-    constexpr static std::array<PieceType, 4> black_pawn_possible_promotions = {BQ, BR, BN, BB};
+    constexpr static std::array<PieceType, 4> BLACK_PAWN_POSSIBLE_PROMOTIONS = {BQ, BR, BN, BB};
 
     /**
      * @brief Gets a valid move as a fallback.
@@ -58,10 +58,10 @@ namespace moveGenUtils {
      * for that piece. The generated moves are stored in the `allPseudoMoves` object.
      *
      * @param board The chess board.
-     * @param PLAYER A boolean value indicating the player (true for white, false for black).
+     * @param player A boolean value indicating the player (true for white, false for black).
      * @return A `PseudoLegalMoves` object containing all the generated pseudo-legal moves.
      */
-    PseudoLegalMoves get_all_pseudo_legal_moves(Board& board, bool PLAYER);
+    PseudoLegalMoves get_all_pseudo_legal_moves(Board& board, bool player);
 
     /**
      * @brief Gets all possible moves for a rook piece on the given iterativeTimePoint square.
@@ -73,10 +73,10 @@ namespace moveGenUtils {
      * @param start_square The iterativeTimePoint square of the rook piece.
      * @param board The Board object representing the current state of the chessboard.
      * @param all_pseudo_moves The PseudoLegalMoves object to add the possible rook moves to.
-     * @param PIECE_COLOR The color of the rook piece (true for white, false for black).
+     * @param piece_color The color of the rook piece (true for white, false for black).
      */
     void get_all_possible_rook_moves(std::pair<int, int> start_square, Board& board, PseudoLegalMoves& all_pseudo_moves,
-                                     bool PIECE_COLOR);
+                                     bool piece_color);
 
     /**
      * \brief Generates all possible pawn moves from a given starting square.
@@ -85,14 +85,14 @@ namespace moveGenUtils {
      * It considers the current state of the board and stores all valid moves in the provided object.
      * The generated moves are pseudo-legal, meaning that they are not guaranteed to lead to a legal board position.
      *
-     * \param START_SQUARE The starting square for generating moves.
+     * \param start_square The starting square for generating moves.
      * \param board The chessboard.
      * \param all_pseudo_moves The container to store the generated moves.
-     * \param PIECE_COLOR The color of the pawn (true for white, false for black).
+     * \param piece_color The color of the pawn (true for white, false for black).
      */
-    void get_all_possible_pawn_moves(const std::pair<int, int>& START_SQUARE, Board& board,
+    void get_all_possible_pawn_moves(const std::pair<int, int>& start_square, Board& board,
                                      PseudoLegalMoves& all_pseudo_moves,
-                                     bool PIECE_COLOR);
+                                     bool piece_color);
 
     /**
      * @brief Calculates all possible moves for a queen from a given iterativeTimePoint square.
@@ -104,11 +104,11 @@ namespace moveGenUtils {
      * @param start_square The starting square of the queen.
      * @param board The chessboard object representing the current state of the game.
      * @param all_pseudo_moves A PseudoLegalMoves object to store all the possible moves.
-     * @param PIECE_COLOR The color of the queen (true for white, false for black).
+     * @param piece_color The color of the queen (true for white, false for black).
      */
     void get_all_possible_queen_moves(std::pair<int, int> start_square, Board& board,
                                       PseudoLegalMoves& all_pseudo_moves,
-                                      bool PIECE_COLOR);
+                                      bool piece_color);
 
     /**
      * @brief Generates all possible moves for a king on the given board from the given iterativeTimePoint square.
@@ -117,16 +117,16 @@ namespace moveGenUtils {
      * It considers the current state of the board and stores all valid moves in the provided object.
      * The generated moves are pseudo-legal, meaning that they are not guaranteed to lead to a legal board position.
      *
-     * @param START_SQUARE The iterativeTimePoint square of the king.
+     * @param start_square The iterativeTimePoint square of the king.
      * @param board The current board configuration.
      * @param all_pseudo_moves The PseudoLegalMoves object to store the generated moves.
-     * @param PIECE_COLOR The color of the king's piece (true for white, false for black).
+     * @param piece_color The color of the king's piece (true for white, false for black).
      *
      * @return None.
      */
-    void get_all_possible_king_moves(const std::pair<int, int>& START_SQUARE, Board& board,
+    void get_all_possible_king_moves(const std::pair<int, int>& start_square, Board& board,
                                      PseudoLegalMoves& all_pseudo_moves,
-                                     bool PIECE_COLOR);
+                                     bool piece_color);
 
     /**
      * @brief Get all possible knight moves from the given square.
@@ -135,14 +135,14 @@ namespace moveGenUtils {
      * It considers the current state of the board and stores all valid moves in the provided object.
      * The generated moves are pseudo-legal, meaning that they are not guaranteed to lead to a legal board position.
      *
-     * @param START_SQUARE The starting square for the knight.
+     * @param start_square The starting square for the knight.
      * @param board The chessboard.
      * @param all_pseudo_moves The PseudoLegalMoves object to store the possible moves.
-     * @param PIECE_COLOR The color of the knight piece (true for white, false for black).
+     * @param piece_color The color of the knight piece (true for white, false for black).
      */
-    void get_all_possible_knight_moves(const std::pair<int, int>& START_SQUARE, Board& board,
+    void get_all_possible_knight_moves(const std::pair<int, int>& start_square, Board& board,
                                        PseudoLegalMoves& all_pseudo_moves,
-                                       bool PIECE_COLOR);
+                                       bool piece_color);
 
     /**
      * @brief Retrieves all possible moves for a bishop on the chessboard.
@@ -154,9 +154,9 @@ namespace moveGenUtils {
      * @param start_square The square where the bishop is located.
      * @param board The chessboard object representing the current state.
      * @param all_pseudo_moves The vector to store all possible moves.
-     * @param PIECE_COLOR The color of the bishop (true for white, false for black).
+     * @param piece_color The color of the bishop (true for white, false for black).
      */
     void get_all_possible_bishop_moves(std::pair<int, int> start_square, Board& board,
                                        PseudoLegalMoves& all_pseudo_moves,
-                                       bool PIECE_COLOR);
+                                       bool piece_color);
 } // namespace moveGenUtils

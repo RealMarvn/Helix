@@ -35,9 +35,9 @@ inline constexpr int kInfinity = 40000;   // must be > kMate
  */
 enum class TTFlag : std::uint8_t
 {
-    Exact = 0,
-    LowerBound = 1, // score >= beta
-    UpperBound = 2  // score <= alpha
+    EXACT = 0,
+    LOWER_BOUND = 1, // score >= beta
+    UPPER_BOUND = 2  // score <= alpha
 };
 
 /**
@@ -50,10 +50,10 @@ enum class TTFlag : std::uint8_t
  * - replaces: How often we replaced an entry.
  */
 struct TTStats {
-    uint64_t probes = 0;
-    uint64_t hits = 0;
-    uint64_t stores = 0;
-    uint64_t replaces = 0;
+    uint64_t probes_ = 0;
+    uint64_t hits_ = 0;
+    uint64_t stores_ = 0;
+    uint64_t replaces_ = 0;
 };
 
 
@@ -79,10 +79,10 @@ public:
      *
      * The actual size is rounded up to the next power of two.
      *
-     * @param ENTRIES Requested number of entries (approximate).
+     * @param entries Requested number of entries (approximate).
      */
-    explicit TranspositionTable(const std::size_t ENTRIES)
-        : mask_(compute_mask(ENTRIES)), table_(mask_ + 1)
+    explicit TranspositionTable(const std::size_t entries)
+        : mask_(compute_mask(entries)), table_(mask_ + 1)
     {
     }
 
@@ -95,7 +95,7 @@ public:
     void clear()
     {
         // Reset stats.
-        stats = {};
+        stats_ = {};
         std::fill(table_.begin(), table_.end(), Entry{});
     }
 
@@ -107,7 +107,7 @@ public:
     void new_search()
     {
         // Reset stats.
-        stats = {};
+        stats_ = {};
         ++generation_;
         if (generation_ == 0) // overflow -> 0
             ++generation_;
@@ -122,21 +122,21 @@ public:
      * Additionally, out_best_move is set to the stored best move (or default Move{}) which
      * can be used for move ordering even if no cutoff is possible.
      *
-     * @param KEY 64-bit Zobrist key of the position.
-     * @param DEPTH Remaining search depth requested.
-     * @param ALPHA Current alpha bound.
-     * @param BETA Current beta bound.
-     * @param PLY Distance from the root (0 at root), used for mate score normalization.
+     * @param key 64-bit Zobrist key of the position.
+     * @param depth Remaining search depth requested.
+     * @param alpha Current alpha bound.
+     * @param beta Current beta bound.
+     * @param ply Distance from the root (0 at root), used for mate score normalization.
      * @param out_score Set to the returned score if the probe causes a cutoff or exact hit.
      * @param out_best_move Set to the TT move for ordering if available.
      *
      * @return true if the probe returns a usable score (exact hit or cutoff), false otherwise.
      */
-    bool probe(std::uint64_t KEY,
-               int DEPTH,
-               int ALPHA,
-               int BETA,
-               int PLY,
+    bool probe(std::uint64_t key,
+               int depth,
+               int alpha,
+               int beta,
+               int ply,
                int& out_score,
                Move& out_best_move) const;
 
@@ -146,31 +146,31 @@ public:
      * This is useful for move ordering in quiescence search or other contexts where
      * you don't want to apply bound logic.
      *
-     * @param KEY 64-bit Zobrist key of the position.
+     * @param key 64-bit Zobrist key of the position.
      * @param out_best_move Set to the stored best move if present.
      *
      * @return true if a matching entry exists (and a move is available), false otherwise.
      */
-    bool probe_move(std::uint64_t KEY, Move& out_best_move) const;
+    bool probe_move(std::uint64_t key, Move& out_best_move) const;
 
     /**
      * @brief Store a search result for a position.
      *
-     * @param KEY 64-bit Zobrist key of the position.
-     * @param DEPTH Remaining depth at which SCORE was obtained.
-     * @param SCORE Score in the engine's internal units.
-     * @param FLAG Exact / LowerBound / UpperBound describing SCORE.
-     * @param PLY Distance from root used to normalize mate scores.
-     * @param BEST_MOVE Best move found at this node (used for move ordering).
+     * @param key 64-bit Zobrist key of the position.
+     * @param depth Remaining depth at which SCORE was obtained.
+     * @param score Score in the engine's internal units.
+     * @param flag Exact / LowerBound / UpperBound describing SCORE.
+     * @param ply Distance from root used to normalize mate scores.
+     * @param best_move Best move found at this node (used for move ordering).
      */
-    void store(std::uint64_t KEY,
-               int DEPTH,
-               int SCORE,
-               TTFlag FLAG,
-               int PLY,
-               const Move& BEST_MOVE);
+    void store(std::uint64_t key,
+               int depth,
+               int score,
+               TTFlag flag,
+               int ply,
+               const Move& best_move);
 
-    const TTStats& get_stats() const { return stats; }
+    const TTStats& get_stats() const { return stats_; }
 
 private:
     /**
@@ -181,12 +181,12 @@ private:
      */
     struct Entry
     {
-        std::uint64_t key = 0;
-        int score = 0;
-        int depth = -1;
-        TTFlag flag = TTFlag::Exact;
-        std::uint8_t generation = 0;
-        Move best_move{};
+        std::uint64_t key_ = 0;
+        int score_ = 0;
+        int depth_ = -1;
+        TTFlag flag_ = TTFlag::EXACT;
+        std::uint8_t generation_ = 0;
+        Move best_move_{};
     };
 
     /**
@@ -195,11 +195,11 @@ private:
      * We round the requested number of entries up to the next power of two (n),
      * and store a mask of (n - 1). Indexing is then: index = key & mask.
      */
-    static std::size_t compute_mask(const std::size_t REQUESTED_ENTRIES)
+    static std::size_t compute_mask(const std::size_t requested_entries)
     {
         // round to 2^n - 1 mask
         std::size_t n = 1;
-        while (n < REQUESTED_ENTRIES) n <<= 1;
+        while (n < requested_entries) n <<= 1;
         return n - 1;
     }
 
@@ -209,21 +209,21 @@ private:
      * Without normalization, a mate score depends on the current ply (distance from root),
      * which would make retrieving it at a different ply incorrect ("mate in N" changes).
      */
-    static int to_tt_score(const int SCORE, const int PLY)
+    static int to_tt_score(const int score, const int ply)
     {
-        if (SCORE > tt_score_constants::kMate - tt_score_constants::kMateWindow) return SCORE + PLY;
-        if (SCORE < -tt_score_constants::kMate + tt_score_constants::kMateWindow) return SCORE - PLY;
-        return SCORE;
+        if (score > tt_score_constants::kMate - tt_score_constants::kMateWindow) return score + ply;
+        if (score < -tt_score_constants::kMate + tt_score_constants::kMateWindow) return score - ply;
+        return score;
     }
 
     /**
      * @brief Undo mate score normalization after loading.
      */
-    static int from_tt_score(const int SCORE, const int PLY)
+    static int from_tt_score(const int score, const int ply)
     {
-        if (SCORE > tt_score_constants::kMate - tt_score_constants::kMateWindow) return SCORE - PLY;
-        if (SCORE < -tt_score_constants::kMate + tt_score_constants::kMateWindow) return SCORE + PLY;
-        return SCORE;
+        if (score > tt_score_constants::kMate - tt_score_constants::kMateWindow) return score - ply;
+        if (score < -tt_score_constants::kMate + tt_score_constants::kMateWindow) return score + ply;
+        return score;
     }
 
     /**
@@ -233,10 +233,10 @@ private:
      * - Always replace entries from older generations.
      * - Otherwise prefer deeper (or equal depth) entries.
      */
-    static bool is_replacement_better(const Entry& cur, const int NEW_DEPTH, const std::uint8_t NEW_GEN)
+    static bool is_replacement_better(const Entry& cur, const int new_depth, const std::uint8_t new_gen)
     {
-        if (cur.generation != NEW_GEN) return true;           // always replace old generation
-        return NEW_DEPTH >= cur.depth;                        // same gen: prefer deeper
+        if (cur.generation_ != new_gen) return true;           // always replace old generation
+        return new_depth >= cur.depth_;                        // same gen: prefer deeper
     }
 
     /**
@@ -248,5 +248,5 @@ private:
     std::vector<Entry> table_;
     std::uint8_t generation_ = 1;
 
-    mutable TTStats stats{};
+    mutable TTStats stats_{};
 };

@@ -18,7 +18,7 @@ namespace search::debug
 
     // VERBOSE helpers (root-only)
     void print_root_ordering(const ChessBot& bot, Board& board);
-    void print_pv(const ChessBot& bot, const Board& BOARD);
+    void print_pv(const ChessBot& bot, const Board& board);
 }
 
 

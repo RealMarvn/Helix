@@ -12,6 +12,8 @@
 
 #pragma once
 
+#include <string>
+
 
 /**
  * @brief Converts 1-based board coordinates into a 0-based mailbox index.
@@ -31,3 +33,8 @@
  * @return Mailbox index in [0, 63].
  */
 inline int calculateSquare(const int X, const int Y) { return (Y - 1) * 8 + X - 1; }
+
+inline bool starts_with(const std::string& s, const char* prefix)
+{
+    return s.rfind(prefix, 0) == 0;
+}

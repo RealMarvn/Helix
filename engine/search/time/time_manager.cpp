@@ -22,8 +22,8 @@ int TimeManager::default_moves_left(const int movestogo)
 TimeControl TimeManager::compute_budget(const int side_to_move, const UciTimeControl& tc)
 {
     // White = 0 | Black = 1.
-    const int my_time = (side_to_move == 0) ? tc.wtime : tc.btime;
-    const int my_inc = (side_to_move == 0) ? tc.winc : tc.binc;
+    const int my_time = (side_to_move == 0) ? tc.wtime_ : tc.btime_;
+    const int my_inc = (side_to_move == 0) ? tc.winc_ : tc.binc_;
 
     // Fallback if no clock infos.
     if (my_time <= 0)
@@ -35,14 +35,14 @@ TimeControl TimeManager::compute_budget(const int side_to_move, const UciTimeCon
         };
     }
 
-    const int reserve = (tc.reserve_ms > 0) ? tc.reserve_ms : default_reserve_ms(my_time);
+    const int reserve = (tc.reserve_ms_ > 0) ? tc.reserve_ms_ : default_reserve_ms(my_time);
 
     // Time, we can only use to calculate.
-    int safe_time = my_time - tc.overhead_ms - reserve;
+    int safe_time = my_time - tc.overhead_ms_ - reserve;
     if (safe_time < 0)
         safe_time = 0;
 
-    const int moves_left = default_moves_left(tc.movestogo);
+    const int moves_left = default_moves_left(tc.movestogo_);
 
     // Initial budget.
     int budget = safe_time / std::max(1, moves_left);
@@ -70,9 +70,9 @@ std::int64_t TimeManager::now_ms()
 
 void TimeManager::init_search(SearchConstraints& search_limits)
 {
-    if (search_limits.mode == SearchType::FixedTime)
+    if (search_limits.mode_ == SearchType::FixedTime)
     {
-        const int total = search_limits.movetime_ms;
+        const int total = search_limits.movetime_ms_;
 
         // 70% for soft.
         const int soft = std::max(1, (total * 70) / 100);
@@ -80,20 +80,20 @@ void TimeManager::init_search(SearchConstraints& search_limits)
         // 95% for hard.
         const int hard = std::max(1, (total * 95) / 100);
 
-        search_limits.budget.total_ms = total;
-        search_limits.budget.soft_ms = soft;
-        search_limits.budget.hard_ms = std::max(hard, soft);
+        search_limits.budget_.total_ms_ = total;
+        search_limits.budget_.soft_ms_ = soft;
+        search_limits.budget_.hard_ms_ = std::max(hard, soft);
     }
 
-    search_limits.budget.start_ms = TimeManager::now_ms();
-    search_limits.budget.soft_deadline_ms =
-        (search_limits.budget.soft_ms > 0)
-            ? (search_limits.budget.start_ms + search_limits.budget.soft_ms)
+    search_limits.budget_.start_ms_ = TimeManager::now_ms();
+    search_limits.budget_.soft_deadline_ms_ =
+        (search_limits.budget_.soft_ms_ > 0)
+            ? (search_limits.budget_.start_ms_ + search_limits.budget_.soft_ms_)
             : 0;
 
-    search_limits.budget.hard_deadline_ms =
-        (search_limits.budget.hard_ms > 0)
-            ? (search_limits.budget.start_ms + search_limits.budget.hard_ms)
+    search_limits.budget_.hard_deadline_ms_ =
+        (search_limits.budget_.hard_ms_ > 0)
+            ? (search_limits.budget_.start_ms_ + search_limits.budget_.hard_ms_)
             : 0;
 }
 

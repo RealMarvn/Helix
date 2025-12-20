@@ -64,7 +64,7 @@ TEST(MoveGenTest, PerftTest)
         myBoard.read_fen(settings[0]);
 
         // Check FEN!
-        auto result = perft(myBoard, 4, myBoard.player == WHITE);
+        auto result = perft(myBoard, 4, myBoard.player_ == WHITE);
         ASSERT_EQ(result, std::stoi(settings[4].substr(3)));
     }
 }

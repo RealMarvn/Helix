@@ -45,7 +45,7 @@ struct SearchConstraints
      *
      * Determines which stopping criteria are active during the search.
      */
-    SearchType mode = SearchType::Normal;
+    SearchType mode_ = SearchType::Normal;
 
     /**
      * @brief Fixed time limit for the search in milliseconds.
@@ -53,7 +53,7 @@ struct SearchConstraints
      * Only used when @ref SearchType::FixedTime is active.
      * A negative value indicates that no fixed move time is set.
      */
-    int movetime_ms = -1;
+    int movetime_ms_ = -1;
 
     /**
      * @brief Fixed search depth.
@@ -61,7 +61,7 @@ struct SearchConstraints
      * Only used when @ref SearchType::FixedDepth is active.
      * A negative value indicates that no fixed depth is set.
      */
-    int depth = -1;
+    int depth_ = -1;
 
     /**
      * @brief Maximum number of nodes to be searched.
@@ -69,7 +69,7 @@ struct SearchConstraints
      * Only used when @ref SearchType::NodeLimit is active.
      * A negative value indicates that no node limit is set.
      */
-    long long nodes = -1;
+    long long nodes_ = -1;
 
     /**
      * @brief Time control budget for the current search.
@@ -78,12 +78,12 @@ struct SearchConstraints
      * For non-time-based searches (e.g. fixed depth), this structure
      * is left unarmed (all deadlines set to zero).
      */
-    TimeControl budget;
+    TimeControl budget_;
 
     /** @name Convenience helpers
      *  @{ */
-    [[nodiscard]] bool has_fixed_depth() const { return depth >= 0; }
-    [[nodiscard]] bool has_node_limit() const { return nodes >= 0; }
-    [[nodiscard]] bool has_movetime() const { return movetime_ms >= 0; }
+    [[nodiscard]] bool has_fixed_depth() const { return depth_ >= 0; }
+    [[nodiscard]] bool has_node_limit() const { return nodes_ >= 0; }
+    [[nodiscard]] bool has_movetime() const { return movetime_ms_ >= 0; }
     /** @} */
 };

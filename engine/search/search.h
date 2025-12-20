@@ -179,12 +179,12 @@ private:
      * search was aborted due to a hard termination condition.
      *
      * @param board Current board position.
-     * @param DEPTH Fixed depth for this root search.
+     * @param depth Fixed depth for this root search.
      * @param move Output parameter receiving the best move found
      *             if the search completes successfully.
      * @return True if the search was aborted, false otherwise.
      */
-    SearchResult root_search(Board& board, int DEPTH, Move& move);
+    SearchResult root_search(Board& board, int depth, Move& move);
 
     /**
      * @brief Performs an iterative deepening search.
@@ -208,14 +208,14 @@ private:
      * to ensure that incomplete results are never used.
      *
      * @param board Current board position.
-     * @param DEPTH Remaining search depth.
+     * @param depth Remaining search depth.
      * @param alpha Alpha bound of the search window.
-     * @param BETA Beta bound of the search window.
-     * @param PLY Current ply (half-move) depth from the root.
+     * @param beta Beta bound of the search window.
+     * @param ply Current ply (half-move) depth from the root.
      * @param best_move Output parameter for the best move at root ply.
      * @return SearchResult containing the score and abort status.
      */
-    SearchResult negamax(Board& board, int DEPTH, int alpha, int BETA, int PLY, Move& best_move);
+    SearchResult negamax(Board& board, int depth, int alpha, int beta, int ply, Move& best_move);
 
     /**
      * @brief Quiescence search to resolve tactical instability.
@@ -227,11 +227,11 @@ private:
      *
      * @param board Current board position.
      * @param alpha Alpha bound of the quiescence window.
-     * @param BETA Beta bound of the quiescence window.
-     * @param PLY Current ply (half-move) depth from root.
+     * @param beta Beta bound of the quiescence window.
+     * @param ply Current ply (half-move) depth from root.
      * @return SearchResult containing the score and abort status.
      */
-    SearchResult quiescence(Board& board, int alpha, int BETA, int PLY);
+    SearchResult quiescence(Board& board, int alpha, int beta, int ply);
 
 
     /**
@@ -275,15 +275,15 @@ private:
     }
 
     /** @brief Prints the info in UCI standard. */
-    void print_info(int DEPTH, int SCORE, const Move& PV_MOVE, long long START_TIME_MS) const;
+    void print_info(int depth, int score, const Move& pv_move, long long start_time_ms) const;
 
     /** @brief Print Debug info based on the debug config. */
-    void print_debug(Board& BOARD, int DEPTH, int SCORE, long long START_TIME_MS) const;
+    void print_debug(Board& board, int depth, int score, long long start_time_ms) const;
 
     friend void search::debug::print_health(const ChessBot& bot);
     friend void search::debug::print_tt(const ChessBot& bot);
     friend void search::debug::print_root_ordering(const ChessBot& bot, Board& board);
-    friend void search::debug::print_pv(const ChessBot& bot, const Board& BOARD);
+    friend void search::debug::print_pv(const ChessBot& bot, const Board& board);
 
     static const char* stop_reason_to_cstr(const decltype(ChessBot::stop_reason) r)
     {

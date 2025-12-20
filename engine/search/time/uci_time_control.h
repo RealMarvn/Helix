@@ -23,7 +23,7 @@ struct UciTimeControl
      * The value is given in milliseconds. A negative value indicates
      * that no time information for white was provided by the GUI.
      */
-    int wtime = -1;
+    int wtime_ = -1;
 
     /**
      * @brief Remaining time for the black side.
@@ -31,7 +31,7 @@ struct UciTimeControl
      * The value is given in milliseconds. A negative value indicates
      * that no time information for black was provided by the GUI.
      */
-    int btime = -1;
+    int btime_ = -1;
 
     /**
      * @brief Increment added to white's clock after each move.
@@ -39,7 +39,7 @@ struct UciTimeControl
      * The value is given in milliseconds. A value of zero indicates
      * that no increment is used.
      */
-    int winc = 0;
+    int winc_ = 0;
 
     /**
      * @brief Increment added to black's clock after each move.
@@ -47,7 +47,7 @@ struct UciTimeControl
      * The value is given in milliseconds. A value of zero indicates
      * that no increment is used.
      */
-    int binc = 0;
+    int binc_ = 0;
 
     /**
      * @brief Number of moves until the next time control.
@@ -55,7 +55,7 @@ struct UciTimeControl
      * A negative value indicates that the GUI did not provide a
      * movestogo parameter.
      */
-    int movestogo = -1;
+    int movestogo_ = -1;
 
     /**
      * @brief Safety margin to compensate for UI, IO, and OS jitter.
@@ -63,7 +63,7 @@ struct UciTimeControl
      * This value is subtracted from the available time before
      * computing the search budget to reduce the risk of flagging.
      */
-    int overhead_ms = 20;
+    int overhead_ms_ = 20;
 
     /**
      * @brief Additional time reserve to avoid time forfeits.
@@ -71,5 +71,5 @@ struct UciTimeControl
      * If the value is less than or equal to zero, a default reserve
      * based on the remaining time is chosen automatically.
      */
-    int reserve_ms = -1;
+    int reserve_ms_ = -1;
 };

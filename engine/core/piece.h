@@ -38,17 +38,17 @@ public:
     /**
      * @brief Constructs a new Piece object with the given piece type.
      *
-     * @param PIECE The PieceType representing the piece type.
+     * @param piece The PieceType representing the piece type.
      */
-    explicit Piece(const PieceType PIECE) : piece_type{PIECE} {
+    explicit Piece(const PieceType piece) : piece_type_{piece} {
     }
 
     /**
      * @brief Constructs a new Piece object from a character representation.
      *
-     * @param PIECE The character representing the piece type.
+     * @param piece The character representing the piece type.
      */
-    explicit Piece(const char PIECE) : piece_type{find_key_by_value(PIECE)} {
+    explicit Piece(const char piece) : piece_type_{find_key_by_value(piece)} {
     };
 
     /**
@@ -64,7 +64,7 @@ public:
      *
      * Defaults to EMPTY when using the default constructor.
      */
-    PieceType piece_type{EMPTY};
+    PieceType piece_type_{EMPTY};
 
     /**
      * @brief Checks if the piece is white.
@@ -73,7 +73,7 @@ public:
      *
      * @return True if the piece is white, false otherwise.
      */
-    [[nodiscard]] bool is_white() const { return (piece_type < BP); }
+    [[nodiscard]] bool is_white() const { return (piece_type_ < BP); }
 
     /**
      * @brief Returns the character representation of the piece.
@@ -82,7 +82,7 @@ public:
      *
      * @return The character representation of the piece.
      */
-    [[nodiscard]] char to_char() const { return piece_to_char[piece_type]; }
+    [[nodiscard]] char to_char() const { return PIECE_TO_CHAR_[piece_type_]; }
 
     /**
      * @brief Retrieves the material value of the piece.
@@ -97,9 +97,9 @@ public:
      *
      * @return The material value of the piece.
      */
-    [[nodiscard]] int get_material_value(const bool endGame) const {
-        if (piece_type == EMPTY) return 0;
-        return endGame ? eg_piece_value[piece_type % BP] : mg_piece_value[piece_type % BP];
+    [[nodiscard]] int get_material_value(const bool end_game) const {
+        if (piece_type_ == EMPTY) return 0;
+        return end_game ? EG_PIECE_VALUE_[piece_type_ % BP] : MG_PIECE_VALUE[piece_type_ % BP];
     }
 
     /**
@@ -117,8 +117,8 @@ public:
      * @return The game phase value of the piece.
      */
     [[nodiscard]] int get_game_phase_value() const {
-        if (piece_type == EMPTY) return 0;
-        return game_phase_value[piece_type % BP];
+        if (piece_type_ == EMPTY) return 0;
+        return GAME_PHASE_VALUE_[piece_type_ % BP];
     }
 
 private:
@@ -129,28 +129,28 @@ private:
      * Used to calculate the overall game phase (opening → endgame)
      * following PeSTO-style evaluation.
      */
-    constexpr static int game_phase_value[6] = {0, 1, 1, 2, 4, 0};
+    constexpr static int GAME_PHASE_VALUE_[6] = {0, 1, 1, 2, 4, 0};
 
     /**
      * @brief Endgame material values indexed by base piece type (pawn..king).
      *
      * These values are applied when the engine detects an endgame phase.
      */
-    constexpr static int eg_piece_value[6] = {94, 281, 297, 512, 936, 0};
+    constexpr static int EG_PIECE_VALUE_[6] = {94, 281, 297, 512, 936, 0};
 
     /**
      * @brief Midgame material values indexed by base piece type (pawn..king).
      *
      * Used for evaluating positions during the midgame phase.
      */
-    constexpr static int mg_piece_value[6] = {82, 337, 365, 477, 1025, 0};
+    constexpr static int MG_PIECE_VALUE[6] = {82, 337, 365, 477, 1025, 0};
 
     /**
      * @brief Mapping from PieceType to corresponding FEN character.
      *
      * Uppercase = white pieces, lowercase = black pieces, ' ' = EMPTY.
      */
-    constexpr static char piece_to_char[13] = {'P', 'N', 'B', 'R', 'Q', 'K', 'p', 'n', 'b', 'r', 'q', 'k', ' '};
+    constexpr static char PIECE_TO_CHAR_[13] = {'P', 'N', 'B', 'R', 'Q', 'K', 'p', 'n', 'b', 'r', 'q', 'k', ' '};
 
     /**
      * @brief Finds the PieceType based on the given character value.
@@ -165,7 +165,7 @@ private:
     static PieceType find_key_by_value(const char value) {
         // Go through the array and find the matching piece.
         for (int i = 0; i < 13; ++i) {
-            if (piece_to_char[i] == value) return static_cast<PieceType>(i);
+            if (PIECE_TO_CHAR_[i] == value) return static_cast<PieceType>(i);
         }
         return EMPTY;
     }
