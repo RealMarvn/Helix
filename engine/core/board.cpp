@@ -10,19 +10,17 @@
 #include "../utils.h"
 #include "board.h"
 
-bool Board::is_king_in_check(const bool PIECE_COLOR)
+bool Board::is_king_in_check(const bool piece_color)
 {
     // Go through board.
     for (int y = 8; y >= 1; y--)
     {
         for (int x = 1; x <= 8; x++)
         {
-            if (board[calculateSquare(x, y)].piece_type == (PIECE_COLOR ? WK : BK))
-            {
-                // If piece is the correct King.
-                // Check if the king square is attacked.
-                return is_square_attacked({x, y}, PIECE_COLOR);
-            }
+            // If piece is the correct King.
+            // Check if the king square is attacked.
+            if (board_[calculateSquare(x, y)].piece_type_ == (piece_color ? WK : BK))
+                return is_square_attacked({x, y}, piece_color);
         }
     }
 
@@ -30,7 +28,7 @@ bool Board::is_king_in_check(const bool PIECE_COLOR)
     throw BoardInterruptException("No king found!");
 }
 
-bool Board::is_square_attacked(const std::pair<int, int>& SQUARE, const bool PIECE_COLOR)
+bool Board::is_square_attacked(const std::pair<int, int>& square, const bool piece_color)
 {
     PseudoLegalMoves allKnightMoves;
     PseudoLegalMoves allPawnMoves;
@@ -40,45 +38,37 @@ bool Board::is_square_attacked(const std::pair<int, int>& SQUARE, const bool PIE
     // getALlPossible###Moves does only return captures of the opponent pieces. So
     // no need to check again if you capture your own piece
 
-    moveGenUtils::get_all_possible_knight_moves(SQUARE, *this, allKnightMoves, PIECE_COLOR);
+    moveGenUtils::get_all_possible_knight_moves(square, *this, allKnightMoves, piece_color);
     for (const Move& MOVE : allKnightMoves)
     {
-        if (MOVE.captured_piece.piece_type == WN || MOVE.captured_piece.piece_type == BN)
-        {
+        if (MOVE.captured_piece_.piece_type_ == WN || MOVE.captured_piece_.piece_type_ == BN)
             return true;
-        }
     }
 
-    moveGenUtils::get_all_possible_pawn_moves(SQUARE, *this, allPawnMoves, PIECE_COLOR);
+    moveGenUtils::get_all_possible_pawn_moves(square, *this, allPawnMoves, piece_color);
     for (const Move& MOVE : allPawnMoves)
     {
-        if (MOVE.captured_piece.piece_type == WP || MOVE.captured_piece.piece_type == BP)
-        {
+        if (MOVE.captured_piece_.piece_type_ == WP || MOVE.captured_piece_.piece_type_ == BP)
             return true;
-        }
     }
 
     // You also have to check for Queens because they can move like the bishop
     // too!
-    moveGenUtils::get_all_possible_bishop_moves(SQUARE, *this, allBishopMoves, PIECE_COLOR);
+    moveGenUtils::get_all_possible_bishop_moves(square, *this, allBishopMoves, piece_color);
     for (const Move& MOVE : allBishopMoves)
     {
-        if (MOVE.captured_piece.piece_type == WB || MOVE.captured_piece.piece_type == BB ||
-            MOVE.captured_piece.piece_type == WQ || MOVE.captured_piece.piece_type == BQ)
-        {
+        if (MOVE.captured_piece_.piece_type_ == WB || MOVE.captured_piece_.piece_type_ == BB ||
+            MOVE.captured_piece_.piece_type_ == WQ || MOVE.captured_piece_.piece_type_ == BQ)
             return true;
-        }
     }
 
     // You also have to check for Queens because they can move like the rook too!
-    moveGenUtils::get_all_possible_rook_moves(SQUARE, *this, allRookMoves, PIECE_COLOR);
+    moveGenUtils::get_all_possible_rook_moves(square, *this, allRookMoves, piece_color);
     for (const Move& MOVE : allRookMoves)
     {
-        if (MOVE.captured_piece.piece_type == WR || MOVE.captured_piece.piece_type == BR ||
-            MOVE.captured_piece.piece_type == WQ || MOVE.captured_piece.piece_type == BQ)
-        {
+        if (MOVE.captured_piece_.piece_type_ == WR || MOVE.captured_piece_.piece_type_ == BR ||
+            MOVE.captured_piece_.piece_type_ == WQ || MOVE.captured_piece_.piece_type_ == BQ)
             return true;
-        }
     }
 
     // Specifically check if there is a king near you.
@@ -86,13 +76,11 @@ bool Board::is_square_attacked(const std::pair<int, int>& SQUARE, const bool PIE
                                          {0, 1},   {1, -1}, {1, 0},  {1, 1}};
     for (const auto& [FST, SND] : directions)
     {
-        const int X = SQUARE.first + FST;
-        if (const int Y = SQUARE.second + SND; X > 0 && Y > 0 && X < 9 && Y < 9)
+        const int X = square.first + FST;
+        if (const int Y = square.second + SND; X > 0 && Y > 0 && X < 9 && Y < 9)
         {
-            if (board[calculateSquare(X, Y)].piece_type == (PIECE_COLOR ? BK : WK))
-            {
+            if (board_[calculateSquare(X, Y)].piece_type_ == (piece_color ? BK : WK))
                 return true;
-            }
         }
     }
 
@@ -102,159 +90,151 @@ bool Board::is_square_attacked(const std::pair<int, int>& SQUARE, const bool PIE
 bool Board::pop_last_move()
 {
     // You shouldn't be able to pop if there is nothing.
-    if (moves.empty() || history.empty())
-    {
+    if (moves_.empty() || history_.empty())
         return false;
-    }
 
     // Save last move.
-    const Move LAST_MOVE = moves.back();
+    const Move LAST_MOVE = moves_.back();
     // Pop it.
-    moves.pop_back();
+    moves_.pop_back();
     // Pop the history.
-    history.pop_back();
+    history_.pop_back();
     // Set the piece which got caught on the moved square.
-    board[LAST_MOVE.move_square] = LAST_MOVE.captured_piece;
+    board_[LAST_MOVE.move_square_] = LAST_MOVE.captured_piece_;
     // Set the moved piece on its original position.
-    board[LAST_MOVE.square] = LAST_MOVE.moving_piece;
+    board_[LAST_MOVE.square_] = LAST_MOVE.moving_piece_;
 
-    if (LAST_MOVE.move_type == EN_PASSANT)
+    if (LAST_MOVE.move_type_ == EN_PASSANT)
     {
         // If the move was an EP.
         // Get the square behind the ep square by adding or subtracting 8 (One row).
         const int EN_PASSANT_SQUARE =
-            LAST_MOVE.move_square + (LAST_MOVE.moving_piece.is_white() ? -8 : +8);
+            LAST_MOVE.move_square_ + (LAST_MOVE.moving_piece_.is_white() ? -8 : +8);
         // Set the piece which got caught there.
-        board[EN_PASSANT_SQUARE].piece_type = (LAST_MOVE.moving_piece.is_white() ? BP : WP);
+        board_[EN_PASSANT_SQUARE].piece_type_ = (LAST_MOVE.moving_piece_.is_white() ? BP : WP);
     }
 
-    if (LAST_MOVE.move_type == CASTLING)
+    if (LAST_MOVE.move_type_ == CASTLING)
     {
         // If the move was castling.
-        if (LAST_MOVE.move_square == 6)
+        if (LAST_MOVE.move_square_ == 6)
         {
             // Check if the King moved to square g1.
             // Reset the rook to h1.
-            board[7].piece_type = WR;
-            board[5].piece_type = EMPTY;
+            board_[7].piece_type_ = WR;
+            board_[5].piece_type_ = EMPTY;
         }
-        if (LAST_MOVE.move_square == 2)
+        if (LAST_MOVE.move_square_ == 2)
         {
             // Check if the King moved to square c1.
             // Reset the rook to a1.
-            board[0].piece_type = WR;
-            board[3].piece_type = EMPTY;
+            board_[0].piece_type_ = WR;
+            board_[3].piece_type_ = EMPTY;
         }
-        if (LAST_MOVE.move_square == 62)
+        if (LAST_MOVE.move_square_ == 62)
         {
             // Check if the King moved to square g8.
             // Reset the rook to h8.
-            board[63].piece_type = BR;
-            board[61].piece_type = EMPTY;
+            board_[63].piece_type_ = BR;
+            board_[61].piece_type_ = EMPTY;
         }
-        if (LAST_MOVE.move_square == 58)
+        if (LAST_MOVE.move_square_ == 58)
         {
             // Check if the King moved to square c8.
             // Reset the rook to h8.
-            board[56].piece_type = BR;
-            board[59].piece_type = EMPTY;
+            board_[56].piece_type_ = BR;
+            board_[59].piece_type_ = EMPTY;
         }
     }
 
     // Set player back.
-    player = player == WHITE ? BLACK : WHITE;
+    player_ = player_ == WHITE ? BLACK : WHITE;
 
     // Settings reset.
-    board_settings = history.back();
+    board_settings_ = history_.back();
 
     build_hash_for_board();
     return true;
 }
 
-bool Board::make_move(const Move& MOVE)
+bool Board::make_move(const Move& move)
 {
     // Set the square to move to the piece where it is currently.
-    board[MOVE.move_square] = board[MOVE.square];
+    board_[move.move_square_] = board_[move.square_];
 
     // Set on the old square an EMPTY piece.
-    board[MOVE.square].piece_type = EMPTY;
+    board_[move.square_].piece_type_ = EMPTY;
 
     // Reset the eqSquare.
-    board_settings.ep_square = 100;
+    board_settings_.ep_square_ = 100;
     // Increment lastMoveSincePawnOrCapture.
-    board_settings.last_moves_since_pawn_or_capture++;
+    board_settings_.last_moves_since_pawn_or_capture_++;
 
     // If move is a promotion set on the future square the promotion piece.
-    if (MOVE.move_type == PROMOTION)
-    {
-        board[MOVE.move_square] = MOVE.promotion_piece;
-    }
+    if (move.move_type_ == PROMOTION)
+        board_[move.move_square_] = move.promotion_piece_;
 
     // If move is EP then replace the square in front of the move with empty.
-    if (MOVE.move_type == EN_PASSANT)
+    if (move.move_type_ == EN_PASSANT)
     {
         const int EN_PASSANT_SQUARE =
-            MOVE.move_square + (MOVE.moving_piece.piece_type == WP ? -8 : +8);
-        board[EN_PASSANT_SQUARE].piece_type = EMPTY;
+            move.move_square_ + (move.moving_piece_.piece_type_ == WP ? -8 : +8);
+
+        board_[EN_PASSANT_SQUARE].piece_type_ = EMPTY;
     }
 
     // If it is a castling move just set the rook at the correct spot.
-    if (MOVE.move_type == CASTLING)
+    if (move.move_type_ == CASTLING)
     {
-        if (MOVE.move_square == 6)
+        if (move.move_square_ == 6)
         {
-            board[7].piece_type = EMPTY;
-            board[5].piece_type = WR;
+            board_[7].piece_type_ = EMPTY;
+            board_[5].piece_type_ = WR;
         }
-        if (MOVE.move_square == 2)
+        if (move.move_square_ == 2)
         {
-            board[0].piece_type = EMPTY;
-            board[3].piece_type = WR;
+            board_[0].piece_type_ = EMPTY;
+            board_[3].piece_type_ = WR;
         }
-        if (MOVE.move_square == 62)
+        if (move.move_square_ == 62)
         {
-            board[63].piece_type = EMPTY;
-            board[61].piece_type = BR;
+            board_[63].piece_type_ = EMPTY;
+            board_[61].piece_type_ = BR;
         }
-        if (MOVE.move_square == 58)
+        if (move.move_square_ == 58)
         {
-            board[56].piece_type = EMPTY;
-            board[59].piece_type = BR;
+            board_[56].piece_type_ = EMPTY;
+            board_[59].piece_type_ = BR;
         }
     }
 
-    if (MOVE.moving_piece.piece_type == WP || MOVE.moving_piece.piece_type == BP)
+    if (move.moving_piece_.piece_type_ == WP || move.moving_piece_.piece_type_ == BP)
     {
-        if (std::abs(MOVE.square - MOVE.move_square) == 16)
-        {
-            // Set EP square if a pawn moves exact 2 rows.
-            board_settings.ep_square = MOVE.move_square + (MOVE.moving_piece.is_white() ? -8 : +8);
-        }
+        // Set EP square if a pawn moves exact 2 rows.
+        if (std::abs(move.square_ - move.move_square_) == 16)
+            board_settings_.ep_square_ =
+                move.move_square_ + (move.moving_piece_.is_white() ? -8 : +8);
     }
 
     // Set the permissions for castling!
-    handle_castling_permissions(MOVE);
+    handle_castling_permissions(move);
 
-    if (player == BLACK)
-    {
-        board_settings.turns++;
-    }
+    if (player_ == BLACK)
+        board_settings_.turns_++;
 
-    if (((MOVE.moving_piece.piece_type == WP) || (MOVE.moving_piece.piece_type == BP)) ||
-        MOVE.captured_piece.piece_type != EMPTY)
-    {
-        board_settings.last_moves_since_pawn_or_capture = 0;
-    }
+    if (((move.moving_piece_.piece_type_ == WP) || (move.moving_piece_.piece_type_ == BP)) ||
+        move.captured_piece_.piece_type_ != EMPTY)
+        board_settings_.last_moves_since_pawn_or_capture_ = 0;
 
     // Save move
-    moves.push_back(MOVE);
+    moves_.push_back(move);
     // Save settings
-    history.push_back(board_settings);
+    history_.push_back(board_settings_);
     // Reset the player.
-    player = player == WHITE ? BLACK : WHITE;
+    player_ = player_ == WHITE ? BLACK : WHITE;
 
     // Check if your king is in check after the move and pop if yes.
-    if (is_king_in_check(player != WHITE))
+    if (is_king_in_check(player_ != WHITE))
     {
         pop_last_move();
         return false;
@@ -266,83 +246,70 @@ bool Board::make_move(const Move& MOVE)
     return true;
 }
 
-void Board::handle_castling_permissions(const Move& MOVE)
+void Board::handle_castling_permissions(const Move& move)
 {
     // If king is moved. disable everything.
-    if (MOVE.moving_piece.piece_type == WK)
+    if (move.moving_piece_.piece_type_ == WK)
     {
-        board_settings.white_queen_side = false;
-        board_settings.white_king_side = false;
+        board_settings_.white_queen_side_ = false;
+        board_settings_.white_king_side_ = false;
     }
-    else if (MOVE.moving_piece.piece_type == BK)
+    else if (move.moving_piece_.piece_type_ == BK)
     {
-        board_settings.black_queen_side = false;
-        board_settings.black_king_side = false;
+        board_settings_.black_queen_side_ = false;
+        board_settings_.black_king_side_ = false;
     }
 
     // disable permission if rook is moved.
-    if (MOVE.moving_piece.piece_type == WR)
+    if (move.moving_piece_.piece_type_ == WR)
     {
-        if (MOVE.square == 0)
-        {
-            // If rook was moved from a1.
-            board_settings.white_queen_side = false;
-        }
-        if (MOVE.square == 7)
-        {
-            // If rook was moved from h1.
-            board_settings.white_king_side = false;
-        }
-    }
-    else if (MOVE.moving_piece.piece_type == BR)
-    {
-        if (MOVE.square == 56)
-        {
-            // If rook was moved from a8.
-            board_settings.black_queen_side = false;
-        }
+        // If rook was moved from a1.
+        if (move.square_ == 0)
+            board_settings_.white_queen_side_ = false;
 
-        if (MOVE.square == 63)
-        {
-            // If rook was moved from h8.
-            board_settings.black_king_side = false;
-        }
+        // If rook was moved from h1.
+        if (move.square_ == 7)
+            board_settings_.white_king_side_ = false;
+    }
+    else if (move.moving_piece_.piece_type_ == BR)
+    {
+        // If rook was moved from a8.
+        if (move.square_ == 56)
+            board_settings_.black_queen_side_ = false;
+
+        // If rook was moved from h8.
+        if (move.square_ == 63)
+            board_settings_.black_king_side_ = false;
     }
 
     // disable permission if rook is captured.
-    if (MOVE.captured_piece.piece_type == WR)
+    if (move.captured_piece_.piece_type_ == WR)
     {
-        if (MOVE.move_square == 0)
-        {
-            // If a piece moved on a1.
-            board_settings.white_queen_side = false;
-        }
-        if (MOVE.move_square == 7)
-        {
-            // If a piece moved on h1.
-            board_settings.white_king_side = false;
-        }
+        // If a piece moved on a1.
+        if (move.move_square_ == 0)
+            board_settings_.white_queen_side_ = false;
+
+        // If a piece moved on h1.
+        if (move.move_square_ == 7)
+            board_settings_.white_king_side_ = false;
     }
-    else if (MOVE.captured_piece.piece_type == BR)
+    else if (move.captured_piece_.piece_type_ == BR)
     {
-        if (MOVE.move_square == 56)
-        {
-            // If a piece moved on a8.
-            board_settings.black_queen_side = false;
-        }
-        if (MOVE.move_square == 63)
-        {
-            // If a piece moved on h8.
-            board_settings.black_king_side = false;
-        }
+        // If a piece moved on a8.
+        if (move.move_square_ == 56)
+            board_settings_.black_queen_side_ = false;
+
+        // If a piece moved on h8.
+        if (move.move_square_ == 63)
+            board_settings_.black_king_side_ = false;
     }
 }
 
-bool Board::is_check_mate(const bool IS_WHITE)
+bool Board::is_check_mate(const bool is_white)
 {
     // Count if there are no possible moves anymore.
     int counter = 0;
-    for (Move& move : moveGenUtils::get_all_pseudo_legal_moves(*this, IS_WHITE))
+    for (Move& move : moveGenUtils::get_all_pseudo_legal_moves(*this, is_white))
     {
         if (make_move(move))
         {
@@ -353,110 +320,94 @@ bool Board::is_check_mate(const bool IS_WHITE)
     return counter == 0;
 }
 
-Move Board::parse_move(const std::string& INPUT) const
+Move Board::parse_move(const std::string& input) const
 {
     char promotion_figure = ' ';
 
     // Use the ascii code of the char to subtract a number to get the correct
     // number.
-    const int x = INPUT[0] - 96;
-    const int y = INPUT[1] - 48;
+    const int x = input[0] - 96;
+    const int y = input[1] - 48;
     const int position = calculateSquare(x, y);
 
-    const char figure = board[position].to_char();
+    const char figure = board_[position].to_char();
 
-    const int move_x = INPUT[2] - 96;
-    const int move_y = INPUT[3] - 48;
+    const int move_x = input[2] - 96;
+    const int move_y = input[3] - 48;
 
     const int movePosition = calculateSquare(move_x, move_y);
 
-    if (INPUT.length() == 5)
-    {
-        promotion_figure = INPUT[4];
-    }
+    if (input.length() == 5)
+        promotion_figure = input[4];
 
     MoveType moveType = NORMAL;
 
     // If figure is a king.
     if (figure == 'K')
     {
+        // Apply castling if specific move is parsed.
         if (position == 4 && (movePosition == 6 || movePosition == 2))
-        {
-            // Apply castling if specific move is parsed.
             moveType = CASTLING;
-        }
     }
 
     if (figure == 'k')
     {
+        // Apply castling if specific move is parsed.
         if (position == 60 && (movePosition == 62 || movePosition == 58))
-        {
-            // Apply castling if specific move is parsed.
             moveType = CASTLING;
-        }
     }
+
     // If you try to move to a ep square set the move to ep.
-    if (movePosition == board_settings.ep_square)
-    {
+    if (movePosition == board_settings_.ep_square_)
         moveType = EN_PASSANT;
-    }
 
     // If the promotion is given set the move to a promotion.
     if (promotion_figure != ' ')
     {
         moveType = PROMOTION;
         promotion_figure =
-            player == WHITE ? static_cast<char>(std::toupper(promotion_figure)) : promotion_figure;
+            player_ == WHITE ? static_cast<char>(std::toupper(promotion_figure)) : promotion_figure;
     }
 
     // Initialize the move with all data.
-    return Move{movePosition, position, Piece(figure), board[movePosition], Piece(promotion_figure),
-                moveType};
+    return Move{
+        movePosition, position, Piece(figure), board_[movePosition], Piece(promotion_figure),
+        moveType};
 }
 
-bool Board::try_to_move_piece(const Move& MOVE)
+bool Board::try_to_move_piece(const Move& move)
 {
     bool capture = false;
-    if (MOVE.captured_piece.piece_type != EMPTY)
-    {
-        // Detect if there is a capture.
+    // Detect if there is a capture.
+    if (move.captured_piece_.piece_type_ != EMPTY)
         capture = true;
-    }
 
     // Check if you try to move a piece of the opponent.
-    if ((player == BLACK && MOVE.moving_piece.is_white()) ||
-        (player == WHITE && (!MOVE.moving_piece.is_white())))
-    {
+    if ((player_ == BLACK && move.moving_piece_.is_white()) ||
+        (player_ == WHITE && (!move.moving_piece_.is_white())))
         return false;
-    }
 
     // Check if moveSquare is out of bounds!
-    if (MOVE.square < 0 || MOVE.square > 63 || MOVE.move_square < 0 || MOVE.move_square > 63)
-    {
+    if (move.square_ < 0 || move.square_ > 63 || move.move_square_ < 0 || move.move_square_ > 63)
         return false;
-    }
 
     // Check if moving piece is really that piece.
-    if (board[MOVE.square].piece_type != MOVE.moving_piece.piece_type)
-    {
+    if (board_[move.square_].piece_type_ != move.moving_piece_.piece_type_)
         return false;
-    }
 
     if (capture)
     {
         // Check if you try to capture your own team.
-        if ((board[MOVE.square].is_white() && board[MOVE.move_square].is_white()) ||
-            ((!board[MOVE.square].is_white()) && (!board[MOVE.move_square].is_white())))
-        {
+        if ((board_[move.square_].is_white() && board_[move.move_square_].is_white()) ||
+            ((!board_[move.square_].is_white()) && (!board_[move.move_square_].is_white())))
             return false;
-        }
     }
 
     // Check if your move is pseudo legal.
-    if (moveGenUtils::get_all_pseudo_legal_moves(*this, player == WHITE).contains(MOVE))
+    if (moveGenUtils::get_all_pseudo_legal_moves(*this, player_ == WHITE).contains(move))
     {
         // Check moves legality.
-        if (!make_move(MOVE))
+        if (!make_move(move))
         {
             std::cout << "Move not legal! Check your king!" << std::endl;
             return false;
@@ -466,23 +417,21 @@ bool Board::try_to_move_piece(const Move& MOVE)
     return false;
 }
 
-void Board::read_fen(const std::string& INPUT)
+void Board::read_fen(const std::string& input)
 {
     std::vector<std::string> fenSettings;
 
     // Parse all the input in my vector while I cut it.
-    std::istringstream iss(INPUT);
+    std::istringstream iss(input);
     for (std::string s; iss >> s;)
         fenSettings.push_back(s);
 
     if (fenSettings.size() != 6)
-    {
         throw InvalidFENException("Invalid length!");
-    }
 
     // Initialize the player and settings.
-    player = WHITE;
-    board_settings = board_setting{100, false, false, false, false};
+    player_ = WHITE;
+    board_settings_ = board_setting{100, false, false, false, false};
 
     // Add the pieces to the board.
     int x = 1;
@@ -508,7 +457,7 @@ void Board::read_fen(const std::string& INPUT)
             {
                 // Loop through the squares which will be empty.
                 // Set them empty.
-                board[calculateSquare(x, y)] = Piece(EMPTY);
+                board_[calculateSquare(x, y)] = Piece(EMPTY);
                 // Increment x cause new square.
                 x++;
                 squares++;
@@ -521,88 +470,75 @@ void Board::read_fen(const std::string& INPUT)
         if (CHARACTER == 'k')
         {
             if (blackKing)
-            {
                 throw InvalidFENException("Your FEN has two black kings!");
-            }
+
             blackKing = true;
         }
         else if (CHARACTER == 'K')
         {
             if (whiteKing)
-            {
                 throw InvalidFENException("Your FEN has two white kings!");
-            }
+
             whiteKing = true;
         }
 
         // Just set on the square that piece.
-        board[calculateSquare(x, y)] = Piece(CHARACTER);
+        board_[calculateSquare(x, y)] = Piece(CHARACTER);
         x++;
         squares++;
     }
 
     // If one king is missing throw exception.
     if ((!whiteKing) || (!blackKing))
-    {
         throw InvalidFENException("Your FEN is missing a king!");
-    }
 
     // Check if enough squares.
     if (squares != 64)
-    {
         throw InvalidFENException("Your FEN is missing some squares!");
-    }
 
     // Set turn
     if (fenSettings[1] == "b")
-    {
-        player = BLACK;
-    }
+        player_ = BLACK;
 
     // Set casteling permissions to true
     if (fenSettings[2].find('K') != std::string::npos)
-    {
-        board_settings.white_king_side = true;
-    }
+        board_settings_.white_king_side_ = true;
+
     if (fenSettings[2].find('Q') != std::string::npos)
-    {
-        board_settings.white_queen_side = true;
-    }
+        board_settings_.white_queen_side_ = true;
+
     if (fenSettings[2].find('k') != std::string::npos)
-    {
-        board_settings.black_king_side = true;
-    }
+        board_settings_.black_king_side_ = true;
+
     if (fenSettings[2].find('q') != std::string::npos)
-    {
-        board_settings.black_queen_side = true;
-    }
+        board_settings_.black_queen_side_ = true;
 
     // Set ep square if given.
     if (fenSettings[3] != "-")
     {
         const int COL = fenSettings[3][0] - 96;
         const int ROW = fenSettings[3][1] - 48;
-        board_settings.ep_square = calculateSquare(COL, ROW);
+        board_settings_.ep_square_ = calculateSquare(COL, ROW);
     }
 
     // Convert the char to an int and subtract 48 (ascii value).
     // It is not pretty but I don't know a better way.
-    board_settings.last_moves_since_pawn_or_capture = fenSettings[4][0] - 48;
-    board_settings.turns = fenSettings[5][0] - 48;
+    board_settings_.last_moves_since_pawn_or_capture_ = fenSettings[4][0] - 48;
+    board_settings_.turns_ = fenSettings[5][0] - 48;
 
     // Build the new hash.
     build_hash_for_board();
 
     // Save current settings.
-    history.push_back(board_settings);
+    history_.push_back(board_settings_);
     // Clear the moves.
-    moves.clear();
+    moves_.clear();
 }
 
 void Board::print_current_board() const
 {
     // Print the current turn.
-    std::cout << "Current turn: " << (player == WHITE ? "White" : "Black") << std::endl;
+    std::cout << "Current turn: " << (player_ == WHITE ? "White" : "Black") << std::endl;
 
     // Print the board.
     for (int y = 8; y >= 1; y--)
@@ -610,7 +546,7 @@ void Board::print_current_board() const
         std::cout << y << " | ";
         for (int x = 1; x <= 8; x++)
         {
-            std::cout << "[" << board[calculateSquare(x, y)].to_char() << "]";
+            std::cout << "[" << board_[calculateSquare(x, y)].to_char() << "]";
         }
         std::cout << std::endl;
     }
@@ -632,15 +568,13 @@ std::string Board::get_fen() const
         int emptyFields = 0;
         for (int x = 1; x < 9; x++)
         {
-            if (Piece piece = board[calculateSquare(x, y)]; piece.piece_type == EMPTY)
+            if (Piece piece = board_[calculateSquare(x, y)]; piece.piece_type_ == EMPTY)
             {
                 emptyFields++;
                 // If the whole row is Empty fields it should print it after hitting the
                 // end.
                 if (x == 8)
-                {
                     outPutFen += std::to_string(emptyFields);
-                }
             }
             else
             {
@@ -650,61 +584,52 @@ std::string Board::get_fen() const
                     outPutFen += std::to_string(emptyFields);
                     emptyFields = 0;
                 }
-                outPutFen += board[calculateSquare(x, y)].to_char();
+                outPutFen += board_[calculateSquare(x, y)].to_char();
             }
         }
         // Add the line break!
         if (y != 1)
-        {
             outPutFen += '/';
-        }
     }
 
     outPutFen += ' ';
     // Add the turn.
-    outPutFen += (player == WHITE) ? "w" : "b";
+    outPutFen += (player_ == WHITE) ? "w" : "b";
     outPutFen += ' ';
 
     // Add castling rights!
-    if (board_settings.black_queen_side || board_settings.white_queen_side ||
-        board_settings.white_king_side || board_settings.black_king_side)
+    if (board_settings_.black_queen_side_ || board_settings_.white_queen_side_ ||
+        board_settings_.white_king_side_ || board_settings_.black_king_side_)
     {
-        if (board_settings.white_king_side)
-        {
+        if (board_settings_.white_king_side_)
             outPutFen += 'K';
-        }
-        if (board_settings.white_queen_side)
-        {
+
+        if (board_settings_.white_queen_side_)
             outPutFen += 'Q';
-        }
-        if (board_settings.black_king_side)
-        {
+
+        if (board_settings_.black_king_side_)
             outPutFen += 'k';
-        }
-        if (board_settings.black_queen_side)
-        {
+
+        if (board_settings_.black_queen_side_)
             outPutFen += 'q';
-        }
     }
     else
-    {
         outPutFen += '-';
-    }
 
     outPutFen += ' ';
     // Add EP square
     outPutFen +=
-        board_settings.ep_square != 100 ? convert_to_x_and_y(board_settings.ep_square) : "-";
+        board_settings_.ep_square_ != 100 ? convert_to_x_and_y(board_settings_.ep_square_) : "-";
     outPutFen += ' ';
     // Add turns
-    outPutFen += std::to_string(board_settings.last_moves_since_pawn_or_capture);
+    outPutFen += std::to_string(board_settings_.last_moves_since_pawn_or_capture_);
     outPutFen += ' ';
-    outPutFen += std::to_string(board_settings.turns);
+    outPutFen += std::to_string(board_settings_.turns_);
     return outPutFen;
 }
 
 void Board::reset()
 {
     read_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-    moves.clear();
+    moves_.clear();
 }

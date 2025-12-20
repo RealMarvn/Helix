@@ -4,42 +4,45 @@
 
 #include "tt.h"
 
-bool TranspositionTable::probe(const std::uint64_t KEY, const int DEPTH, const int ALPHA,
-                               const int BETA, const int PLY, int& out_score,
+bool TranspositionTable::probe(const std::uint64_t key, const int depth, const int alpha,
+                               const int beta, const int ply, int& out_score,
                                Move& out_best_move) const
 {
-    ++stats.probes;
-    const Entry& e = table_[index(KEY)];
+    ++stats_.probes_;
+    const auto& [TT_KEY, TT_SCORE, TT_DEPTH, TT_FLAG, TT_GENERATION, TT_BEST_MOVE] =
+        table_[index(key)];
 
-    if (e.generation == 0 || e.key != KEY)
+    if (TT_GENERATION == 0 || TT_KEY != key)
     {
         out_best_move = Move{};
         return false;
     }
 
-    ++stats.hits;
-    out_best_move = e.best_move;
+    ++stats_.hits_;
+    out_best_move = TT_BEST_MOVE;
 
     // Only use if saved depth is enough
-    if (e.depth < DEPTH)
+    if (TT_DEPTH < depth)
         return false;
 
-    const int score = from_tt_score(e.score, PLY);
+    const int score = from_tt_score(TT_SCORE, ply);
 
-    switch (e.flag)
+    switch (TT_FLAG)
     {
-    case TTFlag::Exact:
+    case TTFlag::EXACT:
         out_score = score;
         return true;
-    case TTFlag::LowerBound:
-        if (score >= BETA)
+
+    case TTFlag::LOWER_BOUND:
+        if (score >= beta)
         {
             out_score = score;
             return true;
         }
         return false;
-    case TTFlag::UpperBound:
-        if (score <= ALPHA)
+
+    case TTFlag::UPPER_BOUND:
+        if (score <= alpha)
         {
             out_score = score;
             return true;
@@ -50,44 +53,44 @@ bool TranspositionTable::probe(const std::uint64_t KEY, const int DEPTH, const i
     return false;
 }
 
-bool TranspositionTable::probe_move(const std::uint64_t KEY, Move& out_best_move) const
+bool TranspositionTable::probe_move(const std::uint64_t key, Move& out_best_move) const
 {
-    ++stats.probes;
-    const Entry& e = table_[index(KEY)];
-    if (e.generation == 0 || e.key != KEY)
+    ++stats_.probes_;
+    const Entry& e = table_[index(key)];
+    if (e.generation_ == 0 || e.key_ != key)
         return false;
 
-    ++stats.hits;
+    ++stats_.hits_;
 
-    out_best_move = e.best_move;
+    out_best_move = e.best_move_;
     return true;
 }
 
-void TranspositionTable::store(const std::uint64_t KEY, const int DEPTH, const int SCORE,
-                               const TTFlag FLAG, const int PLY, const Move& BEST_MOVE)
+void TranspositionTable::store(const std::uint64_t key, const int depth, const int score,
+                               const TTFlag flag, const int ply, const Move& best_move)
 {
-    Entry& e = table_[index(KEY)];
+    Entry& e = table_[index(key)];
 
-    if (e.key != KEY && e.generation != 0)
+    if (e.key_ != key && e.generation_ != 0)
     {
-        // Replacement Policy modify for later usage in future
+        // Replacement Policy modify for later usage in the future.
     }
 
-    // Is there already an entry (For later stats updating).
-    const bool WILL_REPLACE_OTHER = (e.generation != 0 && e.key != KEY);
+    // For later stats updating.
+    const bool WILL_REPLACE_OTHER = (e.generation_ != 0 && e.key_ != key);
 
     const std::uint8_t gen = generation_;
-    if (!is_replacement_better(e, DEPTH, gen) && e.key == KEY)
+    if (!is_replacement_better(e, depth, gen) && e.key_ == key)
         return;
 
-    ++stats.stores;
+    ++stats_.stores_;
     if (WILL_REPLACE_OTHER)
-        ++stats.replaces;
+        ++stats_.replaces_;
 
-    e.key = KEY;
-    e.depth = DEPTH;
-    e.flag = FLAG;
-    e.score = to_tt_score(SCORE, PLY);
-    e.best_move = BEST_MOVE;
-    e.generation = gen;
+    e.key_ = key;
+    e.depth_ = depth;
+    e.flag_ = flag;
+    e.score_ = to_tt_score(score, ply);
+    e.best_move_ = best_move;
+    e.generation_ = gen;
 }

@@ -46,14 +46,14 @@ public:
      *
      * WHITE or BLACK depending on whose turn it is.
      */
-    player_type player{WHITE};
+    player_type player_{WHITE};
 
     /**
      * @brief History of all moves that have been played on this board.
      *
      * Used mainly for undoing moves and for debugging/printing purposes.
      */
-    std::vector<Move> moves;
+    std::vector<Move> moves_;
 
     /**
      * @brief History of board settings corresponding to each move.
@@ -61,29 +61,29 @@ public:
      * Stores auxiliary state (castling rights, en-passant, counters) for
      * each ply to support precise undo operations.
      */
-    std::vector<board_setting> history;
+    std::vector<board_setting> history_;
 
     /**
      * @brief Current auxiliary board settings.
      *
      * Contains castling rights, en-passant square and move counters as in FEN.
      */
-    board_setting board_settings;
+    board_setting board_settings_;
 
     /**
      * @brief Direct access to a square of the internal board array.
      *
-     * @param INDEX Mailbox index in [0, 63].
+     * @param index Mailbox index in [0, 63].
      * @return Reference to the Piece on that square.
      */
-    Piece& operator[](const int INDEX) {
-        assert(INDEX < 64 && INDEX >= 0);
-        return board[INDEX];
+    Piece& operator[](const int index) {
+        assert(index < 64 && index >= 0);
+        return board_[index];
     }
 
-    const Piece& operator[](const int INDEX) const {
-        assert(INDEX < 64 && INDEX >= 0);
-        return board[INDEX];
+    const Piece& operator[](const int index) const {
+        assert(index < 64 && index >= 0);
+        return board_[index];
     }
 
     /**
@@ -102,10 +102,10 @@ public:
      * This function iterates through the board to find the king of the given piece color.
      * Once the king is found, it calls the isSquareAttacked function to check if the king is being attacked.
      *
-     * @param PIECE_COLOR The color of the king to check (true for white, false for black).
+     * @param piece_color The color of the king to check (true for white, false for black).
      * @return True if the king is in check, false otherwise.
      */
-    bool is_king_in_check(bool PIECE_COLOR);
+    bool is_king_in_check(bool piece_color);
 
     /**
      * @brief Resets the board to the starting position;
@@ -123,11 +123,11 @@ public:
      * if any of them captures their counterpart on the given square. It also checks if the square is attacked by the king
      * in the adjacent positions.
      *
-     * @param SQUARE The square to check.
-     * @param PIECE_COLOR The color of the piece to check (true for white, false for black).
+     * @param square The square to check.
+     * @param piece_color The color of the piece to check (true for white, false for black).
      * @return True if the square is attacked, false otherwise.
      */
-    bool is_square_attacked(const std::pair<int, int>& SQUARE, bool PIECE_COLOR);
+    bool is_square_attacked(const std::pair<int, int>& square, bool piece_color);
 
     /**
      * @brief Attempts to move a chess piece on the board.
@@ -136,10 +136,10 @@ public:
      * move and checks for pieces belonging to the opponent. If the move is successful, it updates the board state
      * accordingly.
      *
-     * @param MOVE The move to be made.
+     * @param move The move to be made.
      * @return True if the move is successful, false otherwise. If false, the move will not be applied.
      */
-    bool try_to_move_piece(const Move& MOVE);
+    bool try_to_move_piece(const Move& move);
 
     /**
      * @brief Moves a chess piece on the board.
@@ -149,10 +149,10 @@ public:
      * tryToMovePiece for correct checking. The function returns true if the move is successful, and false otherwise. If
      * false the move will not be applied!
      *
-     * @param MOVE The move to make.
+     * @param move The move to make.
      * @return True if the move is successful, false otherwise. If false the move will not be applied!.
      */
-    bool make_move(const Move& MOVE);
+    bool make_move(const Move& move);
 
     /**
      * @brief Removes the last move from the list of moves and updates the board state accordingly.
@@ -178,9 +178,9 @@ public:
      * This function reads a FEN (Forsyth-Edwards Notation) string and sets up the chessboard based on the provided FEN
      * string. Then FEN has to be correct. Otherwise the programm will throw an exception!
      *
-     * @param INPUT The FEN string to parse.
+     * @param input The FEN string to parse.
      */
-    void read_fen(const std::string& INPUT);
+    void read_fen(const std::string& input);
 
     /**
      * @brief Returns the current FEN representation of the chessboard.
@@ -200,10 +200,10 @@ public:
      * It generates all possible pseudo-legal moves for the current player and checks if any of them result in a
      * non-checkmate position. If there are no such moves, then checkmate is detected.
      *
-     * @param IS_WHITE True if the current player is white, false otherwise.
+     * @param is_white True if the current player is white, false otherwise.
      * @return True if the current player is in checkmate, false otherwise.
      */
-    bool is_check_mate(bool IS_WHITE);
+    bool is_check_mate(bool is_white);
 
     /**
      * @brief Parses a chess move from a string input.
@@ -214,10 +214,10 @@ public:
      * The function extracts the figure, starting square, target square, capture flag, promotion figure,
      * and move type from the input string and constructs a Move object with these values.
      *
-     * @param INPUT The string representing the chess move.
+     * @param input The string representing the chess move.
      * @return The parsed Move object.
      */
-    [[nodiscard]] Move parse_move(const std::string& INPUT) const;
+    [[nodiscard]] Move parse_move(const std::string& input) const;
 
     /**
      * @brief Returns the Zobrist hash of the current board state.
@@ -228,7 +228,7 @@ public:
      *
      * @return 64-bit Zobrist hash of the position.
      */
-    [[nodiscard]] uint64_t get_hash() const { return board_hash; }
+    [[nodiscard]] uint64_t get_hash() const { return board_hash_; }
 
 private:
 
@@ -237,17 +237,17 @@ private:
      *
      * Each entry stores a Piece corresponding to a square on the board.
      */
-    std::array<Piece, 64> board{Piece(EMPTY)};
+    std::array<Piece, 64> board_{Piece(EMPTY)};
 
     /**
      * @brief Precomputed Zobrist keys used to hash the board state.
      */
-    const Zobrist ZOBRIST_TABLES;
+    const Zobrist ZOBRIST_TABLES_;
 
     /**
      * @brief Cached Zobrist hash for the current position.
      */
-    uint64_t board_hash{0};
+    uint64_t board_hash_{0};
 
     /**
      * @brief Recomputes the Zobrist hash from scratch based on the board state.
@@ -260,37 +260,34 @@ private:
         uint64_t hash = 0;
         // add all pieces with the square to the hash.
         for (int square = 0; square < 64; ++square) {
-            if (const int PIECE = board[square].piece_type; PIECE != EMPTY) {
-                hash ^= ZOBRIST_TABLES.zobrist_squares[PIECE][square];
+            if (const int PIECE = board_[square].piece_type_; PIECE != EMPTY) {
+                hash ^= ZOBRIST_TABLES_.zobrist_squares_[PIECE][square];
             }
         }
 
         // Add stm to the hash.
-        hash = hash ^ ZOBRIST_TABLES.zobrist_stm[player];
+        hash = hash ^ ZOBRIST_TABLES_.zobrist_stm_[player_];
 
         // If ep square, get file and add hash.
-        if (board_settings.ep_square != 100) {
-            const int FILE = board_settings.ep_square % 8;
-            hash ^= ZOBRIST_TABLES.zobrist_ep[FILE];
+        if (board_settings_.ep_square_ != 100) {
+            const int FILE = board_settings_.ep_square_ % 8;
+            hash ^= ZOBRIST_TABLES_.zobrist_ep_[FILE];
         }
 
         // Add each castling permission.
-        if (board_settings.white_king_side) {
-            hash ^= ZOBRIST_TABLES.zobrist_castling[0];
-        }
+        if (board_settings_.white_king_side_)
+            hash ^= ZOBRIST_TABLES_.zobrist_castling_[0];
 
-        if (board_settings.white_queen_side) {
-            hash ^= ZOBRIST_TABLES.zobrist_castling[1];
-        }
+        if (board_settings_.white_queen_side_)
+            hash ^= ZOBRIST_TABLES_.zobrist_castling_[1];
 
-        if (board_settings.black_king_side) {
-            hash ^= ZOBRIST_TABLES.zobrist_castling[2];
-        }
-        if (board_settings.black_queen_side) {
-            hash ^= ZOBRIST_TABLES.zobrist_castling[3];
-        }
+        if (board_settings_.black_king_side_)
+            hash ^= ZOBRIST_TABLES_.zobrist_castling_[2];
 
-        board_hash = hash;
+        if (board_settings_.black_queen_side_)
+            hash ^= ZOBRIST_TABLES_.zobrist_castling_[3];
+
+        board_hash_ = hash;
     }
 
     /**
@@ -300,9 +297,9 @@ private:
      * It checks the type of the moving piece and the target square to determine which castling permissions should be
      * disabled.
      *
-     * @param MOVE The move that was made.
+     * @param move The move that was made.
      */
-    void handle_castling_permissions(const Move& MOVE);
+    void handle_castling_permissions(const Move& move);
 
     /**
      * @brief Converts a square number to its corresponding X and Y coordinates on a chess board.
@@ -311,13 +308,13 @@ private:
      * corresponding X and Y coordinates. The X-coordinate is represented by a letter from 'a' to 'h',
      * while the Y-coordinate is represented by a number from 1 to 8.
      *
-     * @param SQUARE The square number on the chess board, ranging from 0 to 63.
+     * @param square The square number on the chess board, ranging from 0 to 63.
      * @return A string representation of the X and Y coordinates in the format "Xn", where X is a letter
      *         and n is a number.
      */
-    static std::string convert_to_x_and_y(const int SQUARE) {
+    static std::string convert_to_x_and_y(const int square) {
         std::ostringstream out;
-        out << static_cast<char>((SQUARE) % 8 + 'a') << (SQUARE) / 8 + 1;
+        out << static_cast<char>((square) % 8 + 'a') << (square) / 8 + 1;
         return out.str();
     }
 };

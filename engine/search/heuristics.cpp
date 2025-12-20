@@ -7,35 +7,37 @@
 
 #include <algorithm>
 
-static int score_move_heuristic(const Move& M, const Move& TT_MOVE, const int PLY, const int SIDE,
-                                const search::heuristics::KillerTable& KILLERS,
-                                const search::heuristics::HistoryTable& HISTORY)
+static int score_move_heuristic(const Move& move, const Move& tt_move, const int ply,
+                                const int side, const search::heuristics::KillerTable& killers,
+                                const search::heuristics::HistoryTable& history)
 {
     // TT / PV move always first.
-    if (TT_MOVE.square != TT_MOVE.move_square && (M == TT_MOVE))
+    if (tt_move.square_ != tt_move.move_square_ && (move == tt_move))
         return search::heuristics::HEUR_TT_BONUS;
 
     // Captures before quiets (MVV-LVA)
-    if (M.captured_piece.piece_type != EMPTY || M.move_type == EN_PASSANT)
+    if (move.captured_piece_.piece_type_ != EMPTY || move.move_type_ == EN_PASSANT)
     {
         // For en-passant, the captured pawn is not on the target square, so captured_piece can be
         // EMPTY. Still treat it as a pawn victim for ordering.
-        const int victim = (M.move_type == EN_PASSANT) ? 0 // pawn
-                                                       : (M.captured_piece.piece_type % BP);
+        const int victim = (move.move_type_ == EN_PASSANT)
+                               ? 0 // pawn
+                               : (move.captured_piece_.piece_type_ % BP);
 
-        const int attacker = (M.moving_piece.piece_type % BP);
+        const int attacker = (move.moving_piece_.piece_type_ % BP);
         return 10000 + victim * 100 - attacker; // base so captures stay above most quiets
     }
 
     // Quiet move heuristics.
     int score = 0;
-    if (KILLERS.is_killer1(PLY, M))
+    if (killers.is_killer1(ply, move))
         score += search::heuristics::HEUR_KILLER1_BONUS;
-    else if (KILLERS.is_killer2(PLY, M))
+
+    else if (killers.is_killer2(ply, move))
         score += search::heuristics::HEUR_KILLER2_BONUS;
 
     // History is additive and smaller than killer bonuses.
-    score += HISTORY.get(SIDE, M.square, M.move_square);
+    score += history.get(side, move.square_, move.move_square_);
     return score;
 }
 
@@ -44,73 +46,73 @@ namespace search::heuristics
 
 void KillerTable::clear()
 {
-    for (auto& k : killers)
+    for (auto& k : killers_)
     {
         k[0] = Move{};
         k[1] = Move{};
     }
 }
 
-void KillerTable::add(const int PLY, const Move& m)
+void KillerTable::add(const int ply, const Move& move)
 {
-    if (PLY < 0 || PLY >= HEUR_MAX_PLY)
+    if (ply < 0 || ply >= HEUR_MAX_PLY)
         return;
 
     // Avoid duplicates
-    if (killers[PLY][0] == m)
+    if (killers_[ply][0] == move)
         return;
 
-    killers[PLY][1] = killers[PLY][0];
-    killers[PLY][0] = m;
+    killers_[ply][1] = killers_[ply][0];
+    killers_[ply][0] = move;
 }
 
-bool KillerTable::is_killer1(const int PLY, const Move& m) const
+bool KillerTable::is_killer1(const int ply, const Move& move) const
 {
-    if (PLY < 0 || PLY >= HEUR_MAX_PLY)
+    if (ply < 0 || ply >= HEUR_MAX_PLY)
         return false;
-    return killers[PLY][0] == m;
+    return killers_[ply][0] == move;
 }
 
-bool KillerTable::is_killer2(const int PLY, const Move& m) const
+bool KillerTable::is_killer2(const int ply, const Move& move) const
 {
-    if (PLY < 0 || PLY >= HEUR_MAX_PLY)
+    if (ply < 0 || ply >= HEUR_MAX_PLY)
         return false;
-    return killers[PLY][1] == m;
+    return killers_[ply][1] == move;
 }
 
 void HistoryTable::clear()
 {
-    for (auto& side : h)
+    for (auto& side : history_)
         for (auto& from : side)
             from.fill(0);
 }
 
-void HistoryTable::add(const int SIDE, const int FROM, const int TO, const int DEPTH)
+void HistoryTable::add(const int side, const int from, const int to, const int depth)
 {
-    if (SIDE < 0 || SIDE > 1)
+    if (side < 0 || side > 1)
         return;
-    if (FROM < 0 || FROM >= 64 || TO < 0 || TO >= 64)
+    if (from < 0 || from >= 64 || to < 0 || to >= 64)
         return;
-    if (DEPTH <= 0)
+    if (depth <= 0)
         return;
 
-    const int bonus = DEPTH * DEPTH;
-    int& cell = h[SIDE][FROM][TO];
+    const int bonus = depth * depth;
+    int& cell = history_[side][from][to];
 
     // Saturating add (avoid runaway/overflow)
-    if (constexpr int MAX_H = 1'000'000; cell > MAX_H - bonus)
+    if (constexpr int MAX_H = 1000000; cell > MAX_H - bonus)
         cell = MAX_H;
     else
         cell += bonus;
 }
 
-int HistoryTable::get(const int SIDE, const int FROM, const int TO) const
+int HistoryTable::get(const int side, const int from, const int to) const
 {
-    if (SIDE < 0 || SIDE > 1)
+    if (side < 0 || side > 1)
         return 0;
-    if (FROM < 0 || FROM >= 64 || TO < 0 || TO >= 64)
+    if (from < 0 || from >= 64 || to < 0 || to >= 64)
         return 0;
-    return h[SIDE][FROM][TO];
+    return history_[side][from][to];
 }
 
 void order_moves(PseudoLegalMoves& moves, const Move& tt_move, const int ply, const int side,

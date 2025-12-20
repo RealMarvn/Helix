@@ -4,14 +4,11 @@
 
 #include "debug_print.h"
 
-// Zugriff auf ChessBot intern
-#include "search.h"
-
-// Board / Move / MoveGen
 #include "./core/board.h"
 #include "./core/move.h"
 #include "./movement/move_gen.h"
 #include "heuristics.h"
+#include "search.h"
 
 #include <algorithm>
 #include <iostream>
@@ -48,10 +45,10 @@ void print_root_ordering(const ChessBot& bot, Board& board)
     bot.tt.probe_move(board.get_hash(), tt_move);
 
     // Get all moves
-    auto moves = moveGenUtils::get_all_pseudo_legal_moves(board, board.player == WHITE);
+    auto moves = moveGenUtils::get_all_pseudo_legal_moves(board, board.player_ == WHITE);
 
     // Order them with PLY 0
-    search::heuristics::order_moves(moves, tt_move, 0, board.player, bot.killers, bot.history);
+    search::heuristics::order_moves(moves, tt_move, 0, board.player_, bot.killers, bot.history);
 
     constexpr int TOP_N = 6;
     const int n = std::min(TOP_N, moves.size());
@@ -70,9 +67,9 @@ void print_root_ordering(const ChessBot& bot, Board& board)
     std::cout << "]" << std::endl;
 }
 
-void print_pv(const ChessBot& bot, const Board& BOARD)
+void print_pv(const ChessBot& bot, const Board& board)
 {
-    Board b = BOARD;
+    Board b = board;
 
     constexpr int MAX_PLIES = 10;
     std::vector<std::string> pv;

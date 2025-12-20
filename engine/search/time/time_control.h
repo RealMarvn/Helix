@@ -27,7 +27,7 @@ struct TimeControl
      * typically after completing the current iteration of
      * iterative deepening.
      */
-    int soft_ms = 0;
+    int soft_ms_ = 0;
 
     /** @brief Hard time limit in milliseconds.
      *
@@ -35,7 +35,7 @@ struct TimeControl
      * enforced immediately inside the search to guarantee
      * timely termination.
      */
-    int hard_ms = 0;
+    int hard_ms_ = 0;
 
     /** @brief Total time budget allocated for the current move.
      *
@@ -43,38 +43,38 @@ struct TimeControl
      * intends to spend on the move, before soft and hard limits
      * are derived.
      */
-    int total_ms = 0;
+    int total_ms_ = 0;
 
     /** @brief Search start time in milliseconds (monotonic clock). */
-    std::int64_t start_ms = 0;
+    std::int64_t start_ms_ = 0;
 
     /** @brief Absolute soft deadline timestamp in milliseconds. */
-    std::int64_t soft_deadline_ms = 0;
+    std::int64_t soft_deadline_ms_ = 0;
 
     /** @brief Absolute hard deadline timestamp in milliseconds. */
-    std::int64_t hard_deadline_ms = 0;
+    std::int64_t hard_deadline_ms_ = 0;
 
     /**
      * @brief Check whether the soft time limit has been reached.
      *
-     * @param NOW_MS Current time in milliseconds obtained from a
+     * @param now_ms Current time in milliseconds obtained from a
      *        monotonic clock.
      * @return True if the soft deadline is active and has been reached.
      */
-    [[nodiscard]] bool soft_time_up(const std::int64_t NOW_MS) const
+    [[nodiscard]] bool soft_time_up(const std::int64_t now_ms) const
     {
-        return soft_deadline_ms > 0 && NOW_MS >= soft_deadline_ms;
+        return soft_deadline_ms_ > 0 && now_ms >= soft_deadline_ms_;
     }
 
     /**
      * @brief Check whether the hard time limit has been reached.
      *
-     * @param NOW_MS Current time in milliseconds obtained from a
+     * @param now_ms Current time in milliseconds obtained from a
      *        monotonic clock.
      * @return True if the hard deadline is active and has been reached.
      */
-    [[nodiscard]] bool hard_time_up(const std::int64_t NOW_MS) const
+    [[nodiscard]] bool hard_time_up(const std::int64_t now_ms) const
     {
-        return hard_deadline_ms > 0 && NOW_MS >= hard_deadline_ms;
+        return hard_deadline_ms_ > 0 && now_ms >= hard_deadline_ms_;
     }
 };

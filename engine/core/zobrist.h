@@ -28,21 +28,21 @@ public:
      * Indexed as [piece_type][square_index], covering all 12 piece types
      * (white/black × pawn/knight/bishop/rook/queen/king) over 64 squares.
      */
-    uint64_t zobrist_squares[12][64]{};
+    uint64_t zobrist_squares_[12][64]{};
 
     /**
      * @brief Zobrist keys for side-to-move.
      *
      * Index 0 = white to move, index 1 = black to move.
      */
-    uint64_t zobrist_stm[2]{};
+    uint64_t zobrist_stm_[2]{};
 
     /**
      * @brief Zobrist keys for en-passant file availability.
      *
      * Only one file may be active at a time. Indexed 0..7 for files a–h.
      */
-    uint64_t zobrist_ep[8]{};
+    uint64_t zobrist_ep_[8]{};
 
     /**
      * @brief Zobrist keys for castling rights.
@@ -50,7 +50,7 @@ public:
      * Four flags: white king-side, white queen-side,
      * black king-side, black queen-side.
      */
-    uint64_t zobrist_castling[4]{};
+    uint64_t zobrist_castling_[4]{};
 
     /**
      * @brief Initializes all Zobrist keys with random 64‑bit numbers.
@@ -59,20 +59,20 @@ public:
      * throughout the entire engine runtime to ensure consistent hashing.
      */
     Zobrist() {
-        for (auto& piece: zobrist_squares) {
+        for (auto& piece: zobrist_squares_) {
             for (auto& square: piece) {
                 square = generate_random_64_bit_number();
             }
         }
 
-        zobrist_stm[0] = generate_random_64_bit_number();
-        zobrist_stm[1] = generate_random_64_bit_number();
+        zobrist_stm_[0] = generate_random_64_bit_number();
+        zobrist_stm_[1] = generate_random_64_bit_number();
 
-        for (auto& ep: zobrist_ep) {
+        for (auto& ep: zobrist_ep_) {
             ep = generate_random_64_bit_number();
         }
 
-        for (auto& castling: zobrist_castling) {
+        for (auto& castling: zobrist_castling_) {
             castling = generate_random_64_bit_number();
         }
     }

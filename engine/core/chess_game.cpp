@@ -7,20 +7,11 @@
 #include <sstream>
 #include <thread>
 
-#include "../search/time/time_manager.h"
-#include "./search/time/search_constraints.h"
-#include "./search/time/uci_time_control.h"
 #include "chess_game.h"
-
-namespace
-{
-
-[[nodiscard]] bool starts_with(const std::string& s, const char* prefix)
-{
-    return s.rfind(prefix, 0) == 0;
-}
-
-} // namespace
+#include "search/time/search_constraints.h"
+#include "search/time/time_manager.h"
+#include "search/time/uci_time_control.h"
+#include "utils.h"
 
 void ChessGame::start()
 {
@@ -29,54 +20,54 @@ void ChessGame::start()
 
 void ChessGame::stop_search_worker()
 {
-    std::unique_lock<std::mutex> lk(search_mutex);
+    std::unique_lock<std::mutex> lk(search_mutex_);
 
     // Always request stop (harmless if no search is running)
-    chessBot.request_stop();
+    chess_bot_.request_stop();
 
     // If a worker thread exists, we MUST join it before reusing search_thread.
-    if (search_thread.joinable())
+    if (search_thread_.joinable())
     {
         lk.unlock();
-        search_thread.join();
+        search_thread_.join();
         lk.lock();
     }
 
-    search_running = false;
+    search_running_ = false;
 }
 
 void ChessGame::clear_ponder_state_locked()
 {
     // Caller must hold search_mutex.
-    ponder_active = false;
-    ponder_best = Move{};
+    ponder_active_ = false;
+    ponder_best_ = Move{};
 }
 
 void ChessGame::clear_ponder_state()
 {
-    std::lock_guard<std::mutex> lk(search_mutex);
+    std::lock_guard<std::mutex> lk(search_mutex_);
     clear_ponder_state_locked();
 }
 
-void ChessGame::parser_uci_handle_position(const std::string& LINE) const
+void ChessGame::parser_uci_handle_position(const std::string& line) const
 {
     std::string token;
-    std::istringstream iss(LINE);
+    std::istringstream iss(line);
 
     iss >> token; // "position"
     iss >> token; // "startpos" oder "fen"
 
     if (token == "startpos")
     {
-        board->reset();
+        board_->reset();
 
         // Check if there are more moves
         if (iss >> token && token == "moves")
         {
             while (iss >> token)
             {
-                Move m = board->parse_move(token);
-                board->try_to_move_piece(m);
+                Move m = board_->parse_move(token);
+                board_->try_to_move_piece(m);
             }
         }
     }
@@ -87,20 +78,20 @@ void ChessGame::parser_uci_handle_position(const std::string& LINE) const
         {
             fen += part + " ";
         }
-        board->read_fen(fen);
+        board_->read_fen(fen);
 
         if (part == "moves")
         {
             while (iss >> token)
             {
-                Move m = board->parse_move(token);
-                board->try_to_move_piece(m);
+                Move m = board_->parse_move(token);
+                board_->try_to_move_piece(m);
             }
         }
     }
 }
 
-void ChessGame::parser_uci_handle_go(const std::string& LINE)
+void ChessGame::parser_uci_handle_go(const std::string& line)
 {
     // Parse the UCI "go" command into search constraints + raw time control.
     // See: https://backscattering.de/chess/uci/
@@ -109,142 +100,137 @@ void ChessGame::parser_uci_handle_go(const std::string& LINE)
     UciTimeControl utc{};
 
     // Defaults: no explicit constraints.
-    constraints.mode = SearchType::Normal;
-    constraints.movetime_ms = -1;
-    constraints.depth = -1;
-    constraints.nodes = -1;
+    constraints.mode_ = SearchType::Normal;
+    constraints.movetime_ms_ = -1;
+    constraints.depth_ = -1;
+    constraints.nodes_ = -1;
 
     // Track whether any time-related token was provided.
     bool saw_any_time_token = false;
 
-    std::istringstream iss(LINE);
+    std::istringstream iss(line);
     std::string token;
     iss >> token; // "go"
 
     while (iss >> token)
     {
         if (token == "infinite")
-            constraints.mode = SearchType::Infinite;
+            constraints.mode_ = SearchType::Infinite;
 
         else if (token == "ponder")
-            constraints.mode = SearchType::Ponder;
+            constraints.mode_ = SearchType::Ponder;
 
         else if (token == "depth")
         {
-            iss >> constraints.depth;
-            constraints.mode = SearchType::FixedDepth;
+            iss >> constraints.depth_;
+            constraints.mode_ = SearchType::FixedDepth;
         }
         else if (token == "nodes")
         {
-            iss >> constraints.nodes;
-            constraints.mode = SearchType::NodeLimit;
+            iss >> constraints.nodes_;
+            constraints.mode_ = SearchType::NodeLimit;
         }
         else if (token == "movetime")
         {
-            iss >> constraints.movetime_ms;
-            constraints.mode = (constraints.mode == SearchType::Ponder) ? SearchType::Ponder
-                                                                        : SearchType::FixedTime;
+            iss >> constraints.movetime_ms_;
+            constraints.mode_ = (constraints.mode_ == SearchType::Ponder) ? SearchType::Ponder
+                                                                          : SearchType::FixedTime;
         }
         else if (token == "wtime")
         {
-            iss >> utc.wtime;
+            iss >> utc.wtime_;
             saw_any_time_token = true;
         }
         else if (token == "btime")
         {
-            iss >> utc.btime;
+            iss >> utc.btime_;
             saw_any_time_token = true;
         }
         else if (token == "winc")
         {
-            iss >> utc.winc;
+            iss >> utc.winc_;
             saw_any_time_token = true;
         }
         else if (token == "binc")
         {
-            iss >> utc.binc;
+            iss >> utc.binc_;
             saw_any_time_token = true;
         }
         else if (token == "movestogo")
         {
-            iss >> utc.movestogo;
+            iss >> utc.movestogo_;
             saw_any_time_token = true;
-        }
-        else
-        {
-            // Other UCI go-parameters are currently ignored:
-            // - searchmoves, mate
         }
     }
 
     // If a tournament clock was provided, compute a per-move budget.
     // (FixedTime/FixedDepth/NodeLimit/Infinite/Ponder do not require tc.)
-    if (constraints.mode == SearchType::Normal && saw_any_time_token)
-        constraints.budget = search::time::TimeManager::compute_budget(board->player, utc);
+    if (constraints.mode_ == SearchType::Normal && saw_any_time_token)
+        constraints.budget_ = search::time::TimeManager::compute_budget(board_->player_, utc);
 
     // Stop previous search if exists.
     stop_search_worker();
 
     // Start search and set pondering if needed.
     {
-        std::lock_guard<std::mutex> lk(search_mutex);
-        search_running = true;
+        std::lock_guard<std::mutex> lk(search_mutex_);
+        search_running_ = true;
 
-        ponder_active = (constraints.mode == SearchType::Ponder);
-        ponder_best = Move{};
+        ponder_active_ = (constraints.mode_ == SearchType::Ponder);
+        ponder_best_ = Move{};
     }
 
-    Board board_copy = *board;
+    Board board_copy = *board_;
     SearchConstraints constraints_copy = constraints;
 
-    search_thread = std::thread([this, board_copy, constraints_copy]() mutable {
-        const Move best = chessBot.think(board_copy, constraints_copy);
+    search_thread_ = std::thread([this, board_copy, constraints_copy]() mutable {
+        const Move best = chess_bot_.think(board_copy, constraints_copy);
 
         // If Ponder, dont print and save the best move.
-        if (constraints_copy.mode == SearchType::Ponder)
+        if (constraints_copy.mode_ == SearchType::Ponder)
         {
-            std::lock_guard<std::mutex> lk(search_mutex);
-            ponder_best = best;
-            search_running = false;
+            std::lock_guard<std::mutex> lk(search_mutex_);
+            ponder_best_ = best;
+            search_running_ = false;
             return;
         }
 
         std::cout << "bestmove " << best.to_string() << std::endl;
 
-        std::lock_guard<std::mutex> lk(search_mutex);
-        search_running = false;
+        std::lock_guard<std::mutex> lk(search_mutex_);
+        search_running_ = false;
     });
 }
 
-void ChessGame::parser_parse_uci(const std::string& LINE)
+void ChessGame::parser_parse_uci(const std::string& line)
 {
-    if (LINE.empty())
+    if (line.empty())
         return;
 
-    if (LINE == "uci")
+    if (line == "uci")
     {
         std::cout << "id name Helix" << std::endl;
         std::cout << "id author Marvin Becker" << std::endl;
         std::cout << "uciok" << std::endl;
         return;
     }
-    if (LINE == "isready")
+    if (line == "isready")
     {
         std::cout << "readyok" << std::endl;
         return;
     }
-    if (LINE == "stop")
+    if (line == "stop")
     {
         stop_search_worker();
         clear_ponder_state();
         return;
     }
-    if (LINE == "ponderhit")
+    if (line == "ponderhit")
     {
         // Only meaningful if a ponder search is active.
         {
-            std::lock_guard<std::mutex> lk(search_mutex);
-            if (!ponder_active)
+            std::lock_guard<std::mutex> lk(search_mutex_);
+            if (!ponder_active_)
                 return;
         }
 
@@ -252,46 +238,49 @@ void ChessGame::parser_parse_uci(const std::string& LINE)
 
         Move best;
         {
-            std::lock_guard<std::mutex> lk(search_mutex);
-            best = ponder_best;
+            std::lock_guard<std::mutex> lk(search_mutex_);
+            best = ponder_best_;
             clear_ponder_state_locked();
         }
 
         // Could be null if ponderhit is too fast.
         if (best.is_null())
-            best = moveGenUtils::get_legal_fallback_move(*board);
+            best = moveGenUtils::get_legal_fallback_move(*board_);
 
         std::cout << "bestmove " << best.to_string() << std::endl;
         return;
     }
-    if (LINE == "ucinewgame")
+    if (line == "ucinewgame")
     {
         stop_search_worker();
         clear_ponder_state();
-        board->reset();
-        chessBot.reset_tt();
+        board_->reset();
+        chess_bot_.reset_tt();
         return;
     }
-    if (starts_with(LINE, "position "))
+
+    if (starts_with(line, "position "))
     {
         stop_search_worker();
         clear_ponder_state();
-        parser_uci_handle_position(LINE);
+        parser_uci_handle_position(line);
         return;
     }
-    if (starts_with(LINE, "go"))
+
+    if (starts_with(line, "go"))
     {
-        parser_uci_handle_go(LINE);
+        parser_uci_handle_go(line);
         return;
     }
-    if (starts_with(LINE, "setoption "))
+
+    if (starts_with(line, "setoption "))
     {
-        std::istringstream iss(LINE);
+        std::istringstream iss(line);
         std::string token, name, value;
 
         iss >> token; // setoption
-        iss >> name;  // name
-        iss >> value; // Debug
+        iss >> token; // name
+        iss >> name;  // Debug
 
         if (name == "Debug")
         {
@@ -300,23 +289,25 @@ void ChessGame::parser_parse_uci(const std::string& LINE)
 
             if (value == "none")
             {
-                chessBot.set_debug_enabled(false);
+                chess_bot_.set_debug_enabled(false);
                 return;
             }
 
             if (value == "basic")
-                chessBot.set_debug_level(ChessBot::DebugLevel::BASIC);
-            else if (value == "medium")
-                chessBot.set_debug_level(ChessBot::DebugLevel::MEDIUM);
-            else if (value == "verbose")
-                chessBot.set_debug_level(ChessBot::DebugLevel::VERBOSE);
+                chess_bot_.set_debug_level(ChessBot::DebugLevel::BASIC);
 
-            chessBot.set_debug_enabled(true);
+            else if (value == "medium")
+                chess_bot_.set_debug_level(ChessBot::DebugLevel::MEDIUM);
+
+            else if (value == "verbose")
+                chess_bot_.set_debug_level(ChessBot::DebugLevel::VERBOSE);
+
+            chess_bot_.set_debug_enabled(true);
         }
 
         return;
     }
-    if (LINE == "quit")
+    if (line == "quit")
     {
         stop_search_worker();
         exit(0);
@@ -325,36 +316,36 @@ void ChessGame::parser_parse_uci(const std::string& LINE)
     // Unknown commands are ignored.
 }
 
-void ChessGame::parser_parse_classic(const std::string& LINE)
+void ChessGame::parser_parse_classic(const std::string& line)
 {
-    if (LINE.empty())
+    if (line.empty())
         return;
 
-    if (LINE[0] == 'F')
+    if (line[0] == 'F')
     {
         // Read in FEN notation.
-        board->read_fen(LINE.substr(1, LINE.length()));
-        board->print_current_board();
+        board_->read_fen(line.substr(1, line.length()));
+        board_->print_current_board();
         return;
     }
-    if (LINE[0] == 'f')
+    if (line[0] == 'f')
     {
         // Get the FEN.
-        std::cout << "Your FEN: " << board->get_fen() << std::endl;
+        std::cout << "Your FEN: " << board_->get_fen() << std::endl;
         return;
     }
 
     // undo the last two moves. (Bot did also move that's why)
-    if (LINE == "undo")
+    if (line == "undo")
     {
-        board->pop_last_move();
-        board->pop_last_move();
-        board->print_current_board();
+        board_->pop_last_move();
+        board_->pop_last_move();
+        board_->print_current_board();
         return;
     }
 
     // Check if input has the correct length.
-    if (LINE.length() < 4)
+    if (line.length() < 4)
     {
         std::cout << "invalid" << std::endl;
         return;
@@ -362,10 +353,10 @@ void ChessGame::parser_parse_classic(const std::string& LINE)
 
     // Parse the move.
 
-    if (const Move PLAYER_MOVE = board->parse_move(LINE); board->try_to_move_piece(PLAYER_MOVE))
+    if (const Move PLAYER_MOVE = board_->parse_move(line); board_->try_to_move_piece(PLAYER_MOVE))
     {
         // Make the move.
-        if (board->is_check_mate(board->player == WHITE))
+        if (board_->is_check_mate(board_->player_ == WHITE))
         {
             // Check the opponent for check mate.
             std::cout << "CHECK MATE!" << std::endl;
@@ -377,21 +368,19 @@ void ChessGame::parser_parse_classic(const std::string& LINE)
 
         // Bot can only move legal so no need to check if the move is legal.
         // Check if opponent is in check mate after bots turn.
-        const Move MOVE = chessBot.think(*board, LIMIT);
-        board->make_move(MOVE);
-        board->print_current_board();
+        const Move MOVE = chess_bot_.think(*board_, LIMIT);
+        board_->make_move(MOVE);
+        board_->print_current_board();
 
-        if (board->is_check_mate(board->player == WHITE))
+        if (board_->is_check_mate(board_->player_ == WHITE))
         {
             // Check the opponent for check mate.
-            board->print_current_board();
+            board_->print_current_board();
             std::cout << "CHECK MATE!" << std::endl;
         }
     }
     else
-    {
         std::cout << "invalid" << std::endl;
-    }
 }
 
 void ChessGame::parser_init()
@@ -408,7 +397,7 @@ void ChessGame::parser_init()
         else if (input == "classic")
         {
             uci_mode = false;
-            board->print_current_board();
+            board_->print_current_board();
             continue;
         }
 

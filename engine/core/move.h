@@ -42,17 +42,22 @@ enum MoveType : uint8_t { NORMAL, EN_PASSANT, PROMOTION, CASTLING };
  */
 struct Move {
     // The square a piece want's to move to.
-    int move_square{0};
+    int move_square_{0};
+
     // The square the piece is on.
-    int square{0};
+    int square_{0};
+
     // The moving piece.
-    Piece moving_piece;
+    Piece moving_piece_;
+
     // The piece which gets captured (If it is a normal move it will be EMPTY)
-    Piece captured_piece;
+    Piece captured_piece_;
+
     // The piece a pawn can be promoted to. Can be empty.
-    Piece promotion_piece;
+    Piece promotion_piece_;
+
     // The type of move.
-    MoveType move_type{NORMAL};
+    MoveType move_type_{NORMAL};
 
     /**
      * @brief Converts the Move object's square and moveSquare coordinates to corresponding X and Y coordinates.
@@ -67,10 +72,10 @@ struct Move {
      */
     [[nodiscard]] std::string to_string() const {
         std::ostringstream out;
-        out << static_cast<char>((square) % 8 + 'a') << (square) / 8 + 1;
-        out << static_cast<char>((move_square) % 8 + 'a') << (move_square) / 8 + 1;
-        if (move_type == PROMOTION) {
-            out << static_cast<char>(std::tolower(promotion_piece.to_char()));
+        out << static_cast<char>((square_) % 8 + 'a') << (square_) / 8 + 1;
+        out << static_cast<char>((move_square_) % 8 + 'a') << (move_square_) / 8 + 1;
+        if (move_type_ == PROMOTION) {
+            out << static_cast<char>(std::tolower(promotion_piece_.to_char()));
         }
         return out.str();
     }
@@ -82,10 +87,10 @@ struct Move {
      * @return True if the two Move objects are equal, false otherwise.
      */
     bool operator==(const Move& other) const {
-        return move_square == other.move_square && square == other.square &&
-               moving_piece.piece_type == other.moving_piece.piece_type &&
-               captured_piece.piece_type == other.captured_piece.piece_type &&
-               promotion_piece.piece_type == other.promotion_piece.piece_type && move_type == other.move_type;
+        return move_square_ == other.move_square_ && square_ == other.square_ &&
+               moving_piece_.piece_type_ == other.moving_piece_.piece_type_ &&
+               captured_piece_.piece_type_ == other.captured_piece_.piece_type_ &&
+               promotion_piece_.piece_type_ == other.promotion_piece_.piece_type_ && move_type_ == other.move_type_;
     }
 
     /**
@@ -95,7 +100,7 @@ struct Move {
      */
     [[nodiscard]] bool is_null() const
     {
-        return move_square == 0 && square == 0;
+        return move_square_ == 0 && square_ == 0;
     }
 };
 
@@ -108,14 +113,14 @@ struct Move {
  */
 class PseudoLegalMoves {
     // Core array which will hold the moves.
-    std::array<Move, MAX_MOVES> move_list{};
+    std::array<Move, MAX_MOVES> move_list_{};
     // The index of that array.
-    int index = 0;
+    int index_ = 0;
 
 public:
     using iterator = std::array<Move, MAX_MOVES>::iterator;
 
-    int size() const {return index;}
+    [[nodiscard]] int size() const {return index_;}
 
     /**
      * @brief Returns an iterator pointing to the first element in the move list.
@@ -124,7 +129,7 @@ public:
      *
      * @return An iterator pointing to the first element in the move list.
      */
-    iterator begin() { return move_list.begin(); }
+    iterator begin() { return move_list_.begin(); }
 
     /**
      * @fn iterator PseudoLegalMoves::end()
@@ -136,7 +141,7 @@ public:
      *
      * @return An iterator pointing to one past the last element of the move list.
      */
-    iterator end() { return move_list.begin() + index; }
+    iterator end() { return move_list_.begin() + index_; }
 
     /**
      * @brief Overloaded subscript operator for accessing a move in the move list.
@@ -152,8 +157,8 @@ public:
      * @post None.
      */
     Move& operator[](const int number) {
-        assert(number < index);
-        return move_list[number];
+        assert(number < index_);
+        return move_list_[number];
     }
 
     /**
@@ -167,9 +172,9 @@ public:
      * @post The move is added to the move list and the index is incremented by 1.
      */
     void push_back(const Move& mv) {
-        assert(index < MAX_MOVES);
-        move_list[index] = mv;
-        ++index;
+        assert(index_ < MAX_MOVES);
+        move_list_[index_] = mv;
+        ++index_;
     }
 
     /**
