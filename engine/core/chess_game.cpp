@@ -284,6 +284,38 @@ void ChessGame::parser_parse_uci(const std::string& LINE)
         parser_uci_handle_go(LINE);
         return;
     }
+    if (starts_with(LINE, "setoption "))
+    {
+        std::istringstream iss(LINE);
+        std::string token, name, value;
+
+        iss >> token; // setoption
+        iss >> name;  // name
+        iss >> value; // Debug
+
+        if (name == "Debug")
+        {
+            iss >> token; // value
+            iss >> value;
+
+            if (value == "none")
+            {
+                chessBot.set_debug_enabled(false);
+                return;
+            }
+
+            if (value == "basic")
+                chessBot.set_debug_level(ChessBot::DebugLevel::BASIC);
+            else if (value == "medium")
+                chessBot.set_debug_level(ChessBot::DebugLevel::MEDIUM);
+            else if (value == "verbose")
+                chessBot.set_debug_level(ChessBot::DebugLevel::VERBOSE);
+
+            chessBot.set_debug_enabled(true);
+        }
+
+        return;
+    }
     if (LINE == "quit")
     {
         stop_search_worker();

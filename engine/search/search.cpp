@@ -6,40 +6,55 @@
 #include "./eval/eval.h"
 #include "time/time_manager.h"
 
+#include <algorithm>
 #include <csignal>
 #include <cstdlib>
 #include <iostream>
+#include <string>
+#include <unordered_set>
 
 void ChessBot::reset_tt()
 {
     tt.clear();
 }
 
-bool ChessBot::hard_stop() const
+bool ChessBot::hard_stop()
 {
     // Stop flag check.
     if (stop_requested.load(std::memory_order_relaxed))
+    {
+        stop_reason = STOP_FLAG;
         return true;
+    }
 
     // Hard time limit.
     if (constraint.budget.hard_time_up(search::time::TimeManager::now_ms()))
+    {
+        stop_reason = HARD_TIME;
         return true;
+    }
 
     // Node limit.
-    if (constraint.has_node_limit() && nodes_searched >= constraint.nodes)
+    if (constraint.has_node_limit() && nodes >= constraint.nodes)
+    {
+        stop_reason = NODE_LIMIT;
         return true;
+    }
 
     return false;
 }
 
 void ChessBot::reset_search_state()
 {
-    clear_stop();       // resets the stop state.
-    nodes_searched = 0; // reset the nodes for new search.
-    seldepth = 0;       // resets the seldepth for a new search.
-    tt.new_search();    // reset transposition table.
-    killers.clear();    // reset killer table.
-    history.clear();    // reset history table.
+    clear_stop();       // Resets the stop state.
+    nodes = 0;          // Reset the nodes for new search.
+    qnodes = 0;         // Reset the Qnodes for new search
+    seldepth = 0;       // Resets the seldepth for a new search.
+    stop_reason = NONE; // Resets the stop reason for a new search.
+    tt_returns = 0;     // Resets the tt_returns counter for a new search.
+    tt.new_search();    // Reset transposition table stats and age it.
+    killers.clear();    // Reset killer table.
+    history.clear();    // Reset history table.
 }
 
 void ChessBot::print_info(const int DEPTH, const int SCORE, const Move& PV_MOVE,
@@ -48,11 +63,11 @@ void ChessBot::print_info(const int DEPTH, const int SCORE, const Move& PV_MOVE,
     const auto NOW = search::time::TimeManager::now_ms();
     const auto TIME_MS = NOW - START_TIME_MS;
 
-    const long long NPS = TIME_MS > 0 ? (nodes_searched * 1000) / TIME_MS : 0;
+    const long long NPS = TIME_MS > 0 ? (nodes * 1000) / TIME_MS : 0;
 
     std::cout << "info"
               << " depth " << DEPTH << " seldepth " << seldepth << " time " << TIME_MS << " nodes "
-              << nodes_searched << " nps " << NPS;
+              << nodes << " nps " << NPS;
 
     if (constexpr int MATE_THRESHOLD = tt_score_constants::kMate - 1000;
         std::abs(SCORE) >= MATE_THRESHOLD)
@@ -69,6 +84,33 @@ void ChessBot::print_info(const int DEPTH, const int SCORE, const Move& PV_MOVE,
         std::cout << " score cp " << SCORE;
 
     std::cout << " pv " << PV_MOVE.to_string() << std::endl;
+}
+
+void ChessBot::print_debug(Board& BOARD, int DEPTH, int SCORE, long long START_TIME_MS) const
+{
+    if (!debug.enabled)
+        return;
+
+    const long long now_ms = search::time::TimeManager::now_ms();
+    const long long time_ms = now_ms - START_TIME_MS;
+    const long long nps = (time_ms > 0) ? (nodes * 1000) / time_ms : 0;
+
+    std::cout << "info string DBG"
+              << " depth=" << DEPTH << " seldepth=" << seldepth << " nodes=" << nodes
+              << " time=" << time_ms << " nps=" << nps
+              << " reason=" << stop_reason_to_cstr(stop_reason) << " score=" << SCORE << std::endl;
+
+    if (debug.level >= DebugLevel::MEDIUM)
+    {
+        search::debug::print_health(*this);
+        search::debug::print_tt(*this);
+    }
+
+    if (debug.level >= DebugLevel::VERBOSE)
+    {
+        search::debug::print_root_ordering(*this, BOARD);
+        search::debug::print_pv(*this, BOARD);
+    }
 }
 
 Move ChessBot::think(Board board, SearchConstraints config /* intentional copy */)
@@ -89,14 +131,18 @@ Move ChessBot::think(Board board, SearchConstraints config /* intentional copy *
 
         Move move = moveGenUtils::get_legal_fallback_move(board);
 
-        if (const auto [SCORE, ABORTED] = root_search(board, config.depth, move); !ABORTED)
+        const auto [SCORE, ABORTED] = root_search(board, config.depth, move);
+
+        if (!ABORTED)
             print_info(config.depth, SCORE, move, START_TIME_MS);
+
+        print_debug(board, config.depth, SCORE, START_TIME_MS);
 
         return move;
     }
     case SearchType::NodeLimit:
     case SearchType::Infinite: {
-        // Rest the time limit so hard_stop does not kill the search.
+        // Reset the time limit so hard_stop does not kill the search.
         this->constraint.budget = {};
         return iterative_deepening(board);
     }
@@ -121,6 +167,8 @@ Move ChessBot::iterative_deepening(Board& board)
         // Search the best move with depth i.
         auto [score, aborted] = root_search(board, i, move);
 
+        print_debug(board, i, score, START_TIME_MS);
+
         // root_search returns true if it got aborted (don't trust result).
         if (aborted)
             break;
@@ -132,7 +180,10 @@ Move ChessBot::iterative_deepening(Board& board)
 
         // Check soft budget.
         if (constraint.budget.soft_time_up(search::time::TimeManager::now_ms()))
+        {
+            stop_reason = SOFT_TIME;
             break;
+        }
     }
     return bestMove;
 }
@@ -161,6 +212,8 @@ ChessBot::SearchResult ChessBot::negamax(Board& board, const int DEPTH, int alph
     {
         if (PLY == 0 && !tt_move.is_null())
             best_move = tt_move;
+
+        ++tt_returns;
         return {tt_score, false};
     }
 
@@ -259,6 +312,7 @@ ChessBot::SearchResult ChessBot::quiescence(Board& board, int alpha, const int B
 {
     // update stats
     updateStats(PLY);
+    ++qnodes;
 
     // Hard stop if reached.
     if (hard_stop())

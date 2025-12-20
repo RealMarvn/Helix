@@ -8,6 +8,7 @@ bool TranspositionTable::probe(const std::uint64_t KEY, const int DEPTH, const i
                                const int BETA, const int PLY, int& out_score,
                                Move& out_best_move) const
 {
+    ++stats.probes;
     const Entry& e = table_[index(KEY)];
 
     if (e.generation == 0 || e.key != KEY)
@@ -16,6 +17,7 @@ bool TranspositionTable::probe(const std::uint64_t KEY, const int DEPTH, const i
         return false;
     }
 
+    ++stats.hits;
     out_best_move = e.best_move;
 
     // Only use if saved depth is enough
@@ -50,9 +52,12 @@ bool TranspositionTable::probe(const std::uint64_t KEY, const int DEPTH, const i
 
 bool TranspositionTable::probe_move(const std::uint64_t KEY, Move& out_best_move) const
 {
+    ++stats.probes;
     const Entry& e = table_[index(KEY)];
     if (e.generation == 0 || e.key != KEY)
         return false;
+
+    ++stats.hits;
 
     out_best_move = e.best_move;
     return true;
@@ -65,12 +70,19 @@ void TranspositionTable::store(const std::uint64_t KEY, const int DEPTH, const i
 
     if (e.key != KEY && e.generation != 0)
     {
-        // Replacement Policy modified here for later usage
+        // Replacement Policy modify for later usage in future
     }
+
+    // Is there already an entry (For later stats updating).
+    const bool WILL_REPLACE_OTHER = (e.generation != 0 && e.key != KEY);
 
     const std::uint8_t gen = generation_;
     if (!is_replacement_better(e, DEPTH, gen) && e.key == KEY)
         return;
+
+    ++stats.stores;
+    if (WILL_REPLACE_OTHER)
+        ++stats.replaces;
 
     e.key = KEY;
     e.depth = DEPTH;

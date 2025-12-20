@@ -40,6 +40,22 @@ enum class TTFlag : std::uint8_t
     UpperBound = 2  // score <= alpha
 };
 
+/**
+ * @brief Stats stored of and in the Transposition Table.
+ *
+ * The value stored for a position may be:
+ * - probes: Counts the probes.
+ * - hits: How often we got a hit.
+ * - stores: How often we stored an entry.
+ * - replaces: How often we replaced an entry.
+ */
+struct TTStats {
+    uint64_t probes = 0;
+    uint64_t hits = 0;
+    uint64_t stores = 0;
+    uint64_t replaces = 0;
+};
+
 
 /**
  * @brief Fixed-size transposition table for caching search results.
@@ -78,6 +94,8 @@ public:
      */
     void clear()
     {
+        // Reset stats.
+        stats = {};
         std::fill(table_.begin(), table_.end(), Entry{});
     }
 
@@ -88,6 +106,8 @@ public:
      */
     void new_search()
     {
+        // Reset stats.
+        stats = {};
         ++generation_;
         if (generation_ == 0) // overflow -> 0
             ++generation_;
@@ -149,6 +169,8 @@ public:
                TTFlag FLAG,
                int PLY,
                const Move& BEST_MOVE);
+
+    const TTStats& get_stats() const { return stats; }
 
 private:
     /**
@@ -225,4 +247,6 @@ private:
     std::size_t mask_;
     std::vector<Entry> table_;
     std::uint8_t generation_ = 1;
+
+    mutable TTStats stats{};
 };

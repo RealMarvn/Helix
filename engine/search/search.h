@@ -15,14 +15,14 @@
 #include <chrono>
 #include <memory>
 #include <climits>
-#include <array>
+#include <cstdint>
 #include <atomic>
 
 #include "../movement/move_gen.h"
 #include "./tt.h"
-#include "time/time_manager.h"
 #include "./search/heuristics.h"
 #include "time/search_constraints.h"
+#include "search/debug_print.h"
 
 /**
  * @class ChessBot
@@ -44,22 +44,25 @@
  */
 class ChessBot {
 
-    /**
-     * @brief Result object returned by recursive search functions.
-     *
-     * SearchResult bundles the evaluated score together with an
-     * explicit abort flag. The abort flag is used to signal hard
-     * termination conditions (e.g. time or node limits) and is
-     * propagated through the negamax recursion to prevent using
-     * incomplete evaluations.
-     */
-    struct SearchResult
+public:
+
+    /** @brief Represents the debug level. */
+    enum class DebugLevel : uint8_t
     {
-        int score = 0;
-        bool aborted = false;
+        BASIC,  // Stop reasons.
+        MEDIUM, // TT stats, search health.
+        VERBOSE // move ordering, extras.
     };
 
-public:
+    /** @brief Represents the debug level. */
+    enum StopReason : uint8_t
+    {
+        NONE,
+        STOP_FLAG,  // Stop flag cancled the search.
+        HARD_TIME,  // Hard time-limit was reached.
+        NODE_LIMIT, // Node-limit was reached.
+        SOFT_TIME   // Soft time-limit was reached.
+    };
 
     /**
      * @brief Entry point for starting a new search.
@@ -86,16 +89,59 @@ public:
     /** @brief Request termination of the currently running search (thread-safe). */
     void request_stop() { stop_requested.store(true, std::memory_order_relaxed); }
 
+    /** @brief Turn debug logs on and off. */
+    void set_debug_enabled(const bool ON) { debug.enabled = ON; }
+
+    /** @brief Set the debug level. */
+    void set_debug_level(const DebugLevel LVL) { debug.level = LVL; }
+
 private:
+
+    /**
+     * @brief Config object used to hold the debug options.
+     *
+     * Bundles the level and the flag for debugging.
+     */
+    struct DebugConfig
+    {
+        bool enabled = false;
+        DebugLevel level = DebugLevel::BASIC;
+    };
+
+    /**
+     * @brief Result object returned by recursive search functions.
+     *
+     * SearchResult bundles the evaluated score together with an
+     * explicit abort flag. The abort flag is used to signal hard
+     * termination conditions (e.g. time or node limits) and is
+     * propagated through the negamax recursion to prevent using
+     * incomplete evaluations.
+     */
+    struct SearchResult
+    {
+        int score = 0;
+        bool aborted = false;
+    };
 
     /** @brief The local constraint which was set */
     SearchConstraints constraint;
 
     /** @brief The nodes which were explored in the last search. */
-    long long nodes_searched = 0;
+    long long nodes = 0;
+
+    /** @brief The nodes which were explored in Qsearch the last search. */
+    long long qnodes = 0;
 
     /** @brief The ply which was explored in the last search. */
     int seldepth = 0;
+
+    int tt_returns = 0;
+
+    /** @brief The current debug config. */
+    DebugConfig debug;
+
+    /** @brief The stop reason for last search */
+    StopReason stop_reason = StopReason::NONE;
 
     /** @brief An atomic flag to stop. */
     std::atomic<bool> stop_requested{false};
@@ -215,7 +261,7 @@ private:
      *
      * @return True if the search must terminate immediately.
      */
-    [[nodiscard]] bool hard_stop()const;
+    [[nodiscard]] bool hard_stop();
 
     /** @brief Clear a previously requested stop before starting a new search. */
     void clear_stop() { stop_requested.store(false, std::memory_order_relaxed); }
@@ -223,11 +269,32 @@ private:
     /** @brief Update the stats correctly in negamax. */
     void updateStats(const int PLY)
     {
-        ++nodes_searched;
+        ++nodes;
         if (PLY > seldepth)
             seldepth = PLY;
     }
 
     /** @brief Prints the info in UCI standard. */
     void print_info(int DEPTH, int SCORE, const Move& PV_MOVE, long long START_TIME_MS) const;
+
+    /** @brief Print Debug info based on the debug config. */
+    void print_debug(Board& BOARD, int DEPTH, int SCORE, long long START_TIME_MS) const;
+
+    friend void search::debug::print_health(const ChessBot& bot);
+    friend void search::debug::print_tt(const ChessBot& bot);
+    friend void search::debug::print_root_ordering(const ChessBot& bot, Board& board);
+    friend void search::debug::print_pv(const ChessBot& bot, const Board& BOARD);
+
+    static const char* stop_reason_to_cstr(const decltype(ChessBot::stop_reason) r)
+    {
+        switch (r)
+        {
+        case ChessBot::STOP_FLAG: return "stop_flag";
+        case ChessBot::HARD_TIME: return "hard_time";
+        case ChessBot::SOFT_TIME: return "soft_time";
+        case ChessBot::NODE_LIMIT: return "node_limit";
+        default: return "none";
+        }
+    }
+
 };
