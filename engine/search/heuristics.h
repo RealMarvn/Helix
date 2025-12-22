@@ -1,28 +1,27 @@
 //
 // Created by Marvin Becker on 16.12.25.
 //
+
 /**
  * @file heuristics.h
- * @brief Search heuristics for move ordering (TT move, MVV-LVA captures, killer moves, history).
+ * @brief Move-ordering heuristics used by the alpha-beta / negamax search.
  *
- * This header contains lightweight data structures used by the alpha-beta / negamax search
- * to improve move ordering.
+ * This header provides lightweight helper tables and routines that influence
+ * only the order in which moves are searched (never legality or evaluation).
  *
  * Why this matters:
- *  - Better ordering => earlier beta cutoffs => fewer nodes searched.
+ *  - Better move ordering increases the likelihood of early beta cutoffs,
+ *    which reduces the number of visited nodes for the same search depth.
  *
- * Implemented heuristics:
- *  - TT / PV move bonus: if a transposition table move is available, it is searched first.
- *  - MVV-LVA for captures: captures are ordered by victim value and attacker value.
- *  - Killer moves: per-ply memorized quiet moves that previously caused a beta-cutoff.
- *  - History heuristic: global quiet-move statistics accumulated on beta-cutoffs.
+ * Implemented heuristics (typical engine conventions):
+ *  - TT / PV move: if a transposition table move is available, search it first.
+ *  - MVV-LVA for captures: order captures by victim value then attacker value.
+ *  - Killer moves: per-ply remembered quiet moves that previously caused a cutoff.
+ *  - History heuristic: global statistics for quiet moves that caused cutoffs.
  *
  * Notes:
- *  - These heuristics must never affect legality or evaluation correctness; only the order
- *    in which moves are searched.
- *  - Killer/History are updated ONLY on beta-cutoffs and ONLY for quiet moves.
- *  - Side indexing: this module expects a compact side index {0 = White, 1 = Black} when
- *    accessing HistoryTable. In your engine this matches `board.player` (WHITE=0, BLACK=1).
+ *  - Killer/History updates are performed ONLY on beta cutoffs and ONLY for quiet moves.
+ *  - Side indexing: this module assumes a compact side index {0 = White, 1 = Black}.
  */
 
 #pragma once
@@ -35,23 +34,26 @@
 
 namespace search::heuristics {
 
-/// Maximum ply supported by the heuristic tables (must be >= maximum search depth in plies).
+/// Maximum ply supported by the heuristic tables (ply = half-move from the root).
+/// Must be >= the maximum selective search depth (in plies) used by the engine.
 inline constexpr int HEUR_MAX_PLY = 128;
 
 /// Heuristic score bonuses used for move ordering (larger = searched earlier).
+/// Relative ordering matters; absolute values are arbitrary as long as tiers don't overlap unintentionally.
 inline constexpr int HEUR_TT_BONUS      = 1000000;
 inline constexpr int HEUR_KILLER1_BONUS = 90000;
 inline constexpr int HEUR_KILLER2_BONUS = 80000;
 
 /**
- * @brief Returns true if a move is considered a "quiet" move for ordering heuristics.
+ * @brief Returns true if a move is considered "quiet" for ordering heuristics.
  *
- * Quiet moves are moves without a capture and without a promotion.
- * Castling is treated as quiet (common engine convention).
+ * A quiet move is a non-capture and non-promotion move. Many engines also treat
+ * castling as quiet, because it is neither a capture nor a promotion and is
+ * commonly handled by the quiet-move heuristics (killers/history).
  */
 inline bool is_quiet(const Move& m)
 {
-    // Castling counts as quiet!
+    // Castling is treated as quiet (engine convention).
     return !((m.captured_piece_.piece_type_ != EMPTY) || (m.move_type_ == EN_PASSANT)) && (m.move_type_ != PROMOTION);
 }
 
@@ -60,7 +62,7 @@ inline bool is_quiet(const Move& m)
  *
  * A "killer" is a quiet move that previously caused a beta-cutoff at the same ply.
  * During move ordering, killer moves are searched early to increase the chance
- * of early cutoffs in similar tactical situations.
+ * of early cutoffs when similar move patterns re-occur at the same ply.
  *
  * Usage:
  *  - On beta-cutoff: if (is_quiet(move)) killers.add(ply, move);
@@ -119,6 +121,9 @@ struct HistoryTable
 
 /**
  * @brief Sorts a list of pseudo-legal moves for alpha-beta search.
+ *
+ * The input moves are pseudo-legal; legality checks (e.g. leaving king in check)
+ * are handled by the caller/search loop.
  *
  * Call this right after move generation and before iterating the moves.
  * Uses score_move_heuristic() internally.

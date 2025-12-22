@@ -2,6 +2,18 @@
 // Created by Marvin Becker on 16.12.25.
 //
 
+/**
+ * @file tt.h
+ * @brief Transposition Table implementation for the chess engine search.
+ *
+ * This file defines the Transposition Table (TT) used by the alpha-beta / negamax
+ * search to cache previously evaluated positions. Entries are indexed by a
+ * 64-bit Zobrist hash and store score bounds and the best move found.
+ *
+ * The table is direct-mapped (one entry per index) and uses a simple replacement
+ * policy based on generation and search depth.
+ */
+
 #pragma once
 #include <cstddef>
 #include <cstdint>
@@ -9,12 +21,17 @@
 #include <core//move.h>
 
 /**
- * @brief Global search score constants.
+ * @brief Global score constants used by the Transposition Table and search.
  *
- * These constants define the numeric ranges used by the engine:
- * - kMate:   Base value for mate scores (mate in N is encoded as ±(kMate - ply)).
- * - kMateWindow: Range around ±kMate that is treated as a mate score.
- * - kInfinity: Safe alpha/beta bound, larger than any evaluation or mate score.
+ * These constants define the numeric ranges assumed by the engine:
+ * - kMate:        Base value for mate scores. A "mate in N" is encoded as
+ *                 ±(kMate - N).
+ * - kMateWindow:  Window around ±kMate used to reliably detect mate scores.
+ * - kInfinity:    A safe value larger than any possible evaluation or mate score,
+ *                 suitable for initializing alpha/beta.
+ *
+ * @note These values must be consistent with the rest of the search and
+ *       evaluation code.
  */
 namespace tt_score_constants
 {
@@ -24,14 +41,16 @@ inline constexpr int kInfinity = 40000;   // must be > kMate
 }
 
 /**
- * @brief Type of score stored in the Transposition Table.
+ * @brief Type of score stored in a Transposition Table entry.
  *
- * The value stored for a position may be:
- * - Exact: the true score for the searched depth.
- * - LowerBound: score is a lower bound (often from a beta cutoff). I.e., true score >= stored score.
- * - UpperBound: score is an upper bound (often from failing to raise alpha). I.e., true score <= stored score.
+ * The stored score can represent:
+ * - EXACT:       The true score for this position at the stored depth.
+ * - LOWER_BOUND: A lower bound on the true score (typically from a beta cutoff).
+ * - UPPER_BOUND: An upper bound on the true score (typically from failing to
+ *                raise alpha).
  *
- * These flags allow the TT probe to safely cause alpha/beta cutoffs.
+ * These flags allow the TT probe to safely influence alpha/beta pruning without
+ * changing the correctness of the search.
  */
 enum class TTFlag : std::uint8_t
 {
@@ -41,13 +60,13 @@ enum class TTFlag : std::uint8_t
 };
 
 /**
- * @brief Stats stored of and in the Transposition Table.
+ * @brief Statistics collected for Transposition Table usage.
  *
- * The value stored for a position may be:
- * - probes: Counts the probes.
- * - hits: How often we got a hit.
- * - stores: How often we stored an entry.
- * - replaces: How often we replaced an entry.
+ * These counters are primarily intended for debugging and performance analysis:
+ * - probes:    Number of TT probe attempts.
+ * - hits:      Number of successful probes (matching key found).
+ * - stores:    Number of entries written to the table.
+ * - replaces:  Number of times an existing entry was overwritten.
  */
 struct TTStats {
     uint64_t probes_ = 0;
@@ -58,18 +77,21 @@ struct TTStats {
 
 
 /**
- * @brief Fixed-size transposition table for caching search results.
+ * @brief Fixed-size Transposition Table for caching search results.
  *
- * This table stores search information for previously visited positions keyed by a 64-bit Zobrist hash.
- * It can be used for:
- * - Reusing previously computed scores (exact or bounds) to prune the alpha-beta search.
- * - Improving move ordering by trying the best known TT move first.
+ * The Transposition Table stores information about previously visited positions
+ * during the search, keyed by a 64-bit Zobrist hash. It is used to:
+ * - Reuse previously computed scores (exact values or bounds).
+ * - Trigger safe alpha/beta cutoffs.
+ * - Improve move ordering by trying the stored best move first.
  *
- * Implementation details:
- * - The table is 1-entry per index (direct-mapped). Collisions overwrite based on a simple replacement policy.
- * - The number of entries is rounded up to a power of two and indexed via bit masking.
- * - A generation counter is used to age entries between root searches.
- * - Mate scores are normalized w.r.t. ply (distance from root) so "mate in N" remains consistent.
+ * Implementation notes:
+ * - The table is direct-mapped (one entry per index).
+ * - Collisions are resolved via a simple replacement policy based on generation
+ *   and search depth.
+ * - A generation counter is used to age entries across root searches.
+ * - Mate scores are normalized with respect to ply so that "mate in N" remains
+ *   consistent when retrieved at different depths.
  */
 class TranspositionTable
 {
@@ -122,6 +144,8 @@ public:
      * Additionally, out_best_move is set to the stored best move (or default Move{}) which
      * can be used for move ordering even if no cutoff is possible.
      *
+     * The returned score, if any, is already de-normalized with respect to ply.
+     *
      * @param key 64-bit Zobrist key of the position.
      * @param depth Remaining search depth requested.
      * @param alpha Current alpha bound.
@@ -156,6 +180,8 @@ public:
     /**
      * @brief Store a search result for a position.
      *
+     * Mate scores are normalized before being written to the table.
+     *
      * @param key 64-bit Zobrist key of the position.
      * @param depth Remaining depth at which SCORE was obtained.
      * @param score Score in the engine's internal units.
@@ -174,10 +200,10 @@ public:
 
 private:
     /**
-     * @brief Single TT entry stored at an index.
+     * @brief Single entry stored in the Transposition Table.
      *
-     * For direct-mapped tables, multiple different keys can map to the same index.
-     * The replacement policy decides when to overwrite an existing entry.
+     * For a direct-mapped table, multiple different positions may map to the same
+     * index. The replacement policy determines when an existing entry is overwritten.
      */
     struct Entry
     {
@@ -204,10 +230,10 @@ private:
     }
 
     /**
-     * @brief Normalize mate scores before storing.
+     * @brief Normalize mate scores before storing them in the table.
      *
-     * Without normalization, a mate score depends on the current ply (distance from root),
-     * which would make retrieving it at a different ply incorrect ("mate in N" changes).
+     * Mate scores depend on the distance from the root (ply). Normalization ensures
+     * that a stored "mate in N" score can be retrieved correctly at a different ply.
      */
     static int to_tt_score(const int score, const int ply)
     {
@@ -217,7 +243,7 @@ private:
     }
 
     /**
-     * @brief Undo mate score normalization after loading.
+     * @brief De-normalize mate scores after loading them from the table.
      */
     static int from_tt_score(const int score, const int ply)
     {
@@ -227,11 +253,11 @@ private:
     }
 
     /**
-     * @brief Decide whether a new entry should replace the current one.
+     * @brief Decide whether a new TT entry should replace the current one.
      *
-     * Current policy:
-     * - Always replace entries from older generations.
-     * - Otherwise prefer deeper (or equal depth) entries.
+     * Replacement policy:
+     * - Always replace entries from an older generation.
+     * - Otherwise, prefer entries searched to an equal or greater depth.
      */
     static bool is_replacement_better(const Entry& cur, const int new_depth, const std::uint8_t new_gen)
     {

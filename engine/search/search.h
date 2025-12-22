@@ -1,14 +1,17 @@
 //
 // Created by Marvin Becker on 10.02.24.
 //
+
 /**
  * @file search.h
- * @brief Declares the ChessBot class implementing search logic for the engine.
+ * @brief Search interface for the chess engine.
  *
- * The ChessBot class provides iterative deepening, fixed-depth searches,
- * negamax with alpha-beta pruning, quiescence search, evaluation, and a
- * transposition-table interface. It forms the core decision-making component
- * of the engine.
+ * Declares the ChessBot class which implements the engine's game-tree search:
+ * - iterative deepening and fixed-depth search,
+ * - negamax with alpha-beta pruning,
+ * - quiescence search,
+ * - move ordering (TT move, killers, history),
+ * - integration with the Transposition Table.
  */
 
 #pragma once
@@ -46,7 +49,7 @@ class ChessBot {
 
 public:
 
-    /** @brief Represents the debug level. */
+    /** @brief Debug verbosity level used by the search debug printer. */
     enum class DebugLevel : uint8_t
     {
         BASIC,  // Stop reasons.
@@ -54,11 +57,11 @@ public:
         VERBOSE // move ordering, extras.
     };
 
-    /** @brief Represents the debug level. */
+    /** @brief Reason why a search terminated (used for reporting/debugging). */
     enum StopReason : uint8_t
     {
         NONE,
-        STOP_FLAG,  // Stop flag cancled the search.
+        STOP_FLAG,  // Stop flag canceled the search.
         HARD_TIME,  // Hard time-limit was reached.
         NODE_LIMIT, // Node-limit was reached.
         SOFT_TIME   // Soft time-limit was reached.
@@ -123,34 +126,35 @@ private:
         bool aborted = false;
     };
 
-    /** @brief The local constraint which was set */
+    /** @brief Active constraints for the current search (time/nodes/depth). */
     SearchConstraints constraint;
 
-    /** @brief The nodes which were explored in the last search. */
+    /** @brief Number of nodes explored in the last (main) search. */
     long long nodes = 0;
 
-    /** @brief The nodes which were explored in Qsearch the last search. */
+    /** @brief Number of nodes explored in quiescence search during the last search. */
     long long qnodes = 0;
 
-    /** @brief The ply which was explored in the last search. */
+    /** @brief Maximum selective depth (seldepth) reached in the last search. */
     int seldepth = 0;
 
+    /** @brief Number of times a TT probe returned a usable score/bound. */
     int tt_returns = 0;
 
     /** @brief The current debug config. */
     DebugConfig debug;
 
-    /** @brief The stop reason for last search */
+    /** @brief Stop reason of the last completed/aborted search. */
     StopReason stop_reason = StopReason::NONE;
 
     /** @brief An atomic flag to stop. */
     std::atomic<bool> stop_requested{false};
 
     /**
-     * @brief Transposition table (hash table) for searched positions.
+     * @brief Transposition Table (hash table) for previously searched positions.
      *
-     * Indexed by Zobrist hash modulo tt_size. Stores moves to improve move
-     * ordering and prune repeated subtrees during search.
+     * Probed during search to reuse previously computed scores (exact values or
+     * bounds) and to get a good move for move ordering.
      */
     TranspositionTable tt{1u << 20}; // ~1M entries (power of two)
 
@@ -176,13 +180,14 @@ private:
      *
      * Performs a complete negamax search from the root position
      * to the specified depth. The function returns whether the
-     * search was aborted due to a hard termination condition.
+     * search was aborted due to a hard termination condition and
+     * the corresponding search score.
      *
      * @param board Current board position.
      * @param depth Fixed depth for this root search.
      * @param move Output parameter receiving the best move found
      *             if the search completes successfully.
-     * @return True if the search was aborted, false otherwise.
+     * @return The Search-Result with the score and if it got aborted.
      */
     SearchResult root_search(Board& board, int depth, Move& move);
 
@@ -239,9 +244,11 @@ private:
      *
      * This function prepares the engine for a fresh search by resetting all
      * data structures that are local to a single root search:
-     *  - Clears the transposition table search state (via tt.new_search()).
+     *  - Advances the transposition table generation (via tt.new_search()).
      *  - Clears the killer move table.
      *  - Clears the history heuristic table.
+     *  - Clears the current stats of the nodes, qnodes, seldepth, stop-reason,
+     *  and the tt returns.
      *
      * It must be called exactly once at the beginning of a new search
      * (e.g. before iterative deepening or fixed-depth search starts),
@@ -266,7 +273,7 @@ private:
     /** @brief Clear a previously requested stop before starting a new search. */
     void clear_stop() { stop_requested.store(false, std::memory_order_relaxed); }
 
-    /** @brief Update the stats correctly in negamax. */
+    /** @brief Update node counters and selective depth during negamax. */
     void updateStats(const int PLY)
     {
         ++nodes;
@@ -274,17 +281,36 @@ private:
             seldepth = PLY;
     }
 
-    /** @brief Prints the info in UCI standard. */
+    /** @brief Print UCI "info" line (depth/score/nodes/time/PV). */
     void print_info(int depth, int score, const Move& pv_move, long long start_time_ms) const;
 
-    /** @brief Print Debug info based on the debug config. */
+    /** @brief Print additional debug information based on the debug config. */
     void print_debug(Board& board, int depth, int score, long long start_time_ms) const;
 
+    /**
+     * @brief Debug helper functions requiring read-only access to internal search state.
+     *
+     * These functions are declared as friends to allow detailed inspection of
+     * the search internals (statistics, transposition table state, move ordering)
+     * without exposing this data through the public API.
+     *
+     * They are intended strictly for debugging and diagnostics and do not
+     * influence the search logic.
+     */
     friend void search::debug::print_health(const ChessBot& bot);
     friend void search::debug::print_tt(const ChessBot& bot);
     friend void search::debug::print_root_ordering(const ChessBot& bot, Board& board);
     friend void search::debug::print_pv(const ChessBot& bot, const Board& board);
 
+    /**
+     * @brief Convert a StopReason enum value into a stable C-string.
+     *
+     * Used for UCI output and debug logging. The returned string is
+     * statically allocated and valid for the entire program lifetime.
+     *
+     * @param r Stop reason enum value.
+     * @return Null-terminated string representation.
+     */
     static const char* stop_reason_to_cstr(const decltype(ChessBot::stop_reason) r)
     {
         switch (r)

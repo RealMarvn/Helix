@@ -1,4 +1,6 @@
-#pragma once
+//
+// Created by Marvin Becker on 24.03.24.
+//
 
 /**
  * @file zobrist.h
@@ -9,6 +11,7 @@
  * These numbers are XOR‑combined to form a unique hash for any board state,
  * enabling fast repetition detection and transposition table indexing.
  */
+#pragma once
 
 #include <random>
 

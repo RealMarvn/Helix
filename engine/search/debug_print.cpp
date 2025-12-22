@@ -71,6 +71,7 @@ void print_pv(const ChessBot& bot, const Board& board)
 {
     Board b = board;
 
+    // Hard limit to avoid long PVs.
     constexpr int MAX_PLIES = 10;
     std::vector<std::string> pv;
     pv.reserve(MAX_PLIES);
@@ -82,12 +83,13 @@ void print_pv(const ChessBot& bot, const Board& board)
     {
         const auto key = b.get_hash();
         if (!seen.insert(key).second)
-            break;
+            break; // Cycle detected in TT.
 
         Move m{};
         if (!bot.tt.probe_move(key, m) || m.is_null())
             break;
 
+        // Stop if the TT move is not legal.
         if (!b.make_move(m))
             break;
 

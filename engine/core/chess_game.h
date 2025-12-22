@@ -9,9 +9,8 @@
  * The ChessGame class manages a Board instance, a ChessBot search engine,
  * and user interaction via UCI and classic input modes. It acts as the
  * entry point for engine execution, handling commands, move input, and
- * game flow until termination.
+ * overall application flow until termination.
  */
-
 #pragma once
 
 #include <memory>
@@ -20,35 +19,35 @@
 
 #include "./search/search.h"
 
+/**
+ * @brief High-level controller orchestrating input parsing and engine interaction.
+ *
+ * Owns a Board instance and a ChessBot search engine. Supports two operation modes:
+ *  - UCI mode for GUI/engine communication.
+ *  - Classic mode for direct human interaction (debug/testing).
+ */
 class ChessGame {
 public:
 
-    /**
-     * @class ChessGame
-     * @brief Orchestrates the gameplay, input parsing, and engine interaction.
-     *
-     * ChessGame owns a Board and a ChessBot instance. It supports two modes:
-     *  - UCI mode for GUI/engine communication
-     *  - Classic mode for direct human interaction (debug/testing)
-     *
-     * It continuously processes input, updates the board, and consults the
-     * ChessBot to compute engine moves.
-     */
+    /** @brief Construct a new game controller with a fresh board and search engine. */
     ChessGame() : board_{new Board}, chess_bot_{ChessBot()} {
     }
 
     /**
-     * @brief Starts the chess game and handles the input and gameplay.
+     * @brief Start the main input loop and run the engine until termination.
      *
-     * This function starts the chess game and initializes the parser to read the input.
-     * The game continues until a checkmate occurs.
+     * Initializes the input parser and processes commands from stdin. The loop
+     * typically runs until a termination command is received (e.g. "quit") or
+     * until EOF is reached.
      */
     void start();
 
 private:
 
+    /// Worker thread used to run the search asynchronously in UCI mode.
     std::thread search_thread_;
 
+    /// Protects search thread lifecycle and ponder-related shared state.
     std::mutex search_mutex_;
 
     /// True while a search worker thread is active.
@@ -92,9 +91,6 @@ private:
      * Dispatches the command to the corresponding UCI handler (e.g. "uci", "isready",
      * "position", "go", "quit", etc.).
      *
-     * Unknown or malformed commands are safely ignored or reported depending on
-     * the parser configuration.
-     *
      * @param line The raw input line received from stdin in UCI format.
      */
     void parser_parse_uci(const std::string& line);
@@ -103,8 +99,6 @@ private:
      * @brief Parses and processes a single input line in classic (human) mode.
      *
      * Interprets the given line as a command entered by a human user.
-     * Supports commands such as move input, board display, game reset,
-     * quitting the application, and debugging commands.
      *
      * This mode is primarily intended for testing and interactive play
      * outside graphical chess GUIs.

@@ -14,26 +14,35 @@
 
 #include <string>
 
-
 /**
- * @brief Converts 1-based board coordinates into a 0-based mailbox index.
+ * @brief Converts 1-based board coordinates (file, rank) into a 0-based mailbox index.
  *
- * The mapping follows:
- *   - Files (columns) = X = 1..8
- *   - Ranks (rows)    = Y = 1..8
+ * Coordinate conventions:
+ *  - X (file) in [1..8] corresponds to a..h
+ *  - Y (rank) in [1..8] corresponds to 1..8
  *
- * Formula: ((Y - 1) * 8 + X) - 1
- *
- * Example:
- *   X=1, Y=1 → square 0 (a1)
- *   X=8, Y=8 → square 63 (h8)
+ * Mailbox index conventions (0-based):
+ *  - a1 -> 0, h1 -> 7
+ *  - a8 -> 56, h8 -> 63
  *
  * @param X File (column) in range [1, 8].
  * @param Y Rank (row) in range [1, 8].
  * @return Mailbox index in [0, 63].
+ *
+ * @note No bounds checking is performed. Validate X/Y before calling if input is external.
  */
 inline int calculateSquare(const int X, const int Y) { return (Y - 1) * 8 + X - 1; }
 
+/**
+ * @brief Checks whether a string starts with the given C-string prefix.
+ *
+ * Used primarily for lightweight command parsing (e.g. UCI / CLI), where we
+ * frequently need to match known command prefixes.
+ *
+ * @param s       Input string.
+ * @param prefix  Null-terminated prefix string.
+ * @return true if @p s begins with @p prefix, otherwise false.
+ */
 inline bool starts_with(const std::string& s, const char* prefix)
 {
     return s.rfind(prefix, 0) == 0;
