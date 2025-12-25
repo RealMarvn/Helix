@@ -328,14 +328,18 @@ Move Board::parse_move(const std::string& input) const
     // number.
     const int x = input[0] - 96;
     const int y = input[1] - 48;
-    const int position = calculateSquare(x, y);
-
-    const char figure = board_[position].to_char();
+    const int square = calculateSquare(x, y);
 
     const int move_x = input[2] - 96;
     const int move_y = input[3] - 48;
 
-    const int movePosition = calculateSquare(move_x, move_y);
+    const int move_square = calculateSquare(move_x, move_y);
+
+    // Check if the squares are even in valid range.
+    if (square < 0 || square > 63 || move_square < 0 || move_square > 63)
+        return Move{};
+
+    const char figure = board_[square].to_char();
 
     if (input.length() == 5)
         promotion_figure = input[4];
@@ -346,19 +350,19 @@ Move Board::parse_move(const std::string& input) const
     if (figure == 'K')
     {
         // Apply castling if specific move is parsed.
-        if (position == 4 && (movePosition == 6 || movePosition == 2))
+        if (square == 4 && (move_square == 6 || move_square == 2))
             moveType = CASTLING;
     }
 
     if (figure == 'k')
     {
         // Apply castling if specific move is parsed.
-        if (position == 60 && (movePosition == 62 || movePosition == 58))
+        if (square == 60 && (move_square == 62 || move_square == 58))
             moveType = CASTLING;
     }
 
     // If you try to move to a ep square set the move to ep.
-    if (movePosition == board_settings_.ep_square_)
+    if (move_square == board_settings_.ep_square_)
         moveType = EN_PASSANT;
 
     // If the promotion is given set the move to a promotion.
@@ -370,9 +374,8 @@ Move Board::parse_move(const std::string& input) const
     }
 
     // Initialize the move with all data.
-    return Move{
-        movePosition, position, Piece(figure), board_[movePosition], Piece(promotion_figure),
-        moveType};
+    return Move{move_square, square, Piece(figure), board_[move_square], Piece(promotion_figure),
+                moveType};
 }
 
 bool Board::try_to_move_piece(const Move& move)
