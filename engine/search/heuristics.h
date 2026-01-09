@@ -35,11 +35,9 @@
 namespace search::heuristics {
 
 /// Maximum ply supported by the heuristic tables (ply = half-move from the root).
-/// Must be >= the maximum selective search depth (in plies) used by the engine.
 inline constexpr int HEUR_MAX_PLY = 128;
 
 /// Heuristic score bonuses used for move ordering (larger = searched earlier).
-/// Relative ordering matters; absolute values are arbitrary as long as tiers don't overlap unintentionally.
 inline constexpr int HEUR_TT_BONUS      = 1000000;
 inline constexpr int HEUR_KILLER1_BONUS = 90000;
 inline constexpr int HEUR_KILLER2_BONUS = 80000;
@@ -79,7 +77,7 @@ struct KillerTable
     /**
      * @brief Records a killer move for a given ply.
      *
-     * Call this ONLY on a beta-cutoff and ONLY for quiet moves.
+     * Call ONLY on a beta-cutoff and ONLY for quiet moves.
      * The newest killer becomes killers[ply][0] and the previous one shifts to [1].
      */
     void add(int ply, const Move& move);
@@ -96,7 +94,7 @@ struct KillerTable
  * Stores a score for each (side, from, to) quiet move indicating how often it led
  * to a beta-cutoff. Higher values mean the move is more likely to be tried early.
  *
- * Update rule (typical): history[side][from][to] += depth^2 on beta-cutoff.
+ * Update rule: history[side][from][to] += depth^2 on beta-cutoff.
  */
 struct HistoryTable
 {
@@ -125,18 +123,18 @@ struct HistoryTable
  * The input moves are pseudo-legal; legality checks (e.g. leaving king in check)
  * are handled by the caller/search loop.
  *
- * Call this right after move generation and before iterating the moves.
+ * Calls right after move generation and before iterating the moves.
  * Uses score_move_heuristic() internally.
  *
  * @param moves    Move container to be sorted in-place.
- * @param tt_move  TT/PV move to prioritize (may be invalid if not found).
+ * @param tt_move  TT/PV move to prioritize.
  * @param ply      Current ply (0 at root).
  * @param side     Side to move (0 = White, 1 = Black).
  * @param killers  Killer move table.
  * @param history  History heuristic table.
  */
 void order_moves(
-    PseudoLegalMoves& moves,
+    MoveList& moves,
     const Move& tt_move,
     int ply,
     int side,

@@ -45,7 +45,7 @@ void print_root_ordering(const ChessBot& bot, Board& board)
     bot.tt.probe_move(board.get_hash(), tt_move);
 
     // Get all moves
-    auto moves = moveGenUtils::get_all_pseudo_legal_moves(board, board.player_ == WHITE);
+    auto moves = moveGenUtils::get_pseudo_legal_moves(board, board.player_ == WHITE);
 
     // Order them with PLY 0
     search::heuristics::order_moves(moves, tt_move, 0, board.player_, bot.killers, bot.history);

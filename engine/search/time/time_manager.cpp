@@ -10,7 +10,7 @@ namespace search::time
 
 int TimeManager::default_reserve_ms(const int my_time_ms)
 {
-    // ~2% reserve, min 100ms.
+    // 2% reserve, min 100 ms.
     return std::max(100, my_time_ms / 50);
 }
 

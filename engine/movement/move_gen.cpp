@@ -8,7 +8,7 @@
 
 Move moveGenUtils::get_legal_fallback_move(Board& board)
 {
-    auto moves = get_all_pseudo_legal_moves(board, board.player_ == WHITE);
+    auto moves = get_pseudo_legal_moves(board, board.player_ == WHITE);
 
     for (Move& m : moves)
     {
@@ -23,9 +23,9 @@ Move moveGenUtils::get_legal_fallback_move(Board& board)
     return Move{};
 }
 
-PseudoLegalMoves moveGenUtils::get_all_pseudo_legal_moves(Board& board, const bool player)
+MoveList moveGenUtils::get_pseudo_legal_moves(Board& board, const bool player)
 {
-    PseudoLegalMoves allPseudoMoves;
+    MoveList allPseudoMoves;
     // Go through the board with x and y coordinates.
     for (int y = 1; y < 9; y++)
     {
@@ -76,7 +76,7 @@ PseudoLegalMoves moveGenUtils::get_all_pseudo_legal_moves(Board& board, const bo
 
 template <int arraySize>
 static void getAllLinearMoves(std::pair<int, int>& start_square, Board& board,
-                              PseudoLegalMoves& all_pseudo_moves, const bool piece_color,
+                              MoveList& all_pseudo_moves, const bool piece_color,
                               const PieceType moving_piece,
                               std::array<std::pair<int, int>, arraySize> directions)
 {
@@ -129,8 +129,7 @@ static void getAllLinearMoves(std::pair<int, int>& start_square, Board& board,
 }
 
 void moveGenUtils::get_all_possible_rook_moves(std::pair<int, int> start_square, Board& board,
-                                               PseudoLegalMoves& all_pseudo_moves,
-                                               const bool piece_color)
+                                               MoveList& all_pseudo_moves, const bool piece_color)
 {
     // All directions a rook can move.
     constexpr std::array<std::pair<int, int>, 4> DIRECTIONS = {std::pair(-1, 0), std::pair(1, 0),
@@ -142,8 +141,7 @@ void moveGenUtils::get_all_possible_rook_moves(std::pair<int, int> start_square,
 }
 
 void moveGenUtils::get_all_possible_bishop_moves(std::pair<int, int> start_square, Board& board,
-                                                 PseudoLegalMoves& all_pseudo_moves,
-                                                 const bool piece_color)
+                                                 MoveList& all_pseudo_moves, const bool piece_color)
 {
     // All directions a bishop can move.
     constexpr std::array<std::pair<int, int>, 4> DIRECTIONS = {std::pair(-1, -1), std::pair(-1, 1),
@@ -154,8 +152,7 @@ void moveGenUtils::get_all_possible_bishop_moves(std::pair<int, int> start_squar
 }
 
 void moveGenUtils::get_all_possible_queen_moves(std::pair<int, int> start_square, Board& board,
-                                                PseudoLegalMoves& all_pseudo_moves,
-                                                const bool piece_color)
+                                                MoveList& all_pseudo_moves, const bool piece_color)
 {
     // All directions a queen can move.
     constexpr std::array<std::pair<int, int>, 8> DIRECTIONS = {
@@ -168,7 +165,7 @@ void moveGenUtils::get_all_possible_queen_moves(std::pair<int, int> start_square
 }
 
 void moveGenUtils::get_all_possible_king_moves(const std::pair<int, int>& start_square,
-                                               Board& board, PseudoLegalMoves& all_pseudo_moves,
+                                               Board& board, MoveList& all_pseudo_moves,
                                                const bool piece_color)
 {
     // Calculate current square.
@@ -284,7 +281,7 @@ void moveGenUtils::get_all_possible_king_moves(const std::pair<int, int>& start_
 }
 
 void moveGenUtils::get_all_possible_knight_moves(const std::pair<int, int>& start_square,
-                                                 Board& board, PseudoLegalMoves& all_pseudo_moves,
+                                                 Board& board, MoveList& all_pseudo_moves,
                                                  const bool piece_color)
 {
     // Calculate the original square.
@@ -323,7 +320,7 @@ void moveGenUtils::get_all_possible_knight_moves(const std::pair<int, int>& star
 }
 
 void moveGenUtils::get_all_possible_pawn_moves(const std::pair<int, int>& start_square,
-                                               Board& board, PseudoLegalMoves& all_pseudo_moves,
+                                               Board& board, MoveList& all_pseudo_moves,
                                                const bool piece_color)
 {
     // Calculate original square.

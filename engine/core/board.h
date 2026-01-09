@@ -8,7 +8,7 @@
  *
  * The Board class stores piece placement, side to move, auxiliary state
  * (castling, en-passant, move counters) and the Zobrist hash. It provides
- * helper functions for move making/unmaking, FEN I/O, check detection and
+ * helper functions for move making/unmaking, FEN I/O, check detection, and
  * basic game-state queries used by the search.
  */
 
@@ -66,7 +66,7 @@ public:
     /**
      * @brief Current auxiliary board settings.
      *
-     * Contains castling rights, en-passant square and move counters as in FEN.
+     * Contains castling rights, en-passant square, and move counters as in FEN.
      */
     board_setting board_settings_;
 
@@ -99,18 +99,18 @@ public:
     /**
      * @brief Checks if the king of the given piece color is in check.
      *
-     * This function iterates through the board to find the king of the given piece color.
-     * Once the king is found, it calls the isSquareAttacked function to check if the king is being attacked.
+     * This function utilizes the white/black king squares to find the king.
+     * It calls the isSquareAttacked function to check if the king is being attacked.
      *
-     * @param piece_color The color of the king to check (true for white, false for black).
+     * @param is_white The color of the king to check (true for white, false for black).
      * @return True if the king is in check, false otherwise.
      */
-    bool is_king_in_check(bool piece_color);
+    bool is_king_in_check(bool is_white);
 
     /**
      * @brief Resets the board to the starting position;
      *
-     * This function checks reloads the default starting position and clears the movement cache.
+     * This function reloads the default starting position and clears the movement cache.
      *
      */
     void reset();
@@ -136,10 +136,25 @@ public:
      * move and checks for pieces belonging to the opponent. If the move is successful, it updates the board state
      * accordingly.
      *
+     * This function is only used for parsed moves, since they could be illegal.
+     *
      * @param move The move to be made.
      * @return True if the move is successful, false otherwise. If false, the move will not be applied.
      */
     bool try_to_move_piece(const Move& move);
+
+    /**
+     * @brief Checks if a move is legal by performing it.
+     *
+     * This function attempts to move a chess piece on the board. It checks if the move can be applied
+     * by moving it and checking if a check occurred.
+     *
+     * This function is only used for legality checks on generated moves.
+     *
+     * @param move The move to be made.
+     * @return True if the move is legal, false otherwise.
+     */
+    bool is_legal_by_make_unmake(const Move& move);
 
     /**
      * @brief Moves a chess piece on the board.
@@ -167,7 +182,7 @@ public:
     /**
      * @brief Prints the current state of the chessboard.
      *
-     * This function prints the current state of the chessboard.
+     * This function prints the current state of the chessboard visually.
      * It shows the current turn and the positions of all the pieces on the board.
      */
     void print_current_board() const;
@@ -186,7 +201,7 @@ public:
      * @brief Returns the current FEN representation of the chessboard.
      *
      * This function returns the current FEN (Forsyth-Edwards Notation) representation of the chessboard.
-     * The FEN string represents the board state, the current player to move, castling rights and the en passant target
+     * The FEN string represents the board state, the current player to move, castling rights, and the en passant target
      * square.
      *
      * @return The current FEN representation of the chessboard.
@@ -209,8 +224,8 @@ public:
      * @brief Parses a chess move from a string input.
      *
      * This function takes a string input representing a chess move and parses it into a Move object.
-     * The string input should follow this notation: Pa2(x)a3(=Q).
-     * First the piece, second the square, third capture is optional, fourth a square and fifth a promotion.
+     * The string input should follow the uci notation.
+     *
      * The function extracts the figure, starting square, target square, capture flag, promotion figure,
      * and move type from the input string and constructs a Move object with these values.
      *
@@ -223,7 +238,7 @@ public:
      * @brief Returns the Zobrist hash of the current board state.
      *
      * The hash uniquely encodes piece placement, side to move, en-passant
-     * file and castling rights, and is used for transposition table lookups
+     * file, and castling rights, and is used for transposition table lookups
      * and repetition detection.
      *
      * @return 64-bit Zobrist hash of the position.
@@ -240,6 +255,16 @@ private:
     std::array<Piece, 64> board_{Piece(EMPTY)};
 
     /**
+     * @brief The current square of the white king.
+     */
+    int white_king_sq_{};
+
+    /**
+     * @brief The current square of the black king.
+     */
+    int black_king_sq_{};
+
+    /**
      * @brief Precomputed Zobrist keys used to hash the board state.
      */
     const Zobrist ZOBRIST_TABLES_;
@@ -252,7 +277,7 @@ private:
     /**
      * @brief Recomputes the Zobrist hash from scratch based on the board state.
      *
-     * Iterates over all squares, side to move, en-passant file and castling
+     * Iterates over all squares, side to move, en-passant file, and castling
      * rights to rebuild the 64-bit hash. Typically used after setting a
      * position from FEN.
      */

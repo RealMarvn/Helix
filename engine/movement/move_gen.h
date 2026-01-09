@@ -24,7 +24,8 @@
  *
  * Contains per-piece move generators and small lookup tables for pawn
  * promotions. All functions assume a consistent Board state and do not
- * perform legality checks such as leaving the king in check.
+ * perform legality checks such as leaving the king in check except the
+ * fallback-move-function.
  */
 namespace moveGenUtils {
 
@@ -47,6 +48,7 @@ namespace moveGenUtils {
      * @brief Gets a valid move as a fallback.
      *
      * Gets the first legal move it can generate.
+     * @return Move which is fully legal.
      */
     Move get_legal_fallback_move(Board& board);
 
@@ -59,9 +61,9 @@ namespace moveGenUtils {
      *
      * @param board The chess board.
      * @param player A boolean value indicating the player (true for white, false for black).
-     * @return A `PseudoLegalMoves` object containing all the generated pseudo-legal moves.
+     * @return A `MoveList` object containing all the generated pseudo-legal moves.
      */
-    PseudoLegalMoves get_all_pseudo_legal_moves(Board& board, bool player);
+    MoveList get_pseudo_legal_moves(Board& board, bool player);
 
     /**
      * @brief Gets all possible moves for a rook piece on the given iterativeTimePoint square.
@@ -72,10 +74,10 @@ namespace moveGenUtils {
      *
      * @param start_square The iterativeTimePoint square of the rook piece.
      * @param board The Board object representing the current state of the chessboard.
-     * @param all_pseudo_moves The PseudoLegalMoves object to add the possible rook moves to.
+     * @param all_pseudo_moves The MoveList object to add the possible rook moves to.
      * @param piece_color The color of the rook piece (true for white, false for black).
      */
-    void get_all_possible_rook_moves(std::pair<int, int> start_square, Board& board, PseudoLegalMoves& all_pseudo_moves,
+    void get_all_possible_rook_moves(std::pair<int, int> start_square, Board& board, MoveList& all_pseudo_moves,
                                      bool piece_color);
 
     /**
@@ -91,7 +93,7 @@ namespace moveGenUtils {
      * \param piece_color The color of the pawn (true for white, false for black).
      */
     void get_all_possible_pawn_moves(const std::pair<int, int>& start_square, Board& board,
-                                     PseudoLegalMoves& all_pseudo_moves,
+                                     MoveList& all_pseudo_moves,
                                      bool piece_color);
 
     /**
@@ -103,11 +105,11 @@ namespace moveGenUtils {
      *
      * @param start_square The starting square of the queen.
      * @param board The chessboard object representing the current state of the game.
-     * @param all_pseudo_moves A PseudoLegalMoves object to store all the possible moves.
+     * @param all_pseudo_moves A MoveList object to store all the possible moves.
      * @param piece_color The color of the queen (true for white, false for black).
      */
     void get_all_possible_queen_moves(std::pair<int, int> start_square, Board& board,
-                                      PseudoLegalMoves& all_pseudo_moves,
+                                      MoveList& all_pseudo_moves,
                                       bool piece_color);
 
     /**
@@ -119,13 +121,13 @@ namespace moveGenUtils {
      *
      * @param start_square The iterativeTimePoint square of the king.
      * @param board The current board configuration.
-     * @param all_pseudo_moves The PseudoLegalMoves object to store the generated moves.
+     * @param all_pseudo_moves The MoveList object to store the generated moves.
      * @param piece_color The color of the king's piece (true for white, false for black).
      *
      * @return None.
      */
     void get_all_possible_king_moves(const std::pair<int, int>& start_square, Board& board,
-                                     PseudoLegalMoves& all_pseudo_moves,
+                                     MoveList& all_pseudo_moves,
                                      bool piece_color);
 
     /**
@@ -137,11 +139,11 @@ namespace moveGenUtils {
      *
      * @param start_square The starting square for the knight.
      * @param board The chessboard.
-     * @param all_pseudo_moves The PseudoLegalMoves object to store the possible moves.
+     * @param all_pseudo_moves The MoveList object to store the possible moves.
      * @param piece_color The color of the knight piece (true for white, false for black).
      */
     void get_all_possible_knight_moves(const std::pair<int, int>& start_square, Board& board,
-                                       PseudoLegalMoves& all_pseudo_moves,
+                                       MoveList& all_pseudo_moves,
                                        bool piece_color);
 
     /**
@@ -157,6 +159,6 @@ namespace moveGenUtils {
      * @param piece_color The color of the bishop (true for white, false for black).
      */
     void get_all_possible_bishop_moves(std::pair<int, int> start_square, Board& board,
-                                       PseudoLegalMoves& all_pseudo_moves,
+                                       MoveList& all_pseudo_moves,
                                        bool piece_color);
 } // namespace moveGenUtils

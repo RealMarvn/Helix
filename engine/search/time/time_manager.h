@@ -46,7 +46,7 @@ public:
      * @brief Arm the time budget with start time and absolute deadlines.
      *
      * This function must be called directly before starting the search.
-     * For non-time-based searches (e.g. fixed depth), the budget should be
+     * For non-time-based searches (e.g., fixed depth), the budget should be
      * left unarmed (all deadlines set to zero).
      *
      * @param search_limits Search constraints containing the time budget.

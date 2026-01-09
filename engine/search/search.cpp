@@ -137,6 +137,10 @@ Move ChessBot::think(Board board, SearchConstraints config /* intentional copy *
 
         print_debug(board, config.depth_, SCORE, START_TIME_MS);
 
+        // Check legality before returning!
+        if (!board.is_legal_by_make_unmake(move))
+            move = moveGenUtils::get_legal_fallback_move(board);
+
         return move;
     }
     case SearchType::NodeLimit:
@@ -184,6 +188,10 @@ Move ChessBot::iterative_deepening(Board& board)
             break;
         }
     }
+
+    if (!board.is_legal_by_make_unmake(bestMove))
+        bestMove = moveGenUtils::get_legal_fallback_move(board);
+
     return bestMove;
 }
 
@@ -205,19 +213,24 @@ ChessBot::SearchResult ChessBot::negamax(Board& board, const int depth, int alph
     const int ORIGINAL_ALPHA = alpha;
     const std::uint64_t key = board.get_hash();
 
-    // Transposition table probe (may return exact score or safe cutoff)
+    // Transposition table probe (may return exact score or safe cutoff).
     Move tt_move{};
     if (int tt_score = 0; tt.probe(key, depth, alpha, beta, ply, tt_score, tt_move))
     {
-        if (ply == 0 && !tt_move.is_null())
+        // Check if we are in the root, the move is not null and legal!
+        if (ply == 0 && !tt_move.is_null() && board.is_legal_by_make_unmake(tt_move))
             best_move = tt_move;
 
         ++tt_returns;
         return {tt_score, false};
     }
 
+    // If tt is not legal, reset it!
+    if (!tt_move.is_null() && !board.is_legal_by_make_unmake(tt_move))
+        tt_move = Move{};
+
     // Get all possible moves.
-    auto moveList = moveGenUtils::get_all_pseudo_legal_moves(board, board.player_ == WHITE);
+    auto moveList = moveGenUtils::get_pseudo_legal_moves(board, board.player_ == WHITE);
 
     // Sort so the best moves are first (TT move + captures + killer/history heuristics).
     search::heuristics::order_moves(moveList, tt_move, ply, board.player_, killers, history);
@@ -324,7 +337,11 @@ ChessBot::SearchResult ChessBot::quiescence(Board& board, int alpha, const int b
     // Get all possible moves.
     Move tt_move{};
     tt.probe_move(board.get_hash(), tt_move);
-    auto moveList = moveGenUtils::get_all_pseudo_legal_moves(board, board.player_ == WHITE);
+    auto moveList = moveGenUtils::get_pseudo_legal_moves(board, board.player_ == WHITE);
+
+    // Reset tt_move if it is not legal!
+    if (!tt_move.is_null() && !board.is_legal_by_make_unmake(tt_move))
+        tt_move = Move{};
 
     // Sort so the best moves are first (TT move + captures + killer/history heuristics).
     search::heuristics::order_moves(moveList, tt_move, ply, board.player_, killers, history);
