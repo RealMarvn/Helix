@@ -26,12 +26,12 @@ class ChessBot;
 /**
  * @brief Debug-only helper functions for inspecting search internals.
  *
- * These functions are declared as friends of ChessBot where necessary in order
+ * These functions are declared as friends of ChessBot where necessary
  * to access internal search state (statistics, transposition table contents,
  * move ordering, principal variation, etc.).
  *
  * They are intended strictly for diagnostics and verbose logging and must not
- * modify engine state or affect search results.
+ * modify the engine state or affect search results.
  */
 namespace search::debug
 {

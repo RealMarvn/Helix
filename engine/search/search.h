@@ -116,7 +116,7 @@ private:
      *
      * SearchResult bundles the evaluated score together with an
      * explicit abort flag. The abort flag is used to signal hard
-     * termination conditions (e.g. time or node limits) and is
+     * termination conditions (e.g., time or node limits) and is
      * propagated through the negamax recursion to prevent using
      * incomplete evaluations.
      */
@@ -244,18 +244,15 @@ private:
      *
      * This function prepares the engine for a fresh search by resetting all
      * data structures that are local to a single root search:
-     *  - Advances the transposition table generation (via tt.new_search()).
+     *  - Advances the transposition table generation.
      *  - Clears the killer move table.
      *  - Clears the history heuristic table.
      *  - Clears the current stats of the nodes, qnodes, seldepth, stop-reason,
      *  and the tt returns.
      *
-     * It must be called exactly once at the beginning of a new search
-     * (e.g. before iterative deepening or fixed-depth search starts),
+     * Its called exactly once at the beginning of a new search
+     * (e.g., before iterative deepening or fixed-depth search starts),
      * and must NOT be called inside the recursive search itself.
-     *
-     * Keeping this logic in a dedicated function avoids code duplication
-     * and ensures consistent initialization of all search heuristics.
      */
     void reset_search_state();
 

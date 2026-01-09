@@ -14,7 +14,7 @@
  * read-only during the search.
  *
  * The structure supports a two-phase termination strategy:
- * - a soft limit, checked only at safe boundaries (e.g. between
+ * - a soft limit, checked only at safe boundaries (e.g., between
  *   iterative deepening iterations), and
  * - a hard limit, enforced immediately inside the search and
  *   quiescence search.

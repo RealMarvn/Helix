@@ -88,13 +88,10 @@ public:
      * @brief Retrieves the material value of the piece.
      *
      * This method calculates and returns the material value of the piece.
-     * The material value is based on the type of the piece and whether it is white.
-     * If the piece type is EMPTY, the material value is 0.
-     * If the piece type is not EMPTY, the material value is calculated as follows:
-     * - If the piece is white, the material value is positive.
-     * - If the piece is black, the material value is negative.
-     * - The material value is multiplied by the mg_pieceValue of the piece type.
      *
+     * Based on if we are in the End-Game, we return different values (MidGame and EndGame).
+     *
+     * @param end_game True if we are in the End-Game. False otherwise
      * @return The material value of the piece.
      */
     [[nodiscard]] int get_material_value(const bool end_game) const {
@@ -108,7 +105,7 @@ public:
      * This method retrieves the game phase value of the piece based on its pieceType.
      * The game phase value represents the piece's importance of the game.
      * It is used to calculate the current game phase.
-     * To learn more about the game phase value check out 'Tampered Eval'.
+     * To learn more about the game phase value, check out 'Tampered Eval'.
      *
      * If the piece type is EMPTY, the game phase value is 0.
      * If the piece is not EMPTY, the game phase value is retrieved from the gamePhaseValue array

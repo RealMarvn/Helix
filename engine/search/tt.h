@@ -111,7 +111,7 @@ public:
     /**
      * @brief Clear the entire table.
      *
-     * This resets all entries. In practice you usually prefer using new_search() for aging,
+     * This resets all entries. In practice, you usually prefer using new_search() for aging
      * and only clear() when you want a truly empty TT (e.g., new game).
      */
     void clear()
@@ -144,7 +144,9 @@ public:
      * Additionally, out_best_move is set to the stored best move (or default Move{}) which
      * can be used for move ordering even if no cutoff is possible.
      *
-     * The returned score, if any, is already de-normalized with respect to ply.
+     * The returned score, if any, is already denormalized with respect to ply.
+     *
+     * NOTE: The OUT_BEST_MOVE does not have to be legal! Always CHECK!
      *
      * @param key 64-bit Zobrist key of the position.
      * @param depth Remaining search depth requested.
@@ -218,7 +220,7 @@ private:
     /**
      * @brief Compute bitmask for indexing.
      *
-     * We round the requested number of entries up to the next power of two (n),
+     * We round the requested number of entries up to the next power of two (n)
      * and store a mask of (n - 1). Indexing is then: index = key & mask.
      */
     static std::size_t compute_mask(const std::size_t requested_entries)
@@ -261,7 +263,7 @@ private:
      */
     static bool is_replacement_better(const Entry& cur, const int new_depth, const std::uint8_t new_gen)
     {
-        if (cur.generation_ != new_gen) return true;           // always replace old generation
+        if (cur.generation_ != new_gen) return true;           // always replace the old generation
         return new_depth >= cur.depth_;                        // same gen: prefer deeper
     }
 

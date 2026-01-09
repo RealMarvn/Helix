@@ -68,7 +68,7 @@ private:
     std::unique_ptr<Board> board_;
 
     /**
-     * @brief Search engine responsible for selecting best moves.
+     * @brief Search engine responsible for selecting the best moves.
      *
      * Used whenever the engine must generate a response to a UCI "go"
      * command or when running automated move calculations.
@@ -80,7 +80,7 @@ private:
      *
      * This function continuously reads input from the user.
      * It supports several commands and performs the corresponding actions based on the input.
-     * The parser continues until a checkmate occurs.
+     * The parser continues until a checkmate occurs or a quit command is received.
      */
     void parser_init();
 
@@ -175,7 +175,7 @@ private:
      *
      * Acquires `search_mutex` and resets all ponder-related flags and cached moves.
      * This should be used whenever ponder state needs to be invalidated from
-     * outside a locked context (e.g. on "stop", "position", or "ucinewgame").
+     * outside a locked context (e.g., on "stop", "position", or "ucinewgame").
      */
     void clear_ponder_state();
 };

@@ -115,7 +115,7 @@ int HistoryTable::get(const int side, const int from, const int to) const
     return history_[side][from][to];
 }
 
-void order_moves(PseudoLegalMoves& moves, const Move& tt_move, const int ply, const int side,
+void order_moves(MoveList& moves, const Move& tt_move, const int ply, const int side,
                  const KillerTable& killers, const HistoryTable& history)
 {
     std::sort(moves.begin(), moves.end(), [&](const Move& a, const Move& b) {

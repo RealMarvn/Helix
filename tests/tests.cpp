@@ -25,7 +25,7 @@ uint64_t perft(Board& boardManager, const int DEPTH, const bool PLAYER)
 
     uint64_t nodes = 0;
     // Get all moves.
-    auto moves = moveGenUtils::get_all_pseudo_legal_moves(boardManager, PLAYER);
+    auto moves = moveGenUtils::get_pseudo_legal_moves(boardManager, PLAYER);
     for (Move& move : moves)
     {
         // If move is valid get the value.

@@ -15,11 +15,7 @@ class Board;
  *
  * The evaluation is independent of the search (Negamax/AlphaBeta/TT) and must not mutate the board.
  *
- * Convention:
- * - Positive score means the side to move is better.
- * - Negative score means the side to move is worse.
- *
- * Units are engine-internal (typically centipawns, but any consistent scale is fine).
+ * Units are engine-internal (centipawns).
  */
 namespace eval
 {

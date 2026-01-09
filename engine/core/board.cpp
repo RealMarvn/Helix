@@ -10,30 +10,31 @@
 #include "../utils.h"
 #include "board.h"
 
-bool Board::is_king_in_check(const bool piece_color)
+bool Board::is_king_in_check(const bool is_white)
 {
-    // Go through board.
-    for (int y = 8; y >= 1; y--)
-    {
-        for (int x = 1; x <= 8; x++)
-        {
-            // If piece is the correct King.
-            // Check if the king square is attacked.
-            if (board_[calculateSquare(x, y)].piece_type_ == (piece_color ? WK : BK))
-                return is_square_attacked({x, y}, piece_color);
-        }
-    }
 
-    // If no king is found throw exception.
-    throw BoardInterruptException("No king found!");
+    // Use cached king squares to avoid scanning the full board.
+    const int king_sq = is_white ? white_king_sq_ : black_king_sq_;
+
+    // Basic sanity: king square must be in range and must actually contain the king.
+    if (king_sq < 0 || king_sq > 63)
+        throw BoardInterruptException("Cached king square out of bounds!");
+
+    if (board_[king_sq].piece_type_ != (is_white ? WK : BK))
+        throw BoardInterruptException("Cached king square does not contain the king!");
+
+    // Convert 0..63 square to 1..8 file/rank used by the move generators.
+    const int x = (king_sq % 8) + 1;
+    const int y = (king_sq / 8) + 1;
+    return is_square_attacked({x, y}, is_white);
 }
 
 bool Board::is_square_attacked(const std::pair<int, int>& square, const bool piece_color)
 {
-    PseudoLegalMoves allKnightMoves;
-    PseudoLegalMoves allPawnMoves;
-    PseudoLegalMoves allBishopMoves;
-    PseudoLegalMoves allRookMoves;
+    MoveList allKnightMoves;
+    MoveList allPawnMoves;
+    MoveList allBishopMoves;
+    MoveList allRookMoves;
 
     // getALlPossible###Moves does only return captures of the opponent pieces. So
     // no need to check again if you capture your own piece
@@ -103,6 +104,12 @@ bool Board::pop_last_move()
     board_[LAST_MOVE.move_square_] = LAST_MOVE.captured_piece_;
     // Set the moved piece on its original position.
     board_[LAST_MOVE.square_] = LAST_MOVE.moving_piece_;
+
+    if (LAST_MOVE.moving_piece_.piece_type_ == WK)
+        white_king_sq_ = LAST_MOVE.square_;
+
+    if (LAST_MOVE.moving_piece_.piece_type_ == BK)
+        black_king_sq_ = LAST_MOVE.square_;
 
     if (LAST_MOVE.move_type_ == EN_PASSANT)
     {
@@ -233,6 +240,11 @@ bool Board::make_move(const Move& move)
     // Reset the player.
     player_ = player_ == WHITE ? BLACK : WHITE;
 
+    if (move.moving_piece_.piece_type_ == WK)
+        white_king_sq_ = move.move_square_;
+    else if (move.moving_piece_.piece_type_ == BK)
+        black_king_sq_ = move.move_square_;
+
     // Check if your king is in check after the move and pop if yes.
     if (is_king_in_check(player_ != WHITE))
     {
@@ -309,7 +321,7 @@ bool Board::is_check_mate(const bool is_white)
 {
     // Count if there are no possible moves anymore.
     int counter = 0;
-    for (Move& move : moveGenUtils::get_all_pseudo_legal_moves(*this, is_white))
+    for (Move& move : moveGenUtils::get_pseudo_legal_moves(*this, is_white))
     {
         if (make_move(move))
         {
@@ -407,17 +419,25 @@ bool Board::try_to_move_piece(const Move& move)
     }
 
     // Check if your move is pseudo legal.
-    if (moveGenUtils::get_all_pseudo_legal_moves(*this, player_ == WHITE).contains(move))
+    if (!moveGenUtils::get_pseudo_legal_moves(*this, player_ == WHITE).contains(move))
+        return false;
+
+    // Check moves legality.
+    if (!make_move(move))
     {
-        // Check moves legality.
-        if (!make_move(move))
-        {
-            std::cout << "Move not legal! Check your king!" << std::endl;
-            return false;
-        }
-        return true;
+        std::cout << "Move not legal! Check your king!" << std::endl;
+        return false;
     }
-    return false;
+    return true;
+}
+
+bool Board::is_legal_by_make_unmake(const Move& move)
+{
+    if (!make_move(move))
+        return false;
+
+    pop_last_move();
+    return true;
 }
 
 void Board::read_fen(const std::string& input)
@@ -485,8 +505,17 @@ void Board::read_fen(const std::string& input)
             whiteKing = true;
         }
 
+        const Piece PIECE = Piece(CHARACTER);
+        const int SQUARE = calculateSquare(x, y);
+
         // Just set on the square that piece.
-        board_[calculateSquare(x, y)] = Piece(CHARACTER);
+        board_[SQUARE] = PIECE;
+
+        if (PIECE.piece_type_ == WK)
+            white_king_sq_ = SQUARE;
+        if (PIECE.piece_type_ == BK)
+            black_king_sq_ = SQUARE;
+
         x++;
         squares++;
     }
