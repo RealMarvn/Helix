@@ -15,17 +15,17 @@
  */
 
 #pragma once
+#include <atomic>
 #include <chrono>
-#include <memory>
 #include <climits>
 #include <cstdint>
-#include <atomic>
+#include <memory>
 
 #include "../movement/move_gen.h"
-#include "./tt.h"
 #include "./search/heuristics.h"
-#include "time/search_constraints.h"
+#include "./tt.h"
 #include "search/debug_print.h"
+#include "time/search_constraints.h"
 
 /**
  * @class ChessBot
@@ -45,10 +45,10 @@
  * conditions are propagated explicitly through the search to avoid
  * using incomplete results.
  */
-class ChessBot {
+class ChessBot
+{
 
-public:
-
+  public:
     /** @brief Debug verbosity level used by the search debug printer. */
     enum class DebugLevel : uint8_t
     {
@@ -90,15 +90,53 @@ public:
     void reset_tt();
 
     /** @brief Request termination of the currently running search (thread-safe). */
-    void request_stop() { stop_requested.store(true, std::memory_order_relaxed); }
+    void request_stop()
+    {
+        stop_requested.store(true, std::memory_order_relaxed);
+    }
 
     /** @brief Turn debug logs on and off. */
-    void set_debug_enabled(const bool ON) { debug.enabled = ON; }
+    void set_debug_enabled(const bool ON)
+    {
+        debug.enabled = ON;
+    }
 
     /** @brief Set the debug level. */
-    void set_debug_level(const DebugLevel LVL) { debug.level = LVL; }
+    void set_debug_level(const DebugLevel LVL)
+    {
+        debug.level = LVL;
+    }
 
-private:
+    /** @brief Set the minimum depth at which PVS scouting (null-window) kicks in. */
+    void set_pvs_min_depth(const int N)
+    {
+        pvs.min_depth = N;
+    }
+
+    /** @brief Set how many leading moves are searched with a full window before scouting starts. */
+    void set_pvs_scout_after_move(const int N)
+    {
+        pvs.scout_after_move = N;
+    }
+
+  private:
+    /**
+     * @brief Config object holding the PVS tuning parameters.
+     *
+     * min_depth: below this depth we skip the scout entirely, since the
+     *            re-search overhead would eat up the savings at shallow nodes.
+     * scout_after_move: the first N legal moves still get a full window
+     *            (we trust the ordering least at the very top), only after
+     *            that do we switch to the cheap null-window scout.
+     */
+    struct PvsConfig
+    {
+        int min_depth = 2;
+        int scout_after_move = 1;
+    };
+
+    /** @brief The current PVS config. */
+    PvsConfig pvs;
 
     /**
      * @brief Config object used to hold the debug options.
@@ -238,7 +276,6 @@ private:
      */
     SearchResult quiescence(Board& board, int alpha, int beta, int ply);
 
-
     /**
      * @brief Resets all search-related state before starting a new root search.
      *
@@ -268,7 +305,10 @@ private:
     [[nodiscard]] bool hard_stop();
 
     /** @brief Clear a previously requested stop before starting a new search. */
-    void clear_stop() { stop_requested.store(false, std::memory_order_relaxed); }
+    void clear_stop()
+    {
+        stop_requested.store(false, std::memory_order_relaxed);
+    }
 
     /** @brief Update node counters and selective depth during negamax. */
     void updateStats(const int PLY)
@@ -312,12 +352,16 @@ private:
     {
         switch (r)
         {
-        case ChessBot::STOP_FLAG: return "stop_flag";
-        case ChessBot::HARD_TIME: return "hard_time";
-        case ChessBot::SOFT_TIME: return "soft_time";
-        case ChessBot::NODE_LIMIT: return "node_limit";
-        default: return "none";
+        case ChessBot::STOP_FLAG:
+            return "stop_flag";
+        case ChessBot::HARD_TIME:
+            return "hard_time";
+        case ChessBot::SOFT_TIME:
+            return "soft_time";
+        case ChessBot::NODE_LIMIT:
+            return "node_limit";
+        default:
+            return "none";
         }
     }
-
 };

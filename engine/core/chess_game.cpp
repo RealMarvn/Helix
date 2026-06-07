@@ -211,6 +211,11 @@ void ChessGame::parser_parse_uci(const std::string& line)
     {
         std::cout << "id name Helix" << std::endl;
         std::cout << "id author Marvin Becker" << std::endl;
+        std::cout << "option name PvsMinDepth type spin default 2 min 1 max 64" << std::endl;
+        std::cout << "option name PvsScoutAfterMove type spin default 1 min 1 max 64" << std::endl;
+        std::cout
+            << "option name Debug type combo default none var none var basic var medium var verbose"
+            << std::endl;
         std::cout << "uciok" << std::endl;
         return;
     }
@@ -281,6 +286,40 @@ void ChessGame::parser_parse_uci(const std::string& line)
         iss >> token; // setoption
         iss >> token; // name
         iss >> name;  // Debug
+
+        if (name == "PvsMinDepth")
+        {
+            iss >> token; // value
+            iss >> value;
+
+            try
+            {
+                chess_bot_.set_pvs_min_depth(std::stoi(value));
+            }
+            catch (const std::exception&)
+            {
+                // Ignore malformed values.
+            }
+
+            return;
+        }
+
+        if (name == "PvsScoutAfterMove")
+        {
+            iss >> token; // value
+            iss >> value;
+
+            try
+            {
+                chess_bot_.set_pvs_scout_after_move(std::stoi(value));
+            }
+            catch (const std::exception&)
+            {
+                // Ignore malformed values.
+            }
+
+            return;
+        }
 
         if (name == "Debug")
         {

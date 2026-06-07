@@ -30,6 +30,7 @@ CuteChess or Banksia.
     - [CLI Mode](#cli-mode)
     - [UCI Mode](#uci-mode)
     - [Debugging & Instrumentation](#debugging--instrumentation)
+    - [Search Tuning (PVS)](#search-tuning-pvs)
 - [Notes](#notes)
 - [Prerequisites](#prerequisites)
 
@@ -70,6 +71,7 @@ making it suitable for empirical evaluation, debugging, and academic analysis.
 
 - **NegaMax** formulation (clean minimax variant for zero‑sum games)
 - **Alpha‑Beta pruning** to reduce the explored game tree
+- **Principal Variation Search (PVS)** with tunable null‑window scouting
 - **Iterative deepening** for stable principal‑variation construction
 - **Quiescence search** to mitigate horizon effects
 - **Transposition Table (TT)** with depth‑sensitive bounds:
@@ -150,6 +152,39 @@ Debug output includes:
 - Principal variation reconstruction via TT tracing
 
 All debug logic is isolated from the core search and executed only at iteration boundaries.
+
+---
+
+### Search Tuning (PVS)
+
+Helix uses **Principal Variation Search (PVS)** as a refinement of plain alpha‑beta: the first
+(best‑ordered) move is searched with a full window, while every later move is first probed with a
+cheap null‑window scout and only re‑searched with the full window if it unexpectedly beats `alpha`.
+
+Two UCI options expose the PVS behavior so the scouting trade‑off can be measured without
+recompiling:
+
+```
+setoption name PvsMinDepth value <int>
+setoption name PvsScoutAfterMove value <int>
+```
+
+| Option              | Default | Description |
+|---------------------|---------|-------------|
+| `PvsMinDepth`       | `2`     | Minimum remaining depth at which null‑window scouting is used. Below this depth every move is searched with a full window, since the re‑search overhead would outweigh the savings at shallow nodes. |
+| `PvsScoutAfterMove` | `1`     | Number of leading (best‑ordered) moves searched with a full window before scouting begins. The remaining moves are probed with a null window first. |
+
+With the defaults (`PvsMinDepth = 2`, `PvsScoutAfterMove = 1`) the engine searches the first move
+per node with a full window and scouts the rest — the standard PVS configuration. Raising
+`PvsMinDepth` to a large value effectively disables scouting, which is convenient for an
+on/off ablation against plain alpha‑beta.
+
+Example:
+
+```
+setoption name PvsMinDepth value 3
+setoption name PvsScoutAfterMove value 2
+```
 
 ---
 

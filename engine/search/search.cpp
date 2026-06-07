@@ -252,8 +252,9 @@ ChessBot::SearchResult ChessBot::negamax(Board& board, const int depth, int alph
             int result_score;
             bool aborted;
 
-            // Using counter to check if it's the first move.
-            if (legalMoves == 0)
+            // Search full window for the first scout_after_move moves.
+            // Or when the depth is too shallow.
+            if (legalMoves < pvs.scout_after_move || depth < pvs.min_depth)
             {
                 // Search with full window.
                 auto r = negamax(board, depth - 1, -beta, -alpha, ply + 1, child_best);
