@@ -20,6 +20,7 @@
 #include <climits>
 #include <cstdint>
 #include <memory>
+#include <algorithm>
 
 #include "../movement/move_gen.h"
 #include "./search/heuristics.h"
@@ -110,13 +111,13 @@ class ChessBot
     /** @brief Set the minimum depth at which PVS scouting (null-window) kicks in. */
     void set_pvs_min_depth(const int N)
     {
-        pvs.min_depth = N;
+        pvs.min_depth = std::max(1, N);
     }
 
     /** @brief Set how many leading moves are searched with a full window before scouting starts. */
     void set_pvs_scout_after_move(const int N)
     {
-        pvs.scout_after_move = N;
+        pvs.scout_after_move = std::max(1, N);
     }
 
   private:
