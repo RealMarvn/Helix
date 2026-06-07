@@ -249,8 +249,32 @@ ChessBot::SearchResult ChessBot::negamax(Board& board, const int depth, int alph
         if (board.make_move(move))
         {
             Move child_best{};
-            auto [result_score, aborted] =
-                negamax(board, depth - 1, -beta, -alpha, ply + 1, child_best);
+            int result_score;
+            bool aborted;
+
+            // Using counter to check if it's the first move.
+            if (legalMoves == 0)
+            {
+                // Search with full window.
+                auto r = negamax(board, depth - 1, -beta, -alpha, ply + 1, child_best);
+                result_score = r.score;
+                aborted = r.aborted;
+            }
+            else
+            {
+                // Search with Null-Window to check if alpha can be beaten.
+                auto r = negamax(board, depth - 1, -alpha - 1, -alpha, ply + 1, child_best);
+                result_score = r.score;
+                aborted = r.aborted;
+
+                // If alpha was beaten, we search with the full window again.
+                if (!aborted && -r.score > alpha && -r.score < beta)
+                {
+                    auto rs = negamax(board, depth - 1, -beta, -alpha, ply + 1, child_best);
+                    result_score = rs.score;
+                    aborted = rs.aborted;
+                }
+            }
 
             // Pop the last move to clean the board.
             board.pop_last_move();
