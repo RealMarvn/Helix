@@ -1,9 +1,8 @@
-#include <iostream>
+#include "./core/chess_game.h"
 
-#include "./chess_game.h"
-
-int main() {
-  ChessGame chessGame;
-  chessGame.start();
-  return EXIT_SUCCESS;
+int main()
+{
+    ChessGame chessGame;
+    chessGame.start();
+    return EXIT_SUCCESS;
 }
