@@ -1,0 +1,58 @@
+\documentclass[english,bibfile=bibliography]{algotemplate/thesis}
+
+% for filler text, can be deleted
+\usepackage{lipsum}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
+
+% ------------------------------------------ Title page ------------------------
+\title{Improved Algorithms for Chess Engines}
+\type{Report}
+\author{Marvin Becker}
+\studentno{01/1365135}
+\group{Algorithmics}
+\department{Computer and Information Science}
+\institute{University of Konstanz}
+\advisor{Prof. Dr. Sabine Storandt}
+\reviewer{Prof. Dr. Sabine Storandt}
+\date{\today}
+% ------------------------------------------------------------------------------
+
+% ------------------------------------------ Abstract --------------------------
+\begin{abstract}
+Chess engines rely heavily on heuristic search techniques to cope with the
+exponential growth of the game tree. Among these techniques, iterative deepening
+combined with alpha-beta pruning has become a standard approach due to its
+ability to produce strong moves under strict time constraints.
+
+This report presents the design and implementation of a modular chess engine and
+investigates the impact of time constraints on the effectiveness of iterative
+deepening search. In particular, the work examines whether limiting the available
+search time significantly degrades search quality compared to depth-limited
+search, and how well the engine adapts to varying time budgets.
+
+The engine is implemented from scratch in \texttt{C++} using a classical
+mailbox-based board representation. It integrates established techniques such as
+alpha-beta pruning, transposition tables, quiescence search, heuristic move
+ordering, and a two-stage time management system with soft and hard deadlines.
+
+Experimental results indicate that iterative deepening remains robust under
+tight time constraints and benefits significantly from improved move ordering
+and transposition table reuse. While reduced time budgets naturally limit the
+maximum reachable depth, the overall move quality degrades gracefully rather
+than catastrophically.
+
+The findings suggest that iterative deepening is well-suited for time-controlled
+search scenarios and that even relatively simple engine architectures can
+achieve stable and predictable behavior when equipped with appropriate search
+heuristics and time management.
+\end{abstract}
+% ---------------
+% ------------------------------------------------------------------------------
+
+% --------------------------------- Document / Main Content --------------------
+\begin{document}
+
+\input{body}
+
+\end{document}

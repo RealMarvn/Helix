@@ -1,0 +1,215 @@
+\section{Preliminaries}
+\label{sec:preliminaries}
+
+This section introduces the fundamental concepts and definitions required to
+understand the remainder of this report. It establishes the formal game-theoretic
+model of chess, derives the associated search problem, and motivates the use of
+heuristic evaluation and time-constrained search. All concepts presented in this
+section are standard in the field of computer chess and provide a common basis
+for the subsequent chapters.
+
+\subsection{Chess as a Game-Theoretic Model}
+
+Chess is modeled as a deterministic, two-player, zero-sum game with perfect
+information. At any point in time, the complete game state is fully observable
+to both players, and no randomness is involved in the game mechanics.
+
+A game state consists of a board configuration together with additional state
+information such as the side to move, castling rights, and en-passant
+availability. Players alternate turns by selecting legal moves, and the game
+terminates in a win, loss, or draw according to the rules of chess.
+
+\paragraph{Formal Representation}
+From a theoretical perspective, the game can be represented as a directed graph.
+Each node corresponds to a legal position, and each directed edge corresponds to
+a legal move transforming one position into another. Terminal nodes represent
+positions in which no legal moves are available, such as checkmate or stalemate,
+as well as positions that are declared drawn by the rules of chess.
+
+\paragraph{Game Tree Interpretation}
+For decision making, the directed graph induces a game tree rooted at the
+current position. Each level of the tree corresponds to one ply. Due to the high
+branching factor of chess, which typically lies between 30 and 40 in middlegame
+positions, the size of the game tree grows exponentially with depth. As a
+result, even moderately deep exhaustive search is computationally infeasible.
+
+\subsection{Search Problem Formulation}
+
+Given a current position, the task of a chess engine is to select a legal move
+that maximizes the expected outcome under the assumption of optimal play by both
+sides. In the classical formulation, outcomes are mapped to numerical values,
+for example win, draw, and loss.
+
+This decision problem is commonly formulated as a game tree search problem, in
+which the engine explores a subset of the game tree to estimate the value of
+available moves. The root of the tree corresponds to the current position, while
+internal nodes represent positions reachable through sequences of legal moves.
+
+\paragraph{Resource Constraints}
+Due to the exponential growth of the search tree, it is impossible to evaluate
+all reachable positions. Consequently, the search must be limited by depth,
+time, or other computational resources. This limitation introduces approximation:
+the engine can no longer guarantee optimal play, but instead aims to select the
+best move according to the information explored within the available budget.
+
+\paragraph{Role of Approximation}
+The quality of a move selected by a chess engine therefore depends on two main
+factors: the effectiveness of the search algorithm in selecting which parts of
+the tree to explore, and the accuracy of the evaluation function used to estimate
+the value of positions at the search frontier.
+
+\subsection{Minimax, Negamax, Quiescene and Alpha-Beta Pruning}
+\label{subsec:minimax_alphabeta}
+
+The classical algorithmic solution to game tree search in two-player zero-sum
+games with perfect information is the Minimax algorithm. Minimax assumes that
+one player aims to maximize the evaluation value of a position, while the
+opponent aims to minimize it. Terminal positions are assigned fixed values
+corresponding to win, loss, or draw, while non-terminal leaf positions are
+evaluated heuristically.
+
+The algorithm explores the game tree recursively and propagates values from the
+leaves toward the root by alternating between maximization and minimization
+steps. A detailed introduction to Minimax can be found in standard AI textbooks,
+such as Russell and Norvig~\cite{russell2010aima}.
+
+\paragraph{Negamax Formulation}
+In zero-sum games, the Minimax algorithm can be simplified using the Negamax
+formulation. Instead of explicitly distinguishing between maximizing and
+minimizing players, Negamax expresses all evaluations from the perspective of the
+side to move. The value of a position is defined as the negation of the value
+obtained by the opponent after making a move.
+
+This formulation exploits the inherent symmetry of zero-sum games and allows the
+search to be implemented using a single recursive procedure. Negamax is
+functionally equivalent to Minimax but leads to more compact and uniform code,
+which is why it is widely used in practical chess engines.
+
+\paragraph{Quiescene Search}
+Depth-limited game tree search combined with static evaluation functions suffers
+from a well-known problem referred to as the \emph{horizon effect}. Tactical
+events such as captures, checks, or promotions may occur just beyond the search
+depth and are therefore not accounted for by the evaluation function. As a
+result, the engine may incorrectly assess positions as stable even though
+significant tactical changes are imminent.
+
+Quiescence search is a standard technique to solve this problem. Instead of
+evaluating a position immediately when the nominal search depth is reached, the
+search is selectively extended in positions that are considered tactically
+unstable. Typically, only forcing moves such as captures or checking moves are
+explored, while quiet moves are excluded.
+
+The goal of quiescence search is to reach a \emph{quiescent} position, that is, a
+position in which no immediate tactical exchanges are available and the static
+evaluation is therefore more reliable. Once such a position is reached, the
+evaluation function is applied and the resulting score is propagated back up the
+search tree.
+
+In practice, quiescence search is commonly implemented using Alpha-Beta pruning
+with a so-called \emph{stand-pat} evaluation, which represents the static
+evaluation of the current position before any tactical extensions are explored.
+If the stand-pat score already exceeds the current bounds, the node can be
+pruned early.
+
+Quiescence search significantly improves evaluation stability in tactical
+positions and has become a standard component of classical chess engines. A
+comprehensive discussion of the horizon effect and quiescence search can be
+found in survey articles on game tree pruning~\cite{marsland1986review}.
+
+\paragraph{Alpha-Beta Pruning}
+Alpha-Beta pruning is an optimization technique that reduces the number of nodes
+that need to be explored by Minimax or Negamax without affecting the correctness
+of the final result. The technique was introduced by Knuth and Moore~\cite{knuth1975alphabeta}
+and is a cornerstone of modern game tree search.
+
+The algorithm maintains two bounds during search:
+\begin{itemize}
+    \item $\alpha$, the best score that the maximizing player can guarantee so
+    far,
+    \item $\beta$, the best score that the minimizing player can guarantee so
+    far.
+\end{itemize}
+
+At the root of the search tree, $\alpha$ is initialized to $-\infty$ and $\beta$
+to $+\infty$. As the search progresses, these bounds are updated based on the
+values of explored child nodes. Whenever a node is encountered for which it can
+be shown that its value cannot improve the current result, the corresponding
+subtree is pruned and not searched further.
+
+More concretely, during a maximizing step, the value of $\alpha$ is updated
+whenever a better move is found. If $\alpha$ becomes greater than or equal to
+$\beta$, further exploration of sibling nodes is unnecessary, as the minimizing
+player would avoid reaching this position. An analogous argument applies during
+minimizing steps.
+
+\paragraph{Effectiveness and Influencing Factors}
+In the worst case, Alpha-Beta pruning explores the same number of nodes as plain
+Minimax. However, with optimal move ordering, the effective branching factor is
+significantly reduced, allowing the search to reach roughly twice the depth of
+unpruned Minimax for the same computational effort.
+
+The effectiveness of Alpha-Beta pruning therefore depends strongly on the order
+in which moves are explored. Techniques such as heuristic move ordering,
+transposition tables, and iterative deepening are commonly employed to improve
+this order and thereby increase pruning efficiency. These aspects are discussed
+in more detail in later sections of this report.
+
+For a comprehensive discussion of Alpha-Beta pruning and its variants in the
+context of game-playing programs, see Marsland~\cite{marsland1986review}.
+
+\subsection{Heuristic Evaluation}
+
+Most positions encountered during search are non-terminal and therefore cannot be
+assigned an exact game-theoretic value. Instead, they must be evaluated
+heuristically. An evaluation function assigns a numerical score to a position,
+indicating its desirability from the perspective of the side to move.
+
+Classical evaluation functions combine material considerations with positional
+features such as piece activity, king safety, and pawn structure. These features
+are typically handcrafted and encode domain knowledge about the game of chess.
+The design of the evaluation function has a significant impact on the playing
+strength of the engine, particularly when search depth is limited.
+
+\subsection{Time-Constrained Search}
+
+In practical settings, chess engines are required to operate under strict time
+constraints. Rather than searching to a fixed depth, the engine must dynamically
+adapt its search behavior to the available time budget.
+
+\paragraph{Iterative Deepening}
+Iterative deepening is a widely used technique to address this requirement. The
+search is performed repeatedly with increasing depth limits, starting from a
+shallow search. This approach ensures that a valid move is always available, even
+if the search is interrupted prematurely.
+
+\paragraph{Interaction with Pruning}
+In addition to providing robustness under time constraints, iterative deepening
+also improves the effectiveness of Alpha-Beta pruning. Information gathered in
+earlier iterations, such as good move orderings, can be reused in deeper searches,
+leading to a significant reduction in the number of explored nodes.
+
+The interaction between heuristic evaluation, Alpha-Beta pruning, and
+time-constrained iterative deepening forms the foundation of modern chess
+engines and is a central aspect of this work.
+
+\subsection{Universal Chess Interface (UCI)}
+\label{subsec:uci}
+
+In practice, chess engines are controlled through standardized communication
+protocols. The most widely used protocol in modern computer chess is the
+\emph{Universal Chess Interface} (UCI).
+
+UCI specifies a text-based command interface that allows external tools to set up
+positions, initiate searches, and receive search results. In particular, search
+constraints such as time limits, depth limits, node limits, and pondering are
+communicated via the \texttt{go} command.
+
+The protocol itself is independent of the engine’s internal implementation. As a
+result, UCI naturally separates external control from internal search logic.
+This separation is reflected in the design of the engine presented in this work,
+where UCI parameters are first mapped to an abstract constraint representation
+before being enforced during search.
+
+All experiments reported in this work are conducted using UCI-compatible
+interfaces and tournament frameworks. UCI therefore provides the practical
+context in which time-constrained search and iterative deepening are evaluated.

@@ -1,0 +1,161 @@
+\section{Time Management and Constraints}
+\label{sec:time_management}
+
+In practical chess engines, search is not only limited by depth but often by a
+set of external constraints such as time, node budgets, or explicit stop
+signals. In this engine, all stopping conditions for a single search invocation
+are bundled in an immutable constraint object, which is initialized once before
+the search starts and treated as read-only during the search.
+
+A key design goal is that the search code itself does not depend on UCI parsing
+details. Instead, the UCI layer produces a fully specified \texttt{SearchConstraints}
+instance, and the search only consults this object (and a stop flag) to decide
+when to terminate.
+
+\subsection{Unified Constraint Model}
+
+The engine uses a dedicated \texttt{SearchConstraints} structure to describe how
+a search is controlled and when it should terminate. This structure unifies all
+search modes under a single interface and avoids scattered termination logic
+across the search code.
+
+A constraint instance contains:
+\begin{itemize}
+    \item a \textbf{search mode} determining which criteria are active,
+    \item an optional \textbf{fixed move time} (\texttt{movetime\_ms\_}),
+    \item an optional \textbf{fixed depth} (\texttt{depth\_}),
+    \item an optional \textbf{node limit} (\texttt{nodes\_}),
+    \item and a \textbf{time budget} object (\texttt{budget\_}) used for time-managed searches.
+\end{itemize}
+
+To simplify checks in the search, convenience predicates such as
+\texttt{has\_fixed\_depth()}, \texttt{has\_node\_limit()}, and \texttt{has\_movetime()}
+are provided.
+
+\subsection{Search Modes}
+
+The active search behavior is selected via \texttt{SearchType}. The engine
+supports the following modes:
+\begin{itemize}
+    \item \textbf{Normal:} Tournament-style time management with iterative
+    deepening (default UCI behavior). Time allocation is derived from the clock
+    settings and stored in \texttt{budget\_}.
+    \item \textbf{FixedTime:} Search for a fixed amount of time specified by
+    \texttt{movetime\_ms\_} (UCI \texttt{go movetime}).
+    \item \textbf{FixedDepth:} Search to a fixed depth only, determined by
+    \texttt{depth\_}, without relying on time control.
+    \item \textbf{NodeLimit:} Search until a fixed number of nodes specified by
+    \texttt{nodes\_} has been explored.
+    \item \textbf{Infinite:} Search indefinitely until an external stop command
+    is received (UCI \texttt{go infinite}).
+    \item \textbf{Ponder:} Search during the opponent’s time. The engine
+    continues searching until it is either stopped or the predicted opponent
+    move is played, at which point the search can be continued or restarted.
+\end{itemize}
+
+This mode-based design enables a clean separation between the UCI interface
+(which interprets the \texttt{go} command) and the search itself (which only
+consults the active constraints).
+
+\subsection{Time Budgets: Structure and Arming}
+
+Time-based searches (Normal / FixedTime) rely on \texttt{TimeControl} stored in
+\texttt{SearchConstraints::budget\_}. The budget distinguishes a \emph{soft} and a
+\emph{hard} limit:
+\begin{itemize}
+    \item \textbf{Soft deadline:} preferred stopping point, checked only at safe
+    boundaries (between completed iterations of iterative deepening).
+    \item \textbf{Hard deadline:} strict upper bound that must not be exceeded,
+    checked frequently throughout the search (including quiescence).
+\end{itemize}
+
+\paragraph{Unarmed Budgets for Non-time Modes}
+A crucial implementation detail is that \texttt{budget\_} is explicitly
+\emph{disarmed} for non-time-based modes. Concretely, deadlines are set to zero,
+so \texttt{soft\_time\_up(...)} and \texttt{hard\_time\_up(...)} always return
+false. This ensures that depth-limited and node-limited search do not depend on
+any timing state.
+
+\paragraph{Arming the Budget Before Search}
+Immediately before a time-managed search begins, \texttt{TimeManager::init\_search}
+is called. This function captures the current monotonic time
+(\texttt{now\_ms()}) as the start timestamp and derives absolute deadlines:
+\[
+\texttt{soft\_deadline\_ms\_} = \texttt{start\_ms\_} + \texttt{soft\_ms\_}, \qquad
+\texttt{hard\_deadline\_ms\_} = \texttt{start\_ms\_} + \texttt{hard\_ms\_}.
+\]
+From this point onward, the budget object is treated as read-only.
+
+\subsection{Termination Conditions in the Search}
+
+The engine enforces termination using a combination of (i) an external stop flag,
+(ii) the hard deadline, and (iii) an optional node limit. These checks are
+centralized in \texttt{ChessBot::hard\_stop()}, which is called frequently inside
+the main search and quiescence.
+
+\paragraph{Hard Stop Checks}
+The stop check follows the order shown in \cref{algo:hardstop}: first an external
+flag, then the hard time deadline, then the node limit. If any condition is met,
+the search aborts immediately and returns a special ``aborted'' result to the
+caller.
+
+\begin{algorithm}[ht]
+\DontPrintSemicolon
+\KwIn{Current time $now$}
+\KwOut{\texttt{true} iff the search must terminate immediately}
+
+\If{\texttt{stop\_requested} is set}{
+    \Return \texttt{true}\;
+}
+\If{\texttt{budget\_.hard\_time\_up(now)}}{
+    \Return \texttt{true}\;
+}
+\If{\texttt{has\_node\_limit()} \textbf{and} \texttt{nodes >= nodes\_}}{
+    \Return \texttt{true}\;
+}
+\Return \texttt{false}\;
+\caption{Immediate termination check (\texttt{hard\_stop()}).}
+\label{algo:hardstop}
+\end{algorithm}
+
+\paragraph{Soft Stop in Iterative Deepening}
+In contrast to the hard deadline, the \emph{soft} deadline is checked only after
+a complete iteration has finished. This ensures that the engine does not stop
+mid-iteration, which would otherwise risk returning an unstable or partially
+explored root result. The structure is summarized in \cref{algo:softstop}.
+
+\begin{algorithm}[ht]
+\DontPrintSemicolon
+\KwIn{Board position $P$}
+\KwOut{Best move found within the budget}
+
+$bestMove \gets$ legal fallback move\;
+\For{$d \gets 1,2,3,\dots$}{
+    $(score, aborted) \gets$ depth-limited root search at depth $d$\;
+    \If{$aborted$}{
+        \textbf{break}\tcp*{do not trust partial iteration}
+    }
+    $bestMove \gets$ move from completed iteration\;
+    \If{\texttt{budget\_.soft\_time\_up(now)}}{
+        \textbf{break}\tcp*{stop cleanly after a full iteration}
+    }
+}
+\Return $bestMove$\;
+\caption{Soft stopping policy at iteration boundaries (iterative deepening).}
+\label{algo:softstop}
+\end{algorithm}
+
+\subsection{Summary}
+
+The engine models time control and other stopping criteria using a single,
+immutable \texttt{SearchConstraints} object. By activating different termination
+rules depending on \texttt{SearchType} and by explicitly arming or disarming time
+budgets, the implementation remains robust and easy to analyze.
+
+Most importantly, the implementation distinguishes between \emph{hard} stopping
+conditions, which are enforced immediately inside the recursive search, and a
+\emph{soft} stopping condition, which terminates the search cleanly between
+iterations of iterative deepening. This separation is essential for making
+time-constrained iterative deepening comparable to fixed-depth search in later
+experiments, since it ensures that the engine always returns the best move from
+the last fully completed depth.

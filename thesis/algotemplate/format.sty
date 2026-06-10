@@ -1,0 +1,49 @@
+\NeedsTeXFormat{LaTeX2e}
+% define the class thesis
+\ProvidesPackage{algotemplate/format}
+
+% --------- Packages ---------
+\RequirePackage[iso]{isodate}
+\RequirePackage{color,soul}
+\RequirePackage[table,xcdraw]{xcolor}
+\RequirePackage{graphics}
+\RequirePackage{graphicx}
+\RequirePackage{mathtools}
+\RequirePackage{amssymb}
+\RequirePackage{amsmath}
+\RequirePackage[normalem]{ulem}
+\RequirePackage[numbers]{natbib}
+\RequirePackage[vlined,ruled,linesnumbered]{algorithm2e}
+\DontPrintSemicolon
+\RequirePackage{array}
+\RequirePackage{fancyhdr}
+\RequirePackage[most]{tcolorbox}
+\RequirePackage{longtable}
+\RequirePackage{booktabs}
+\RequirePackage{arydshln}
+\RequirePackage{etoolbox}
+\RequirePackage{caption}
+\RequirePackage{amsthm}
+\RequirePackage{ifthen}
+\RequirePackage{lmodern}
+\RequirePackage{tikz}
+\RequirePackage[utf8]{inputenc}
+\RequirePackage{csquotes}
+
+% Allow Fonts larger than \Huge
+\newcommand{\size}[2]{{\fontsize{#1}{0}\selectfont#2}}
+
+% --------- make links clickable ---------
+\AddToHook{begindocument/before}[algotemplate]{
+    \RequirePackage[
+        backref=page,
+        linktoc=all,
+        colorlinks=true,
+        allcolors=kn_seeblau_d,
+        pdfborder={0 0 0},
+        pdfusetitle,
+    ]{hyperref}
+    \RequirePackage{bookmark}
+    \RequirePackage[capitalise,noabbrev]{cleveref}
+    \RequirePackage{algotemplate/CD_2023}
+}

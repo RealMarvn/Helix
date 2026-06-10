@@ -1,0 +1,176 @@
+\section{Experimental Evaluation}
+\label{sec:evaluation}
+
+This section presents an experimental evaluation of the implemented chess engine
+and its search optimizations. The evaluation serves two purposes: first, to
+establish a reliable baseline for the playing strength of the engine, and
+second, to isolate and quantify the effect of individual search optimizations
+independently of evaluation quality and time management.
+
+\subsection{Research Objectives}
+\label{subsec:research_objectives}
+
+The experimental evaluation addresses the following research questions:
+
+\begin{itemize}
+    \item How strong is the optimized engine under realistic tournament time
+    controls when compared to a fixed reference opponent?
+    \item How large is the performance difference between optimized search and
+    plain Negamax with Alpha-Beta pruning when evaluated on identical positions?
+\end{itemize}
+
+The first question focuses on practical playing strength, while the second
+isolates search efficiency and pruning behavior.
+
+\subsection{Engine-versus-Engine Evaluation}
+\label{subsec:engine_eval}
+
+\subsubsection{Experimental Setup}
+\label{subsubsec:engine_setup}
+
+The engine under evaluation (\emph{Helix}) was tested in head-to-head matches
+against a fixed reference opponent under controlled and reproducible conditions.
+
+\paragraph{Engines.}
+Helix was evaluated against a development version of Stockfish
+(\texttt{Stockfish dev-20251117-035cb146}). To obtain a meaningful comparison in
+the target strength range, Stockfish was configured using its built-in Elo
+limitation mechanism with \texttt{UCI\_LimitStrength} enabled and a target
+strength of 2000 Elo. In addition, Stockfish was restricted to a single search
+thread and a hash size of 32\,MB. Pondering was disabled for both engines.
+
+\paragraph{Time Control.}
+All games were played using a classical tournament time control of 5 minutes per
+side with an increment of 0.5 seconds per move. This setting ensures that time
+management and iterative deepening behavior have a significant influence on
+search quality while still allowing sufficiently deep searches.
+
+\paragraph{Match Configuration.}
+A total of 400 games were played using the CuteChess testing framework. No opening
+book was used; all games started from the standard initial position. Colors were
+alternated, and each engine played an equal number of games as White and Black to
+ensure fairness.
+
+\paragraph{Hardware and Software Environment.}
+All experiments were conducted on a MacBook Pro equipped with an Apple M3 Pro
+processor and 18\,GB of RAM. Both engines were compiled in release mode and run as
+single-threaded processes. Apart from the explicitly stated options, all engine
+parameters were kept constant throughout the experiments.
+
+\paragraph{Evaluation Methodology.}
+Playing strength was measured using Elo difference estimates derived from match
+results. In addition to the Elo estimate, the likelihood of superiority (LOS) and
+the draw ratio were recorded to assess statistical confidence and game
+decisiveness.
+
+\subsubsection{Results}
+\label{subsubsec:engine_results}
+
+Table~\ref{tab:elo_results} summarizes the results of the match series between
+Helix and the reference Stockfish configuration.
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{@{}lr@{}}
+\toprule
+Metric & Value \\ \midrule
+Games played & 400 \\
+Elo difference & $+161.9 \pm 36.2$ \\
+Likelihood of Superiority (LOS) & $100.0\,\%$ \\
+Draw ratio & $7.5\,\%$ \\ \bottomrule
+\end{tabular}
+\caption{Match results of Helix against Stockfish limited to 2000 Elo.}
+\label{tab:elo_results}
+\end{table}
+
+Out of the 400 games played, Helix achieved a clear majority of wins. The low draw
+ratio indicates that most games were decided decisively rather than through
+repetition or stalemate.
+
+A breakdown of decisive outcomes shows that Helix won 279 games by checkmate
+(130 as Black and 149 as White), while Stockfish won 91 games by checkmate
+(38 as Black and 53 as White). The remaining 30 games ended in draws due to
+threefold repetition.
+
+The estimated Elo difference of approximately $+162$ points in favor of Helix is
+statistically significant, as indicated by the $100\,\%$ likelihood of
+superiority. It should be emphasized that the reference engine was deliberately
+limited to 2000 Elo; the reported difference therefore reflects relative
+performance under this configuration rather than an absolute strength comparison.
+
+\subsection{Search Optimization Ablation Study}
+\label{subsec:ablation}
+
+To isolate the effect of the implemented search optimizations, an additional
+controlled ablation experiment was conducted. In contrast to the
+engine-versus-engine evaluation, this experiment focuses exclusively on search
+efficiency under identical time constraints.
+
+\subsubsection{Experimental Design}
+
+The engine was evaluated in two configurations:
+\begin{itemize}
+    \item \textbf{Optimized search:} Full implementation including transposition
+    tables and heuristic move ordering (TT move, captures, killer moves, history
+    heuristic).
+    \item \textbf{Unoptimized search:} Plain Negamax with Alpha-Beta pruning,
+    without transposition tables and without heuristic move ordering. Moves are
+    explored in their generated order.
+\end{itemize}
+
+Both configurations use the same board representation, move generator, and
+evaluation function. Any observed differences can therefore be attributed
+directly to the presence or absence of search optimizations.
+
+\subsubsection{Positions and Time Control}
+
+The experiment was performed on a fixed set of 128 predefined chess positions.
+For each position, both engine configurations were given a fixed search time
+limit of 2 seconds. No depth or node limits were imposed.
+
+This setup ensures that both configurations operate under identical external
+constraints and that observed differences reflect how efficiently the available
+time is converted into search depth and explored nodes.
+
+\subsubsection{Evaluation Metrics}
+
+For each position and configuration, the following metrics were recorded:
+\begin{itemize}
+    \item total number of explored nodes,
+    \item maximum search depth reached within the time limit,
+    \item average search depth over all positions.
+\end{itemize}
+
+All results are aggregated across the full set of 128 positions.
+
+\subsubsection{Results}
+
+Table~\ref{tab:ablation_nodes} compares the average number of explored nodes per
+search depth for the optimized and unoptimized configurations under the fixed
+2-second time limit.
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{@{}rcc@{}}
+\toprule
+Depth & Optimized Nodes (avg.) & Unoptimized Nodes (avg.) \\ \midrule
+1 & $\approx 36$ & $\approx 1651$ \\
+2 & $\approx 114$ & $\approx 278$ \\
+3 & $\approx 625$ & $\approx 2596$ \\
+4 & $\approx 1689$ & $\approx 19766$ \\
+5 & $\approx 9410$ & $\approx 185529$ \\
+\bottomrule
+\end{tabular}
+\caption{Average number of explored nodes per depth under a fixed 2-second time
+limit, aggregated over 128 positions.}
+\label{tab:ablation_nodes}
+\end{table}
+
+The optimized configuration consistently reaches greater search depths and
+explores significantly fewer nodes per depth level. This indicates a substantial
+reduction in the effective branching factor compared to the unoptimized search.
+
+In a subset of the tested positions, both configurations selected identical best
+moves and principal variations despite differences in achieved search depth. A
+detailed discussion of this observation is provided in
+Section~\ref{sec:discussion}.

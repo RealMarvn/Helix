@@ -1,0 +1,128 @@
+\NeedsTeXFormat{LaTeX2e}
+% define the class thesis
+\ProvidesPackage{algotemplate/CD_2023}
+
+% --------- university of Konstanz, corporate design colors ---------
+\RequirePackage{algotemplate/CD_2023_colours}
+
+\RequirePackage{aliascnt}
+
+% --------- university of Konstanz, corporate design definitions etc ---------
+% Create new counter for tcolorbox
+\newcounter{statement}[chapter]
+\ifkn@chapters
+    \def\thestatement{\thechapter.\arabic{statement}}
+\else
+    \def\thestatement{\arabic{statement}}
+\fi
+
+% configure tcolorbox package
+\newenvironment{knbox}[4]
+{\begin{tcolorbox}
+    [sharp corners,
+    center,
+    width=\linewidth,
+    parbox=false,
+    colback=white,
+    boxrule=1pt,
+    breakable,
+    enhanced,
+    left=4mm,
+    top=4mm,
+    right=4mm,
+    bottom=4mm,
+    colframe={#1},
+    overlay broken = {
+        \draw[line width=1pt, {#1}, sharp corners]
+        ([yshift=0.5pt, xshift=-0.5pt]frame.south east) rectangle ([yshift=-0.5pt, xshift=0.5pt]frame.north west);
+    }]%
+    \textbf{\color{#2}{[#3 \thestatement] #4}}\par}
+{\end{tcolorbox}}
+
+\newskip\kn@oldparskip
+
+% #1 = name of the environment, like definition
+% #2 = arguments 2-4 to knbox, like {kn_seeblau}{kn_seeblau_d}{Definition}
+\def\kn@newthm#1#2{
+    \newaliascnt{#1}{statement}
+    \newenvironment{#1}[1][]
+        {%
+            \kn@oldparskip\parskip
+            \parskip\z@
+            \refstepcounter{#1}%
+            \begin{knbox}#2{##1}%
+            \parskip\kn@oldparskip
+            \divide\parskip by2\relax
+        }
+        {%
+            \end{knbox}%
+            \ignorespacesafterend
+        }
+}
+\def\newtheorem#1#2{%
+    \kn@newthm{#1}{{kn_seeblau}{kn_seeblau_d}{#2}}%
+    \crefname{#1}{#2}{\lowercase{#2}s}%
+    \Crefname{#1}{#2}{#2s}%
+}
+
+\kn@newthm{definition}{{kn_seeblau}{kn_seeblau_d}{Definition}}
+\kn@newthm{lemma}{{kn_seeblau}{kn_seeblau_d}{Lemma}}
+\kn@newthm{corollary}{{kn_seeblau}{kn_seeblau_d}{Corollary}}
+\kn@newthm{theorem}{{kn_seeblau}{kn_seeblau_d}{Theorem}}
+\kn@newthm{observation}{{kn_karpfenblau}{kn_karpfenblau}{Observation}}
+\kn@newthm{remark}{{kn_karpfenblau}{kn_karpfenblau}{Remark}}
+\kn@newthm{example}{{kn_seegruen}{kn_seegruen}{Example}}
+
+% teaching cref package the created environments
+\crefname{section}{Section}{sections}
+\Crefname{section}{Section}{Sections}
+\crefname{lemma}{Lemma}{lemmata}
+\Crefname{lemma}{Lemma}{Lemmata}
+\crefname{definition}{Definition}{definitions}
+\Crefname{definition}{Definition}{Definitions}
+\crefname{corollary}{Corollary}{corollaries}
+\Crefname{corollary}{Corollary}{Corollaries}
+\crefname{theorem}{Theorem}{theorems}
+\Crefname{theorem}{Theorem}{Theorems}
+\crefname{observation}{Observation}{observations}
+\Crefname{observation}{Observation}{Observations}
+\crefname{remark}{Remark}{remarks}
+\Crefname{remark}{Remark}{Remarks}
+\crefname{example}{Example}{examples}
+\Crefname{example}{Example}{Examples}
+
+\renewenvironment{proof}[1][\proofname]
+{\par
+    \kn@oldparskip\parskip
+    \parskip\z@\@plus1\p@
+    \pushQED\qed
+    \normalfont
+    \topsep6\p@\@plus6\p@
+    \trivlist
+    \item[\hskip\labelsep\scshape#1\@addpunct.]
+    \noindent
+    \parskip.5\kn@oldparskip
+    \ignorespaces}
+{\popQED\endtrivlist\@endpefalse}
+
+% --------- Placement of figures inside statements ---------
+\newenvironment{statementfigure}
+{\par
+    \begin{minipage}[t]{\linewidth}%
+    \captionsetup{type=figure}}
+{\end{minipage}}
+
+% --------- university of Konstanz, corporate design underlinings ---------
+\setul{0.55ex}{0.25ex}
+\setulcolor{kn_seeblau}
+\newcommand{\knul}[1]{\ul{#1}}
+
+\newcommand{\knuli}{\setul{0.55ex}{0.25ex}\textcolor{kn_seeblau}{\ul}}
+
+% --------- university of Konstanz, corporate design tables ---------
+\renewcommand{\arraystretch}{1.25} % more space between rows
+\setlength\heavyrulewidth{0.25ex} % thickness for \toprule and \bottomrule
+\setlength\lightrulewidth{0.125ex} % thickness for \midrule
+\let\topruleOld\toprule
+\arrayrulecolor{kn_seeblau}
+\renewcommand{\toprule}{\arrayrulecolor{kn_seeblau}\topruleOld}% change rule color of all tables when use \toprule

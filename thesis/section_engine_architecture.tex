@@ -1,0 +1,154 @@
+\section{Engine Architecture}
+\label{sec:architecture}
+
+This section describes the overall architecture of the implemented chess engine.
+The focus lies on the structural design decisions and the interaction between the
+core components. Rather than optimizing for maximum playing strength, the
+architecture is deliberately kept modular and transparent in order to facilitate
+experimentation and detailed analysis of search algorithms and time management
+strategies.
+
+\subsection{Overall Design}
+
+The engine follows a layered architecture that separates game representation,
+move generation, search, evaluation, and search control. Each component has a
+clearly defined responsibility and communicates with other modules through
+narrow and explicit interfaces.
+
+\cref{fig:architecture} provides a high-level overview of the engine structure
+and the interaction between the individual modules.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+  box/.style={draw, rounded corners, inner sep=6pt, align=center},
+  arr/.style={-Latex, thick}
+]
+\node[box] (board) {Board State\\(Mailbox)};
+\node[box, right=1cm of board] (movegen) {Move Generation};
+\node[box, right=1cm of movegen] (search) {Search\\(ID + NM + Q)};
+\node[box, below=1cm of search] (eval) {Evaluation\\(MG/EG + PSQT)};
+\node[box, above=1cm of search] (tt) {Position Cache\\(TT)};
+\node[box, below=1cm of movegen] (time) {Search Constraints\\(Time / Nodes / Depth)};
+\node[box, right=1cm of search] (heuristics) {Heuristics - Move ord.\\(PV/TT+HH+KM+Material)};
+
+\draw[arr] (board) -- (movegen);
+\draw[arr] (movegen) -- (search);
+\draw[arr] (search) -- (eval);
+\draw[arr] (tt) -- (search);
+\draw[arr] (time) -- (search);
+\draw[arr] (heuristics) -- (search);
+\end{tikzpicture}
+\caption{High-level architecture of the implemented chess engine.}
+\label{fig:architecture}
+\end{figure}
+
+At a conceptual level, the engine consists of the representation of the game
+state, the generation and application of moves, the search procedure, the static
+evaluation, and a unified constraint mechanism that controls search termination.
+This separation ensures that individual components can be modified or replaced
+without affecting the rest of the system, which is particularly important for
+experimental analysis.
+
+\subsection{Game State and Move Handling}
+
+\paragraph{Board Representation}
+The board is represented using a classical mailbox model consisting of 64
+squares. Each square explicitly stores the occupying piece or indicates that the
+square is empty. In addition to the piece placement, the board state contains
+information about the side to move, castling rights, king squares and en-passant availability.
+
+Modern state-of-the-art engines typically rely on bitboard-based representations
+for efficient move generation and evaluation. However, mailbox representations
+remain a common choice in educational and experimental engines due to their
+simplicity and transparency~\cite{cpw_bitboards}. Given the focus of this work on
+algorithmic behavior rather than raw performance, the mailbox model provides a
+clear and easily analyzable foundation.
+
+\paragraph{Move Representation}
+Moves are represented as explicit objects containing all information required to
+apply and undo them. This includes the source and destination squares, the moving
+piece, captured pieces, promotion information, and special move flags for
+castling, promotion and en-passant captures.
+
+This design enables a fully reversible make--unmake mechanism, which is essential
+for recursive search algorithms. By storing all relevant information directly in
+the move object, the engine avoids recomputation when restoring previous board
+states, thereby simplifying the search implementation and reducing potential
+sources of errors.
+
+\paragraph{Move Generation}
+Move generation follows a direct and exhaustive approach. For each piece on the
+board, all potential target squares are examined according to the rules of
+chess. No precomputed attack tables or bitboard-based optimizations are used.
+
+Illegal moves, such as those that leave the king in check, are filtered during
+move execution rather than during generation. This design keeps the move
+generator independent of check detection logic and makes its behavior easier to
+reason about. Although this approach is less optimized than state-of-the-art
+alternatives, it provides a robust and well-understood baseline for search
+experimentation.
+
+\subsection{Position Hashing and Transposition Tables}
+
+\paragraph{Zobrist Hashing}
+To uniquely identify board positions, the engine employs Zobrist hashing. Each
+combination of square and piece type is associated with a random 64-bit value,
+and the hash of a position is computed by XOR-combining the values corresponding
+to the pieces currently on the board. Additional state information, such as the
+side to move, castling rights, and en-passant availability, is also incorporated
+into the hash.
+
+Zobrist hashing is commonly used in game tree search because it allows board
+positions to be mapped efficiently to fixed-size keys. While the technique
+supports incremental updates during make--unmake operations, the implementation
+used in this engine recomputes the hash from the board state directly. The technique itself was originally introduced by Zobrist~\cite{zobrist1970hashing} and has since become a standard component of modern chess engines.
+
+\paragraph{Transposition Table Usage}
+The computed hash values are used as keys in a transposition table, which stores
+previously evaluated positions. Each entry contains the evaluation score, the
+search depth at which the position was evaluated, a bound type (exact, lower
+bound, or upper bound), and the best move found.
+
+The transposition table serves two closely related purposes. First, it reduces
+search redundancy by reusing results for positions that can be reached via
+different move orders, which is common in chess. Without such a mechanism,
+identical positions would be evaluated repeatedly, leading to a significant
+increase in search effort. Second, transposition table entries improve move
+ordering by prioritizing moves that proved effective in previous searches. A
+simple aging mechanism ensures that outdated entries are gradually replaced,
+preventing the table from being dominated by stale information. For practical
+implementations and further discussion, see for example Warnock~\cite{warnock1988search}.
+
+\subsection{Search Control and Integration}
+
+\paragraph{Unified Search Constraints}
+All termination conditions for a search invocation are encapsulated in a single
+constraint structure. This includes depth limits, node limits, time budgets, and
+special modes such as infinite search or pondering.
+
+Encapsulating all stopping criteria in a unified constraint object avoids
+scattered stop checks throughout the search code and ensures consistent behavior
+across different search modes. This design is particularly important for
+experimental analysis, as it guarantees that differences in search behavior are
+caused by the chosen constraints rather than by implementation artifacts.
+
+\paragraph{Engine Integration}
+The engine core is coordinated by a game management component that maintains the
+current position, applies and reverts moves, and invokes the search procedure.
+This component acts as a bridge between the external UCI interface and the
+internal search and evaluation modules, ensuring a clean separation between
+protocol handling and algorithmic logic.
+
+\subsection{Design Rationale}
+
+The architectural decisions made in this engine deliberately prioritize clarity,
+correctness, and experimental flexibility over maximum playing strength. Many
+state-of-the-art engines employ highly optimized data structures and aggressive
+micro-optimizations, which can obscure the underlying algorithmic behavior.
+
+By choosing a modular and explicit design, this engine allows the effects of
+search algorithms, heuristics, and time management strategies to be studied in
+isolation. This aligns with the primary goal of this work, which is to analyze
+the behavior of iterative deepening search under time constraints rather than to
+compete directly with top-performing chess engines.

@@ -1,0 +1,51 @@
+\section{Related Work}
+\label{sec:related_work}
+% Classical chess engines, alpha-beta, iterative deepening, time control
+
+The problem of efficient search in chess engines has been studied extensively
+over several decades. Early approaches were based on the Minimax algorithm,
+which provides an optimal decision strategy under the assumption of perfect
+play~\cite{russell2010aima}. However, due to the exponential growth of the game tree, Minimax quickly becomes infeasible even at moderate depths.
+
+Alpha-Beta pruning was introduced as a major improvement over plain Minimax,
+allowing large parts of the search tree to be pruned without affecting the
+correctness of the result~\cite{knuth1975alphabeta}. Subsequent work showed that
+the effectiveness of Alpha-Beta pruning depends crucially on the order in which
+moves are explored. With perfect move ordering, the effective branching factor can be reduced dramatically, enabling much deeper searches within the same computational budget~\cite{marsland1986review}.
+
+Iterative deepening has emerged as a standard technique to improve move ordering
+and to support time-controlled search. By repeatedly searching the game tree with
+increasing depth limits, iterative deepening ensures that a valid best move is
+always available while simultaneously refining the move ordering for deeper
+iterations. Despite the apparent redundancy caused by re-searching parts of the
+tree, it has been shown that the overhead is often compensated by improved
+pruning efficiency~\cite{marsland1986review}.
+
+A detailed analysis of Alpha-Beta pruning efficiency in chess engines is
+presented by Nair~\cite{nair_improving_ab}. The paper investigates how different
+move ordering heuristics and search enhancements affect the pruning behavior of
+Alpha-Beta search. In particular, it highlights the strong interaction between
+iterative deepening, transposition tables, and heuristic move ordering. The
+results indicate that improved move ordering can significantly reduce the number
+of explored nodes, even when additional search iterations are introduced.
+
+Transposition tables have further improved search efficiency by allowing engines
+to reuse previously computed results for positions reached via different move
+orders~\cite{zobrist1970hashing}. By storing evaluations together with depth
+information and bound types, transposition tables enable both direct cutoffs and
+enhanced move ordering. Their effectiveness is especially pronounced in
+combination with iterative deepening, where information from earlier iterations
+can be reused almost immediately~\cite{warnock1988search}.
+
+Quiescence search addresses another well-known limitation of depth-limited
+search, commonly referred to as the horizon effect. By extending the search in
+tactically unstable positions, quiescence search produces more reliable
+evaluations and has become a standard component of classical chess
+engines~\cite{marsland1986review}.
+
+While modern state-of-the-art engines incorporate additional techniques such as
+bitboards, evaluation learning, and neural networks~\cite{silver2018alphazero},
+the classical search principles discussed above remain fundamental. This work
+builds upon these established ideas and focuses specifically on the interaction
+between iterative deepening and time constraints, using a deliberately simple
+and transparent engine architecture to isolate and analyze their effects.

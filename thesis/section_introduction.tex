@@ -1,0 +1,63 @@
+\section{Introduction}
+\label{sec:introduction}
+% Motivation, problem statement, goals, research question
+
+Chess has long been regarded as a canonical benchmark problem in artificial
+intelligence and algorithm engineering. Despite its simple and fully specified
+rules, the game exhibits an enormous search space caused by its high branching
+factor and strategic depth. As a consequence, exhaustive search of the complete
+game tree is computationally infeasible, even with modern hardware, and chess
+engines must rely on heuristic search techniques to make strong decisions under
+limited computational resources.
+
+At the core of most classical chess engines lies a depth-limited game tree
+search based on Minimax or Negamax, enhanced by Alpha-Beta pruning. Over the
+years, a variety of improvements have been proposed to increase search
+efficiency, including iterative deepening, transposition tables, quiescence
+search, and heuristic move ordering. Among these techniques, iterative
+deepening has become a standard approach, particularly in time-controlled
+settings, as it allows the engine to gradually refine its decision while always
+maintaining a valid best move.
+
+The primary motivation of this work is to investigate the effectiveness of
+iterative deepening when operating under explicit time constraints. While
+iterative deepening is widely used in practice, it repeatedly re-searches the
+game tree at increasing depths, which raises the question of how much efficiency
+is lost compared to a fixed-depth search when the available time is limited.
+This leads to the central research question of this thesis:
+
+\emph{To what extent does the effectiveness of iterative deepening degrade under
+strict time constraints, and how well can modern search heuristics compensate
+for this overhead?}
+
+To address this question, a complete chess engine is implemented from scratch in
+\texttt{C++}. The engine deliberately employs a classical mailbox-based board
+representation rather than highly optimized bitboard techniques. This design
+choice emphasizes architectural clarity, ease of reasoning, and suitability for
+academic analysis, allowing the impact of search algorithms and time management
+to be studied in isolation from low-level optimizations.
+
+The implemented engine integrates a Negamax search with Alpha-Beta pruning,
+iterative deepening, quiescence search, transposition tables, and heuristic move
+ordering. A dedicated time management module supports multiple search modes,
+including fixed depth, fixed time, node-limited, and infinite search, following
+the UCI protocol. In particular, a two-stage time budget with soft and hard
+deadlines is used to control the interaction between iterative deepening and
+time constraints.
+
+The contribution of this work is twofold. First, it provides a clean and modular
+implementation of a classical chess engine that serves as a transparent
+experimental platform. Second, it presents an empirical evaluation of
+iterative deepening under time constraints, analyzing its impact on search
+depth, node counts, and move stability. The results aim to shed light on the
+practical trade-offs between search efficiency and decision quality in
+time-controlled chess engines.
+
+The remainder of this report is structured as follows. \cref{sec:related_work}
+discusses relevant prior work in computer chess and game tree search.
+\cref{sec:preliminaries} introduces the necessary theoretical background.
+The architecture and implementation of the engine are described in
+\cref{sec:architecture} and \cref{sec:search}. The evaluation function and time
+management are detailed in subsequent sections, followed by an experimental
+evaluation and a discussion of the results. Finally, conclusions and directions
+for future work are presented.
