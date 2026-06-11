@@ -69,6 +69,54 @@ class ChessBot
     };
 
     /**
+     * @brief Everything a finished search hands back to the caller.
+     *
+     * Pure output data: the chosen move plus the stats of exactly this
+     * search. Configuration (PVS params, constraints) stays outside,
+     * the caller knows what it passed in.
+     */
+    struct SearchReport
+    {
+        Move best_move{};
+
+        int completed_depth = 0; // Last fully finished iteration.
+        int seldepth = 0;        // Deepest point incl. quiescence.
+
+        long long nodes = 0;
+        long long qnodes = 0;
+        long long researches = 0; // Failed null-window scouts.
+        int tt_returns = 0;       // Usable TT probes.
+
+        StopReason stop_reason = StopReason::NONE;
+    };
+
+    /**
+     * @brief Convert a StopReason enum value into a stable C-string.
+     *
+     * Used for UCI output, debug logging and the bench harness. The returned
+     * string is statically allocated and valid for the entire program lifetime.
+     *
+     * @param R Stop reason enum value.
+     * @return Null-terminated string representation.
+     */
+    static const char* stop_reason_to_cstr(const StopReason R)
+    {
+        switch (R)
+        {
+        case STOP_FLAG:
+            return "stop_flag";
+        case HARD_TIME:
+            return "hard_time";
+        case SOFT_TIME:
+            return "soft_time";
+        case NODE_LIMIT:
+            return "node_limit";
+        default:
+            return "none";
+        }
+    }
+
+    /**
      * @brief Entry point for starting a new search.
      *
      * Executes a search according to the provided SearchConstraints.
@@ -78,9 +126,9 @@ class ChessBot
      *
      * @param board Current board position to search from.
      * @param config Immutable search constraints controlling termination.
-     * @return Best move found by the completed search.
+     * @return SearchReport with the best move.
      */
-    Move think(Board board, SearchConstraints config);
+    SearchReport think(Board board, SearchConstraints config);
 
     /**
      * @brief Resets the transposition table to an empty state.
@@ -118,44 +166,6 @@ class ChessBot
     void set_pvs_scout_after_move(const int N)
     {
         pvs.scout_after_move = std::max(1, N);
-    }
-
-    // --------- Read-only stats of the last search (used by the bench harness) ---------
-
-    /** @brief Number of main-search nodes explored in the last search. */
-    [[nodiscard]] long long get_nodes() const
-    {
-        return nodes;
-    }
-
-    /** @brief Number of quiescence nodes explored in the last search. */
-    [[nodiscard]] long long get_qnodes() const
-    {
-        return qnodes;
-    }
-
-    /** @brief Maximum selective depth reached in the last search. */
-    [[nodiscard]] int get_seldepth() const
-    {
-        return seldepth;
-    }
-
-    /** @brief Depth of the last fully completed iteration (0 if none finished). */
-    [[nodiscard]] int get_completed_depth() const
-    {
-        return completed_depth;
-    }
-
-    /** @brief Number of PVS re-searches (failed null-window scouts) in the last search. */
-    [[nodiscard]] long long get_researches() const
-    {
-        return researches;
-    }
-
-    /** @brief Reason why the last search stopped. */
-    [[nodiscard]] StopReason get_stop_reason() const
-    {
-        return stop_reason;
     }
 
   private:
@@ -383,30 +393,4 @@ class ChessBot
     friend void search::debug::print_tt(const ChessBot& bot);
     friend void search::debug::print_root_ordering(const ChessBot& bot, Board& board);
     friend void search::debug::print_pv(const ChessBot& bot, const Board& board);
-
-    /**
-     * @brief Convert a StopReason enum value into a stable C-string.
-     *
-     * Used for UCI output and debug logging. The returned string is
-     * statically allocated and valid for the entire program lifetime.
-     *
-     * @param r Stop reason enum value.
-     * @return Null-terminated string representation.
-     */
-    static const char* stop_reason_to_cstr(const decltype(ChessBot::stop_reason) r)
-    {
-        switch (r)
-        {
-        case ChessBot::STOP_FLAG:
-            return "stop_flag";
-        case ChessBot::HARD_TIME:
-            return "hard_time";
-        case ChessBot::SOFT_TIME:
-            return "soft_time";
-        case ChessBot::NODE_LIMIT:
-            return "node_limit";
-        default:
-            return "none";
-        }
-    }
 };

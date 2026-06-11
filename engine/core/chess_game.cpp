@@ -184,7 +184,7 @@ void ChessGame::parser_uci_handle_go(const std::string& line)
     SearchConstraints constraints_copy = constraints;
 
     search_thread_ = std::thread([this, board_copy, constraints_copy]() mutable {
-        const Move best = chess_bot_.think(board_copy, constraints_copy);
+        const Move best = chess_bot_.think(board_copy, constraints_copy).best_move;
 
         // If Ponder, dont print and save the best move.
         if (constraints_copy.mode_ == SearchType::Ponder)
@@ -407,7 +407,7 @@ void ChessGame::parser_parse_classic(const std::string& line)
 
         // Bot can only move legal so no need to check if the move is legal.
         // Check if opponent is in check mate after bots turn.
-        const Move MOVE = chess_bot_.think(*board_, LIMIT);
+        const Move MOVE = chess_bot_.think(*board_, LIMIT).best_move;
         board_->make_move(MOVE);
         board_->print_current_board();
 

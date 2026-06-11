@@ -100,7 +100,7 @@ void ChessBot::print_debug(Board& board, const int depth, const int score,
 
     std::cout << "info string DBG"
               << " depth=" << depth << " seldepth=" << seldepth << " nodes=" << nodes
-              << " time=" << time_ms << " nps=" << nps
+              << " researches=" << researches << " time=" << time_ms << " nps=" << nps
               << " reason=" << stop_reason_to_cstr(stop_reason) << " score=" << score << std::endl;
 
     if (debug.level >= DebugLevel::MEDIUM)
@@ -116,7 +116,7 @@ void ChessBot::print_debug(Board& board, const int depth, const int score,
     }
 }
 
-Move ChessBot::think(Board board, SearchConstraints config /* intentional copy */)
+ChessBot::SearchReport ChessBot::think(Board board, SearchConstraints config /* intentional copy */)
 {
     // save constraint as member of ChessBot.
     this->constraint = config;
@@ -146,18 +146,33 @@ Move ChessBot::think(Board board, SearchConstraints config /* intentional copy *
         if (!board.is_legal_by_make_unmake(move))
             move = moveGenUtils::get_legal_fallback_move(board);
 
-        return move;
+        return {move,   completed_depth, seldepth,   nodes,
+                qnodes, researches,      tt_returns, stop_reason};
     }
     case SearchType::NodeLimit:
     case SearchType::Infinite: {
         // Reset the time limit so hard_stop does not kill the search.
         this->constraint.budget_ = {};
-        return iterative_deepening(board);
+        return {iterative_deepening(board),
+                completed_depth,
+                seldepth,
+                nodes,
+                qnodes,
+                researches,
+                tt_returns,
+                stop_reason};
     }
     default: {
         // Initialize timers for time-based search.
         search::time::TimeManager::init_search(constraint);
-        return iterative_deepening(board);
+        return {iterative_deepening(board),
+                completed_depth,
+                seldepth,
+                nodes,
+                qnodes,
+                researches,
+                tt_returns,
+                stop_reason};
     }
     }
 }
