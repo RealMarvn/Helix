@@ -2,7 +2,7 @@
 \label{sec:preliminaries}
 
 This section introduces the fundamental concepts and definitions required to
-understand the remainder of this report. It establishes the formal game-theoretic
+understand the remainder of this thesis. It establishes the formal game-theoretic
 model of chess, derives the associated search problem, and motivates the use of
 heuristic evaluation and time-constrained search. All concepts presented in this
 section are standard in the field of computer chess and provide a common basis
@@ -58,7 +58,7 @@ factors: the effectiveness of the search algorithm in selecting which parts of
 the tree to explore, and the accuracy of the evaluation function used to estimate
 the value of positions at the search frontier.
 
-\subsection{Minimax, Negamax, Quiescene and Alpha-Beta Pruning}
+\subsection{Minimax, Negamax, Quiescence and Alpha-Beta Pruning}
 \label{subsec:minimax_alphabeta}
 
 The classical algorithmic solution to game tree search in two-player zero-sum
@@ -85,7 +85,7 @@ search to be implemented using a single recursive procedure. Negamax is
 functionally equivalent to Minimax but leads to more compact and uniform code,
 which is why it is widely used in practical chess engines.
 
-\paragraph{Quiescene Search}
+\paragraph{Quiescence Search}
 Depth-limited game tree search combined with static evaluation functions suffers
 from a well-known problem referred to as the \emph{horizon effect}. Tactical
 events such as captures, checks, or promotions may occur just beyond the search
@@ -152,7 +152,29 @@ The effectiveness of Alpha-Beta pruning therefore depends strongly on the order
 in which moves are explored. Techniques such as heuristic move ordering,
 transposition tables, and iterative deepening are commonly employed to improve
 this order and thereby increase pruning efficiency. These aspects are discussed
-in more detail in later sections of this report.
+in more detail in later sections of this thesis.
+
+\paragraph{Principal Variation Search}
+Principal Variation Search (PVS) is a refinement of Alpha-Beta pruning that
+exploits good move ordering even further~\cite{marsland1982parallel,
+pearl1980scout}. The technique is based on the assumption that the first move
+examined at a node is usually the best one. Only this first move is searched
+with the full window $[\alpha, \beta]$. Every remaining move is first examined
+with a so-called \emph{null window} (or zero window) $[\alpha, \alpha + 1]$,
+which cannot return an exact score but can cheaply prove whether the move has
+the potential to improve upon $\alpha$.
+
+If the null-window search fails low, the move is confirmed to be inferior to
+the current best move and no further work is required. If it fails high, the
+assumption was wrong: the move may be better than the principal variation, and
+the node must be \emph{re-searched} with the full window to obtain its exact
+score. PVS therefore trades occasional re-searches for substantially cheaper
+verification of the majority of moves. With strong move ordering, fail-highs
+are rare and the technique reduces the overall search effort
+considerably~\cite{reinefeld1983negascout}. Conversely, with poor move
+ordering, frequent re-searches can negate the savings, which is why PVS is
+typically combined with iterative deepening, transposition tables, and
+heuristic move ordering.
 
 For a comprehensive discussion of Alpha-Beta pruning and its variants in the
 context of game-playing programs, see Marsland~\cite{marsland1986review}.
@@ -187,6 +209,17 @@ In addition to providing robustness under time constraints, iterative deepening
 also improves the effectiveness of Alpha-Beta pruning. Information gathered in
 earlier iterations, such as good move orderings, can be reused in deeper searches,
 leading to a significant reduction in the number of explored nodes.
+
+\paragraph{Search Tree Reuse Across Searches}
+The same principle extends beyond a single search invocation. After the engine
+has played a move and the opponent has responded, the new search root lies
+within the tree that was explored during the previous search. If the results of
+that search are retained, for example in a transposition table, the engine can
+\emph{resume} the old search tree: previously computed scores yield immediate
+cutoffs, and previously identified best moves improve the move ordering from the
+very first iteration. Conceptually, the engine no longer starts each search from
+scratch but continues the computation it has already begun in earlier moves of
+the game.
 
 The interaction between heuristic evaluation, Alpha-Beta pruning, and
 time-constrained iterative deepening forms the foundation of modern chess

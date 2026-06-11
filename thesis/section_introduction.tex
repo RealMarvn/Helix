@@ -19,23 +19,34 @@ deepening has become a standard approach, particularly in time-controlled
 settings, as it allows the engine to gradually refine its decision while always
 maintaining a valid best move.
 
-The primary motivation of this work is to investigate the effectiveness of
-iterative deepening when operating under explicit time constraints. While
-iterative deepening is widely used in practice, it repeatedly re-searches the
-game tree at increasing depths, which raises the question of how much efficiency
-is lost compared to a fixed-depth search when the available time is limited.
-This leads to the central research question of this thesis:
+The primary motivation of this work is to understand how a chess engine should
+spend its limited time. More search time generally yields deeper searches and
+better moves, but the relationship is far from linear: at some point the chosen
+move stabilizes and additional computation no longer changes the decision. At
+the same time, search refinements such as Principal Variation Search and the
+reuse of previous search trees change how efficiently a given time budget is
+converted into depth and decision quality. This leads to the central research
+question of this thesis:
 
-\emph{To what extent does the effectiveness of iterative deepening degrade under
-strict time constraints, and how well can modern search heuristics compensate
-for this overhead?}
+\emph{Where lies the sweet spot between invested search time and decision
+quality in heuristic chess search, and how do search refinements such as
+Principal Variation Search and search tree reuse shift this trade-off?}
+
+To make this question measurable, the thesis examines four concrete aspects:
+(i) \emph{move stability}, i.e., the depth at which the best move stabilizes
+and deeper search no longer changes the decision, (ii) the
+\emph{time-to-quality curve}, i.e., how move quality changes as the time limit
+increases, (iii) \emph{depth-versus-time} behavior with and without Principal
+Variation Search, and (iv) a \emph{PVS parameter sweep} that determines which
+combination of minimum scouting depth and number of fully searched moves yields
+the best ratio of cost reduction to move quality.
 
 To address this question, a complete chess engine is implemented from scratch in
-\texttt{C++}. The engine deliberately employs a classical mailbox-based board
-representation rather than highly optimized bitboard techniques. This design
-choice emphasizes architectural clarity, ease of reasoning, and suitability for
-academic analysis, allowing the impact of search algorithms and time management
-to be studied in isolation from low-level optimizations.
+\texttt{C++}. The engine employs a classical mailbox-based board representation
+rather than highly optimized bitboard techniques, which keeps the impact of
+search algorithms and time management observable in isolation from low-level
+optimizations; the underlying design rationale is discussed in
+\cref{sec:architecture}.
 
 The implemented engine integrates a Negamax search with Alpha-Beta pruning,
 iterative deepening, quiescence search, transposition tables, and heuristic move
@@ -45,19 +56,29 @@ the UCI protocol. In particular, a two-stage time budget with soft and hard
 deadlines is used to control the interaction between iterative deepening and
 time constraints.
 
-The contribution of this work is twofold. First, it provides a clean and modular
-implementation of a classical chess engine that serves as a transparent
-experimental platform. Second, it presents an empirical evaluation of
-iterative deepening under time constraints, analyzing its impact on search
-depth, node counts, and move stability. The results aim to shed light on the
-practical trade-offs between search efficiency and decision quality in
-time-controlled chess engines.
+Beyond this baseline, this thesis develops two further search improvements:
+Principal Variation Search and the reuse of search trees from previous searches
+through a persistent transposition table. Both techniques are introduced
+formally in \cref{sec:preliminaries} and described at the implementation level
+in \cref{sec:algorithm_implementation}.
 
-The remainder of this report is structured as follows. \cref{sec:related_work}
+The contribution of this work is threefold. First, it provides a clean and
+modular implementation of a classical chess engine that serves as a transparent
+experimental platform. Second, it extends the baseline search with Principal
+Variation Search and transposition-based search tree reuse and describes how
+these techniques are realized in practice. Third, it presents an empirical
+evaluation of time-dependent decision making, analyzing move stability across
+depths, time-to-quality curves, depth-versus-time behavior with and without
+PVS, and the effect of the PVS tuning parameters. The results aim to locate the
+practical sweet spot between search time and decision quality in time-controlled
+chess engines.
+
+The remainder of this thesis is structured as follows. \cref{sec:related_work}
 discusses relevant prior work in computer chess and game tree search.
 \cref{sec:preliminaries} introduces the necessary theoretical background.
-The architecture and implementation of the engine are described in
-\cref{sec:architecture} and \cref{sec:search}. The evaluation function and time
-management are detailed in subsequent sections, followed by an experimental
-evaluation and a discussion of the results. Finally, conclusions and directions
-for future work are presented.
+\cref{sec:algorithm_implementation} describes the architecture of the engine and
+the implementation of the baseline search, the Principal Variation Search, the
+reuse of previous search trees, the time management, and the evaluation
+function. \cref{sec:evaluation} presents the experimental evaluation, and
+\cref{sec:discussion} concludes with a discussion of the results and directions
+for future work.

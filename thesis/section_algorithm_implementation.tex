@@ -1,0 +1,19 @@
+\section{Algorithm \& Implementation}
+\label{sec:algorithm_implementation}
+
+This section describes the algorithms used by the engine and how they were
+implemented. It first introduces the overall engine architecture and the
+baseline search, consisting of Negamax with Alpha-Beta pruning, iterative
+deepening, quiescence search, transposition tables, and heuristic move ordering.
+Building on this baseline, the two main algorithmic improvements of this thesis
+are presented: Principal Variation Search and the reuse of search trees from
+previous searches. The section concludes with the time management scheme and
+the static evaluation function.
+
+\input{section_engine_architecture}
+
+\input{section_search_algorithms}
+
+\input{section_time_management_and_constraints}
+
+\input{section_evaluation_function}

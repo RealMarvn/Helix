@@ -1,21 +1,19 @@
 \documentclass[english,bibfile=bibliography]{algotemplate/thesis}
 
-% for filler text, can be deleted
-\usepackage{lipsum}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning}
 
 % ------------------------------------------ Title page ------------------------
-\title{Improved Algorithms for Chess Engines}
-\type{Report}
+\title{Time-Dependent Decision Making in Heuristic Chess Search}
+\type{Bachelor Thesis}
 \author{Marvin Becker}
 \studentno{01/1365135}
 \group{Algorithmics}
 \department{Computer and Information Science}
 \institute{University of Konstanz}
-\advisor{Prof. Dr. Sabine Storandt}
-\reviewer{Prof. Dr. Sabine Storandt}
-\date{\today}
+\advisor{Prof.~Dr.~Sabine Storandt}
+\reviewer{Prof.~Dr.~Sabine Storandt\\ & Prof.~Dr.~Michael Grossniklaus}
+\date{2026-09-01}
 % ------------------------------------------------------------------------------
 
 % ------------------------------------------ Abstract --------------------------
@@ -25,27 +23,34 @@ exponential growth of the game tree. Among these techniques, iterative deepening
 combined with alpha-beta pruning has become a standard approach due to its
 ability to produce strong moves under strict time constraints.
 
-This report presents the design and implementation of a modular chess engine and
-investigates the impact of time constraints on the effectiveness of iterative
-deepening search. In particular, the work examines whether limiting the available
-search time significantly degrades search quality compared to depth-limited
-search, and how well the engine adapts to varying time budgets.
+This thesis presents the design and implementation of a modular chess engine and
+investigates the relationship between search time and decision quality. The
+central question is where the sweet spot between invested time and move quality
+lies: how much additional search time actually translates into better decisions,
+and at which point further computation no longer changes the chosen move.
 
 The engine is implemented from scratch in \texttt{C++} using a classical
-mailbox-based board representation. It integrates established techniques such as
-alpha-beta pruning, transposition tables, quiescence search, heuristic move
-ordering, and a two-stage time management system with soft and hard deadlines.
+mailbox-based board representation. Its baseline integrates established
+techniques such as alpha-beta pruning, transposition tables, quiescence search,
+heuristic move ordering, and a two-stage time management system with soft and
+hard deadlines. On top of this baseline, the thesis develops two further search
+improvements: Principal Variation Search (PVS), which verifies all but the
+presumed best move with inexpensive null-window searches, and the reuse of
+search trees from previous searches, realized through a persistent
+transposition table that allows the engine to resume earlier computations.
 
-Experimental results indicate that iterative deepening remains robust under
-tight time constraints and benefits significantly from improved move ordering
-and transposition table reuse. While reduced time budgets naturally limit the
-maximum reachable depth, the overall move quality degrades gracefully rather
-than catastrophically.
+The experimental evaluation studies time-dependent decision making along four
+axes: move stability, i.e., the depth at which the best move stabilizes and no
+longer changes with deeper search; time-to-quality curves, which capture how
+move quality evolves under increasing time limits; depth-versus-time behavior
+with and without Principal Variation Search; and a PVS parameter sweep that
+determines which combination of scouting depth and number of fully searched
+moves yields the best ratio of cost reduction to move quality.
 
-The findings suggest that iterative deepening is well-suited for time-controlled
-search scenarios and that even relatively simple engine architectures can
-achieve stable and predictable behavior when equipped with appropriate search
-heuristics and time management.
+The findings aim to characterize how gracefully decision quality degrades under
+tight time budgets and to identify configurations in which a deliberately simple
+engine architecture converts limited search time into stable, high-quality
+decisions.
 \end{abstract}
 % ---------------
 % ------------------------------------------------------------------------------

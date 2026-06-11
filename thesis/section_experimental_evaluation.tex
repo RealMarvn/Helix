@@ -1,11 +1,14 @@
 \section{Experimental Evaluation}
 \label{sec:evaluation}
 
-This section presents an experimental evaluation of the implemented chess engine
-and its search optimizations. The evaluation serves two purposes: first, to
-establish a reliable baseline for the playing strength of the engine, and
-second, to isolate and quantify the effect of individual search optimizations
-independently of evaluation quality and time management.
+This section presents the experimental evaluation of the implemented chess
+engine. The evaluation pursues the central question of this thesis: where lies
+the sweet spot between invested search time and decision quality? To this end,
+it first establishes a reliable baseline for the playing strength of the engine
+and quantifies the effect of the search optimizations, and then studies
+time-dependent decision making directly through move stability, time-to-quality,
+and depth-versus-time measurements, including the influence of Principal
+Variation Search and its tuning parameters.
 
 \subsection{Research Objectives}
 \label{subsec:research_objectives}
@@ -17,10 +20,21 @@ The experimental evaluation addresses the following research questions:
     controls when compared to a fixed reference opponent?
     \item How large is the performance difference between optimized search and
     plain Negamax with Alpha-Beta pruning when evaluated on identical positions?
+    \item \textbf{Move stability:} at which search depth does the best move
+    stabilize, so that deeper search no longer changes the decision?
+    \item \textbf{Time-to-quality:} how does move quality change as the time
+    limit is increased, and where does additional time stop paying off?
+    \item \textbf{Depth versus time:} how does the reachable depth per time
+    budget differ with and without Principal Variation Search?
+    \item \textbf{PVS parameter sweep:} which combination of minimum scouting
+    depth (\texttt{PvsMinDepth}) and number of fully searched moves
+    (\texttt{PvsScoutAfterMove}) yields the best ratio of cost reduction to
+    move quality?
 \end{itemize}
 
-The first question focuses on practical playing strength, while the second
-isolates search efficiency and pruning behavior.
+The first two questions establish the baseline strength and the effect of the
+search optimizations; the remaining four questions form the core of this thesis
+and characterize time-dependent decision making directly.
 
 \subsection{Engine-versus-Engine Evaluation}
 \label{subsec:engine_eval}

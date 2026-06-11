@@ -1,15 +1,16 @@
-\section{Search Algorithms}
+\subsection{Search Algorithms}
 \label{sec:search}
 
 This section describes the concrete implementation of the engine's search
 procedure. The underlying algorithms (Negamax, Alpha-Beta pruning, and
 quiescence search) were introduced in \cref{sec:preliminaries}; here, the focus
 is on how these ideas are realized in code and how the individual mechanisms
-interact in practice. The search implementation is centered around a Negamax
-routine with Alpha-Beta bounds, augmented by iterative deepening, a transposition
-table, and practical move ordering heuristics.
+interact in practice. Particular attention is paid to the two refinements of
+this thesis: the move loop is organized as a Principal Variation Search
+(\cref{subsec:pvs_implementation}), and previous search trees are resumed
+through the persistent transposition table (\cref{subsec:tree_reuse}).
 
-\subsection{Search Entry Point and Modes}
+\subsubsection{Search Entry Point and Modes}
 
 The main entry point is \texttt{ChessBot::think(Board board, SearchConstraints config)}.
 The \texttt{SearchConstraints} object is copied intentionally and stored inside
@@ -38,28 +39,22 @@ This structure keeps the actual search logic independent of UCI parsing and
 ensures that all termination behavior is expressed through the constraint object
 and the common stop checks.
 
-\subsection{Termination and Safety Checks}
+\subsubsection{Termination and Safety Checks}
 
-All immediate termination decisions are centralized in \texttt{ChessBot::hard\_stop()}.
-This function is called frequently inside the search (including quiescence) and
-implements three independent stop criteria:
-\begin{itemize}
-    \item an external stop flag (atomic \texttt{stop\_requested}),
-    \item the hard time deadline (\texttt{budget\_.hard\_time\_up(...)}),
-    \item an optional node budget (\texttt{has\_node\_limit()} and \texttt{nodes >= nodes\_}).
-\end{itemize}
-
-In contrast, the \emph{soft} time deadline is only checked between completed
-iterations of iterative deepening. This reflects a practical trade-off: the
-engine prefers returning the last fully completed iteration rather than stopping
-mid-iteration and potentially returning an unstable result.
+All immediate termination decisions are centralized in
+\texttt{ChessBot::hard\_stop()}, which is called frequently inside the search
+(including quiescence) and combines an external stop flag, the hard time
+deadline, and an optional node budget. The exact semantics of these criteria,
+and the distinction between the hard deadline and the \emph{soft} deadline that
+is only consulted between completed iterations of iterative deepening, are
+described in \cref{sec:time_management}.
 
 As an additional robustness measure, the engine verifies the final move before
 returning it. If the selected move is not legal (checked via
 \texttt{is\_legal\_by\_make\_unmake()}), the engine falls back to a legal move
 obtained from \texttt{get\_legal\_fallback\_move()}.
 
-\subsection{Iterative Deepening Loop}
+\subsubsection{Iterative Deepening Loop}
 
 Time-managed searches run in \texttt{ChessBot::iterative\_deepening(Board\&)}.
 The engine starts with a legal fallback move and then performs repeated searches
@@ -72,13 +67,10 @@ becomes the new best move and is reported via the UCI \texttt{info} output
 the loop terminates and the engine returns the best move from the last completed
 iteration.
 
-This implementation deliberately separates:
-\begin{itemize}
-    \item \textbf{hard stops} (checked inside the search and enforced immediately),
-    \item \textbf{soft stops} (checked after an iteration and used to stop cleanly).
-\end{itemize}
+Hard stops are enforced immediately inside the search, while soft stops only
+take effect at iteration boundaries (cf. \cref{sec:time_management}).
 
-\subsection{Root Search and Core Negamax}
+\subsubsection{Root Search and Core Negamax}
 
 The helper \texttt{root\_search(Board\&, depth, Move\&)} is a thin wrapper that
 invokes Negamax with the initial window $[-\infty, +\infty]$ and ply $0$.
@@ -115,7 +107,62 @@ If no legal move exists, the implementation distinguishes:
 Using the current ply in the mate score ensures that faster mates are preferred
 and slower mates are avoided.
 
-\subsection{Quiescence Search}
+\subsubsection{Principal Variation Search}
+\label{subsec:pvs_implementation}
+
+The move loop inside \texttt{negamax} implements the Principal Variation Search
+scheme introduced in \cref{sec:preliminaries}. Instead of searching every move
+with the full window $[\alpha, \beta]$, the engine searches only the leading
+moves with the full window and verifies all remaining moves with a null-window
+search $[\alpha, \alpha + 1]$ (realized as $[-\alpha - 1, -\alpha]$ in the
+Negamax formulation). Only if the null-window search indicates that a move can
+beat $\alpha$ without already exceeding $\beta$ is the move re-searched with
+the full window to obtain its exact score.
+
+The behavior is controlled by two tunable parameters bundled in a
+\texttt{PvsConfig} structure:
+\begin{itemize}
+    \item \texttt{min\_depth} (default $2$): below this remaining depth the
+    scout search is skipped entirely and all moves are searched with the full
+    window. At shallow nodes the subtrees are so small that the potential
+    re-search overhead would outweigh the savings of the null-window search.
+    \item \texttt{scout\_after\_move} (default $1$): the first $N$ legal
+    moves of a node are always searched with the full window. Move ordering is
+    least reliable for the very first moves, so the engine only switches to the
+    cheap null-window scout once the presumed principal variation has been
+    established.
+\end{itemize}
+
+Both parameters are exposed as UCI options (\texttt{PvsMinDepth} and
+\texttt{PvsScoutAfterMove}), which allows the scouting behavior to be tuned and
+evaluated experimentally without recompiling the engine. The overall structure
+of the move loop is summarized in \cref{algo:pvs}.
+
+\begin{algorithm}[ht]
+\DontPrintSemicolon
+\KwIn{Position $P$, depth $d$, bounds $\alpha, \beta$, legal move counter $n$}
+\KwOut{Score of the searched move}
+
+\uIf{$n < \texttt{scout\_after\_move}$ \textbf{or} $d < \texttt{min\_depth}$}{
+    $score \gets -\textsc{Negamax}(P, d-1, -\beta, -\alpha)$\tcp*{full window}
+}
+\Else{
+    $score \gets -\textsc{Negamax}(P, d-1, -\alpha - 1, -\alpha)$\tcp*{null-window scout}
+    \If{$\alpha < score < \beta$}{
+        $score \gets -\textsc{Negamax}(P, d-1, -\beta, -\alpha)$\tcp*{re-search}
+    }
+}
+\Return $score$\;
+\caption{Principal Variation Search inside the Negamax move loop.}
+\label{algo:pvs}
+\end{algorithm}
+
+A subtle but important implementation detail is the interaction with aborted
+searches: if a null-window scout is aborted by a hard stop, its score is not
+trusted and no re-search is triggered; instead, the abort is propagated upward
+so that the iterative deepening loop can discard the incomplete iteration.
+
+\subsubsection{Quiescence Search}
 
 Quiescence search is implemented in \texttt{ChessBot::quiescence(...)} and is
 entered whenever the regular search reaches depth $0$. The function evaluates
@@ -133,7 +180,7 @@ The implementation uses the standard \emph{stand-pat} scheme:
 As with the main search, \texttt{hard\_stop()} is checked inside quiescence to
 enforce hard termination constraints consistently.
 
-\subsection{Transposition Table Integration}
+\subsubsection{Transposition Table Integration}
 
 The search consults the transposition table early in \texttt{negamax} via
 \texttt{tt.probe(key, depth, alpha, beta, ply, ...)}. A successful probe may:
@@ -154,7 +201,42 @@ encoded in a TT-safe form using the ply (via \texttt{to\_tt\_score} /
 \texttt{from\_tt\_score}) so that mate distances remain consistent across
 different search depths.
 
-\subsection{Move Ordering and Heuristics}
+\subsubsection{Search Tree Reuse Across Searches}
+\label{subsec:tree_reuse}
+
+The transposition table is not only used within a single search invocation but
+also serves as the engine's mechanism for resuming previous search trees. The
+table is a member of the engine instance and is deliberately \emph{not} cleared
+between searches. When a new search starts, \texttt{reset\_search\_state()}
+only calls \texttt{tt.new\_search()}, which advances an internal generation
+counter; all stored entries remain accessible. A full \texttt{tt.clear()} is
+performed only when the UCI command \texttt{ucinewgame} signals that an
+entirely new game begins.
+
+This design directly implements the idea of continuing an earlier computation.
+After the engine has played a move and the opponent has answered, the new root
+position lies inside the tree that was explored during the previous search.
+Probing the persistent table therefore immediately recovers large parts of the
+earlier work:
+\begin{itemize}
+    \item \textbf{Score reuse:} entries stored with sufficient depth yield
+    exact scores or safe bound cutoffs without re-searching the corresponding
+    subtrees.
+    \item \textbf{Move ordering reuse:} stored best moves from the previous
+    search guide the move ordering of the new search from the very first
+    iteration, which is exactly the situation in which Principal Variation
+    Search and Alpha-Beta pruning are most effective.
+\end{itemize}
+
+The generation counter implements a soft aging scheme rather than hard
+invalidation. The replacement policy prefers overwriting entries from older
+generations and entries with lower depth, so stale information gradually
+disappears as the game progresses while still being available as long as it is
+not displaced. In combination with iterative deepening, this means consecutive
+searches behave less like independent computations and more like one continuous
+search that is deepened and re-rooted as the game advances.
+
+\subsubsection{Move Ordering and Heuristics}
 
 Move ordering is implemented in \texttt{search::heuristics::order\_moves}.
 The ordering score combines several standard heuristics:
@@ -176,12 +258,12 @@ moves. This avoids polluting these tables with captures and ensures that the
 heuristics reflect moves that are generally useful for pruning rather than
 tactical one-offs.
 
-\subsection{Debugging and Instrumentation}
+\subsubsection{Debugging and Instrumentation}
 
 The search provides UCI-compliant reporting via \texttt{print\_info}, including
 depth, selective depth, time, nodes, NPS, and either centipawn score or mate
 distance (converted from the internal mate representation). Additionally, a
 configurable debug facility can emit search health statistics, transposition
 table statistics, root move ordering, and principal variation output. This
-instrumentation supports the experimental goal of this project by making search
+instrumentation supports the experimental goal of this thesis by making search
 behavior observable and reproducible.

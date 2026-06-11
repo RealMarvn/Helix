@@ -29,13 +29,28 @@ iterative deepening, transposition tables, and heuristic move ordering. The
 results indicate that improved move ordering can significantly reduce the number
 of explored nodes, even when additional search iterations are introduced.
 
+Building directly on the observation that Alpha-Beta search is most effective
+with strong move ordering, several refinements of the basic algorithm have been
+proposed. Pearl introduced the Scout algorithm, which verifies promising moves with
+minimal-window tests before evaluating them exactly~\cite{pearl1980scout}.
+Marsland and Campbell transferred this idea to the Alpha-Beta framework in the
+form of Principal Variation Search~\cite{marsland1982parallel}, and Reinefeld
+later refined it into NegaScout, analyzing the conditions under which the
+additional re-searches pay off~\cite{reinefeld1983negascout}. PVS is
+particularly effective in combination with iterative deepening and
+transposition tables, since both increase the probability that the first move
+searched is indeed the best one~\cite{marsland1986review}.
+
 Transposition tables have further improved search efficiency by allowing engines
 to reuse previously computed results for positions reached via different move
 orders~\cite{zobrist1970hashing}. By storing evaluations together with depth
 information and bound types, transposition tables enable both direct cutoffs and
 enhanced move ordering. Their effectiveness is especially pronounced in
 combination with iterative deepening, where information from earlier iterations
-can be reused almost immediately~\cite{warnock1988search}.
+can be reused almost immediately~\cite{warnock1988search}. Beyond single search
+invocations, a persistent transposition table also allows information to be
+carried over from one move to the next, effectively resuming previously
+explored search trees instead of recomputing them from scratch.
 
 Quiescence search addresses another well-known limitation of depth-limited
 search, commonly referred to as the horizon effect. By extending the search in
@@ -46,6 +61,5 @@ engines~\cite{marsland1986review}.
 While modern state-of-the-art engines incorporate additional techniques such as
 bitboards, evaluation learning, and neural networks~\cite{silver2018alphazero},
 the classical search principles discussed above remain fundamental. This work
-builds upon these established ideas and focuses specifically on the interaction
-between iterative deepening and time constraints, using a deliberately simple
-and transparent engine architecture to isolate and analyze their effects.
+builds upon these established ideas and focuses specifically on the relationship
+between invested search time and decision quality.

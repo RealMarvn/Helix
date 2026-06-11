@@ -1,4 +1,4 @@
-\section{Evaluation Function}
+\subsection{Evaluation Function}
 \label{sec:evaluation_function}
 
 This section describes the static evaluation function used by the engine. Since
@@ -8,7 +8,7 @@ implemented evaluation follows a classical \emph{tapered} approach with separate
 midgame (MG) and endgame (EG) scores, piece-square tables (PSQT), a phase-based
 interpolation scheme, and a tempo bonus.
 
-\subsection{Material Model}
+\subsubsection{Material Model}
 \label{subsec:material_model}
 
 The evaluation assigns a material value to each piece type. Material is counted
@@ -22,7 +22,7 @@ and an endgame value. This is consistent with the idea that the relative
 importance of pieces changes over the course of a game (e.g., kings become more
 active in endgames).
 
-\subsection{Piece-Square Tables (PSQT)}
+\subsubsection{Piece-Square Tables (PSQT)}
 \label{subsec:psqt}
 
 Positional preferences are encoded using piece-square tables. For each piece
@@ -37,7 +37,7 @@ white pieces use index $i \oplus 56$, while black pieces use $i$ directly. This
 ensures that both colours share the same PSQT semantics relative to their
 respective perspective.
 
-\subsection{Midgame and Endgame Separation}
+\subsubsection{Midgame and Endgame Separation}
 \label{subsec:mg_eg}
 
 Instead of a single score, the evaluation computes two scores:
@@ -51,7 +51,7 @@ is then expressed from the perspective of the \emph{side to move}. This is
 implemented by subtracting the opponent's accumulated values from the values of
 the player whose turn it is.
 
-\subsection{Game Phase Interpolation}
+\subsubsection{Game Phase Interpolation}
 \label{subsec:phase_interpolation}
 
 To smoothly transition between midgame and endgame behavior, the engine uses a
@@ -93,7 +93,7 @@ game phase.}
 \label{fig:tapered_eval}
 \end{figure}
 
-\subsection{Tempo Bonus}
+\subsubsection{Tempo Bonus}
 \label{subsec:tempo_bonus}
 
 A constant tempo bonus is added to the final score to reflect the advantage of
@@ -105,7 +105,7 @@ Since the engine evaluates positions from the perspective of the side to move,
 this constant shifts the score slightly in favor of the player whose turn it is,
 encouraging initiative and reducing symmetry artifacts.
 
-\subsection{Algorithmic Summary}
+\subsubsection{Algorithmic Summary}
 \label{subsec:eval_algorithm}
 
 \begin{algorithm}[ht]
@@ -141,7 +141,7 @@ $Eval(P) \gets \big(MG(P)\cdot mgPhase + EG(P)\cdot egPhase\big) / 24$\;
 \label{algo:evaluation}
 \end{algorithm}
 
-\subsection{Limitations of the Evaluation}
+\subsubsection{Limitations of the Evaluation}
 \label{subsec:eval_limitations}
 
 The evaluation is intentionally simple and focuses on material and PSQT-based

@@ -1,4 +1,4 @@
-\section{Time Management and Constraints}
+\subsection{Time Management and Constraints}
 \label{sec:time_management}
 
 In practical chess engines, search is not only limited by depth but often by a
@@ -12,7 +12,7 @@ details. Instead, the UCI layer produces a fully specified \texttt{SearchConstra
 instance, and the search only consults this object (and a stop flag) to decide
 when to terminate.
 
-\subsection{Unified Constraint Model}
+\subsubsection{Unified Constraint Model}
 
 The engine uses a dedicated \texttt{SearchConstraints} structure to describe how
 a search is controlled and when it should terminate. This structure unifies all
@@ -32,7 +32,7 @@ To simplify checks in the search, convenience predicates such as
 \texttt{has\_fixed\_depth()}, \texttt{has\_node\_limit()}, and \texttt{has\_movetime()}
 are provided.
 
-\subsection{Search Modes}
+\subsubsection{Search Modes}
 
 The active search behavior is selected via \texttt{SearchType}. The engine
 supports the following modes:
@@ -57,7 +57,7 @@ This mode-based design enables a clean separation between the UCI interface
 (which interprets the \texttt{go} command) and the search itself (which only
 consults the active constraints).
 
-\subsection{Time Budgets: Structure and Arming}
+\subsubsection{Time Budgets: Structure and Arming}
 
 Time-based searches (Normal / FixedTime) rely on \texttt{TimeControl} stored in
 \texttt{SearchConstraints::budget\_}. The budget distinguishes a \emph{soft} and a
@@ -86,7 +86,7 @@ is called. This function captures the current monotonic time
 \]
 From this point onward, the budget object is treated as read-only.
 
-\subsection{Termination Conditions in the Search}
+\subsubsection{Termination Conditions in the Search}
 
 The engine enforces termination using a combination of (i) an external stop flag,
 (ii) the hard deadline, and (iii) an optional node limit. These checks are
@@ -145,7 +145,7 @@ $bestMove \gets$ legal fallback move\;
 \label{algo:softstop}
 \end{algorithm}
 
-\subsection{Summary}
+\subsubsection{Summary}
 
 The engine models time control and other stopping criteria using a single,
 immutable \texttt{SearchConstraints} object. By activating different termination

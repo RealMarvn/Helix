@@ -1,14 +1,12 @@
-\section{Engine Architecture}
+\subsection{Engine Architecture}
 \label{sec:architecture}
 
 This section describes the overall architecture of the implemented chess engine.
-The focus lies on the structural design decisions and the interaction between the
-core components. Rather than optimizing for maximum playing strength, the
-architecture is deliberately kept modular and transparent in order to facilitate
-experimentation and detailed analysis of search algorithms and time management
-strategies.
+The focus lies on the structural design decisions and the interaction between
+the core components; the rationale behind these decisions is summarized at the
+end of the section.
 
-\subsection{Overall Design}
+\subsubsection{Overall Design}
 
 The engine follows a layered architecture that separates game representation,
 move generation, search, evaluation, and search control. Each component has a
@@ -50,7 +48,7 @@ This separation ensures that individual components can be modified or replaced
 without affecting the rest of the system, which is particularly important for
 experimental analysis.
 
-\subsection{Game State and Move Handling}
+\subsubsection{Game State and Move Handling}
 
 \paragraph{Board Representation}
 The board is represented using a classical mailbox model consisting of 64
@@ -89,7 +87,7 @@ reason about. Although this approach is less optimized than state-of-the-art
 alternatives, it provides a robust and well-understood baseline for search
 experimentation.
 
-\subsection{Position Hashing and Transposition Tables}
+\subsubsection{Position Hashing and Transposition Tables}
 
 \paragraph{Zobrist Hashing}
 To uniquely identify board positions, the engine employs Zobrist hashing. Each
@@ -117,10 +115,13 @@ identical positions would be evaluated repeatedly, leading to a significant
 increase in search effort. Second, transposition table entries improve move
 ordering by prioritizing moves that proved effective in previous searches. A
 simple aging mechanism ensures that outdated entries are gradually replaced,
-preventing the table from being dominated by stale information. For practical
+preventing the table from being dominated by stale information. Since the table
+persists across search invocations, it additionally serves as the mechanism by
+which the engine resumes previously explored search trees, as described in
+\cref{subsec:tree_reuse}. For practical
 implementations and further discussion, see for example Warnock~\cite{warnock1988search}.
 
-\subsection{Search Control and Integration}
+\subsubsection{Search Control and Integration}
 
 \paragraph{Unified Search Constraints}
 All termination conditions for a search invocation are encapsulated in a single
@@ -140,7 +141,7 @@ This component acts as a bridge between the external UCI interface and the
 internal search and evaluation modules, ensuring a clean separation between
 protocol handling and algorithmic logic.
 
-\subsection{Design Rationale}
+\subsubsection{Design Rationale}
 
 The architectural decisions made in this engine deliberately prioritize clarity,
 correctness, and experimental flexibility over maximum playing strength. Many
@@ -150,5 +151,5 @@ micro-optimizations, which can obscure the underlying algorithmic behavior.
 By choosing a modular and explicit design, this engine allows the effects of
 search algorithms, heuristics, and time management strategies to be studied in
 isolation. This aligns with the primary goal of this work, which is to analyze
-the behavior of iterative deepening search under time constraints rather than to
-compete directly with top-performing chess engines.
+time-dependent decision making rather than to compete directly with
+top-performing chess engines.
