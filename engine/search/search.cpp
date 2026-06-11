@@ -46,15 +46,17 @@ bool ChessBot::hard_stop()
 
 void ChessBot::reset_search_state()
 {
-    clear_stop();       // Resets the stop state.
-    nodes = 0;          // Reset the nodes for new search.
-    qnodes = 0;         // Reset the Qnodes for new search
-    seldepth = 0;       // Resets the seldepth for a new search.
-    stop_reason = NONE; // Resets the stop reason for a new search.
-    tt_returns = 0;     // Resets the tt_returns counter for a new search.
-    tt.new_search();    // Reset transposition table stats and age it.
-    killers.clear();    // Reset killer table.
-    history.clear();    // Reset history table.
+    clear_stop();        // Resets the stop state.
+    nodes = 0;           // Reset the nodes for new search.
+    qnodes = 0;          // Reset the Qnodes for new search
+    seldepth = 0;        // Resets the seldepth for a new search.
+    completed_depth = 0; // Resets the last completed depth for a new search.
+    researches = 0;      // Resets the PVS re-search counter for a new search.
+    stop_reason = NONE;  // Resets the stop reason for a new search.
+    tt_returns = 0;      // Resets the tt_returns counter for a new search.
+    tt.new_search();     // Reset transposition table stats and age it.
+    killers.clear();     // Reset killer table.
+    history.clear();     // Reset history table.
 }
 
 void ChessBot::print_info(const int depth, const int score, const Move& pv_move,
@@ -133,7 +135,10 @@ Move ChessBot::think(Board board, SearchConstraints config /* intentional copy *
         const auto [SCORE, ABORTED] = root_search(board, config.depth_, move);
 
         if (!ABORTED)
+        {
+            completed_depth = config.depth_;
             print_info(config.depth_, SCORE, move, START_TIME_MS);
+        }
 
         print_debug(board, config.depth_, SCORE, START_TIME_MS);
 
@@ -178,6 +183,7 @@ Move ChessBot::iterative_deepening(Board& board)
 
         // Set the move if the search is fully done.
         bestMove = move;
+        completed_depth = i;
 
         print_info(i, score, move, START_TIME_MS);
 
@@ -271,6 +277,7 @@ ChessBot::SearchResult ChessBot::negamax(Board& board, const int depth, int alph
                 // If alpha was beaten, we search with the full window again.
                 if (!aborted && -r.score > alpha && -r.score < beta)
                 {
+                    ++researches; // Count it, the bench wants to know how often scouting fails.
                     auto rs = negamax(board, depth - 1, -beta, -alpha, ply + 1, child_best);
                     result_score = rs.score;
                     aborted = rs.aborted;

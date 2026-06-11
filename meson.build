@@ -125,6 +125,34 @@ if not is_debug
         tests_exe,
         depends : copy_test_data
     )
+
+    # ----------------------------------------------------------------
+    # Bench harness (thesis measurements, runs manually - not via `meson test`)
+    # ----------------------------------------------------------------
+
+    # Git hash so every result CSV knows which engine version produced it.
+    git_hash_cmd = run_command('git', 'rev-parse', '--short', 'HEAD', check : false)
+    if git_hash_cmd.returncode() == 0
+        git_hash = git_hash_cmd.stdout().strip()
+    else
+        git_hash = 'unknown'
+    endif
+
+    bench_exe = executable(
+        'helix-bench',
+        files(
+            'bench/bench_main.cpp',
+            'bench/exp_move_stability.cpp',
+            'bench/exp_depth_vs_time.cpp',
+            'bench/exp_pvs_sweep.cpp',
+            'bench/exp_time_to_quality.cpp',
+            'bench/exp_tree_reuse.cpp',
+        ),
+        include_directories : engine_inc,
+        link_with : chess_engine_lib,
+        cpp_args : ['-DBENCH_GIT_HASH="@0@"'.format(git_hash)],
+        build_by_default : true
+    )
 endif
 
 # --------------------------------------------------------------------
@@ -143,6 +171,12 @@ all_source_files = files(
     'engine/search/search.cpp',
     'engine/search/tt.cpp',
     'tests/tests.cpp',
+    'bench/bench_main.cpp',
+    'bench/exp_move_stability.cpp',
+    'bench/exp_depth_vs_time.cpp',
+    'bench/exp_pvs_sweep.cpp',
+    'bench/exp_time_to_quality.cpp',
+    'bench/exp_tree_reuse.cpp',
 )
 
 clang_format = find_program('clang-format', required : false)

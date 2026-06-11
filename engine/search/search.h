@@ -15,12 +15,12 @@
  */
 
 #pragma once
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <climits>
 #include <cstdint>
 #include <memory>
-#include <algorithm>
 
 #include "../movement/move_gen.h"
 #include "./search/heuristics.h"
@@ -120,6 +120,44 @@ class ChessBot
         pvs.scout_after_move = std::max(1, N);
     }
 
+    // --------- Read-only stats of the last search (used by the bench harness) ---------
+
+    /** @brief Number of main-search nodes explored in the last search. */
+    [[nodiscard]] long long get_nodes() const
+    {
+        return nodes;
+    }
+
+    /** @brief Number of quiescence nodes explored in the last search. */
+    [[nodiscard]] long long get_qnodes() const
+    {
+        return qnodes;
+    }
+
+    /** @brief Maximum selective depth reached in the last search. */
+    [[nodiscard]] int get_seldepth() const
+    {
+        return seldepth;
+    }
+
+    /** @brief Depth of the last fully completed iteration (0 if none finished). */
+    [[nodiscard]] int get_completed_depth() const
+    {
+        return completed_depth;
+    }
+
+    /** @brief Number of PVS re-searches (failed null-window scouts) in the last search. */
+    [[nodiscard]] long long get_researches() const
+    {
+        return researches;
+    }
+
+    /** @brief Reason why the last search stopped. */
+    [[nodiscard]] StopReason get_stop_reason() const
+    {
+        return stop_reason;
+    }
+
   private:
     /**
      * @brief Config object holding the PVS tuning parameters.
@@ -176,6 +214,12 @@ class ChessBot
 
     /** @brief Maximum selective depth (seldepth) reached in the last search. */
     int seldepth = 0;
+
+    /** @brief Depth of the last fully completed iteration (for measurements). */
+    int completed_depth = 0;
+
+    /** @brief How often a null-window scout failed high and forced a full re-search. */
+    long long researches = 0;
 
     /** @brief Number of times a TT probe returned a usable score/bound. */
     int tt_returns = 0;
