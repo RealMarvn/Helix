@@ -73,6 +73,7 @@ void run_tree_reuse(const std::vector<std::string>& args)
 
     auto csv = open_csv(OUT, "tree_reuse", config.str());
     csv << "game_id,ply,side,mode,completed_depth,seldepth,nodes,qnodes,researches,"
+        << "tt_probes,tt_hits,tt_stores,tt_replaces,tt_hit_rate,"
         << "time_ms,bestmove,played_move\n";
 
     for (std::size_t game_id = 0; game_id < GAMES.size(); game_id++)
@@ -96,9 +97,16 @@ void run_tree_reuse(const std::vector<std::string>& args)
             const SearchSample SAMPLE = run_search(bot, board, limits);
             const char SIDE = (board.player_ == WHITE) ? 'w' : 'b';
 
+            // Share of probes that actually found their position, the headline
+            // number for tree reuse. Guard against the (rare) zero-probe search.
+            const TTStats& TT = SAMPLE.tt_stats;
+            const double HIT_RATE = TT.probes_ ? static_cast<double>(TT.hits_) / TT.probes_ : 0.0;
+
             csv << game_id << "," << ply << "," << SIDE << "," << MODE << ","
                 << SAMPLE.completed_depth << "," << SAMPLE.seldepth << "," << SAMPLE.nodes << ","
-                << SAMPLE.qnodes << "," << SAMPLE.researches << "," << SAMPLE.time_ms << ","
+                << SAMPLE.qnodes << "," << SAMPLE.researches << "," << TT.probes_ << "," << TT.hits_
+                << "," << TT.stores_ << "," << TT.replaces_ << "," << std::fixed
+                << std::setprecision(4) << HIT_RATE << "," << SAMPLE.time_ms << ","
                 << SAMPLE.move.to_string() << "," << played << "\n";
 
             // Follow the game with the move that was actually played.

@@ -49,6 +49,10 @@ struct SearchSample
     long long researches = 0;
     long long time_ms = 0;
     ChessBot::StopReason stop_reason = ChessBot::NONE;
+
+    // Raw TT counters for this run, straight from the report. Experiments that
+    // care about the table (e.g. tree reuse) read these; the rest just ignore them.
+    TTStats tt_stats{};
 };
 
 /** @brief Run one search, the wall time comes on top of the engine's own report. */
@@ -67,6 +71,7 @@ inline SearchSample run_search(ChessBot& bot, const Board& board, const SearchCo
     sample.researches = REPORT.researches;
     sample.time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(END - START).count();
     sample.stop_reason = REPORT.stop_reason;
+    sample.tt_stats = REPORT.tt_stats;
     return sample;
 }
 

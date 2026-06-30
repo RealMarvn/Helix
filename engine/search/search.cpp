@@ -146,35 +146,35 @@ ChessBot::SearchReport ChessBot::think(Board board, SearchConstraints config /* 
         if (!board.is_legal_by_make_unmake(move))
             move = moveGenUtils::get_legal_fallback_move(board);
 
-        return {move,   completed_depth, seldepth,   nodes,
-                qnodes, researches,      tt_returns, stop_reason};
+        return build_report(move);
     }
     case SearchType::NodeLimit:
     case SearchType::Infinite: {
         // Reset the time limit so hard_stop does not kill the search.
         this->constraint.budget_ = {};
-        return {iterative_deepening(board),
-                completed_depth,
-                seldepth,
-                nodes,
-                qnodes,
-                researches,
-                tt_returns,
-                stop_reason};
+        return build_report(iterative_deepening(board));
     }
     default: {
         // Initialize timers for time-based search.
         search::time::TimeManager::init_search(constraint);
-        return {iterative_deepening(board),
-                completed_depth,
-                seldepth,
-                nodes,
-                qnodes,
-                researches,
-                tt_returns,
-                stop_reason};
+        return build_report(iterative_deepening(board));
     }
     }
+}
+
+ChessBot::SearchReport ChessBot::build_report(const Move& best_move) const
+{
+    SearchReport report;
+    report.best_move = best_move;
+    report.completed_depth = completed_depth;
+    report.seldepth = seldepth;
+    report.nodes = nodes;
+    report.qnodes = qnodes;
+    report.researches = researches;
+    report.tt_returns = tt_returns;
+    report.tt_stats = tt.get_stats(); // Raw counters of exactly this search.
+    report.stop_reason = stop_reason;
+    return report;
 }
 
 Move ChessBot::iterative_deepening(Board& board)

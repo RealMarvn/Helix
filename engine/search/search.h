@@ -87,6 +87,11 @@ class ChessBot
         long long researches = 0; // Failed null-window scouts.
         int tt_returns = 0;       // Usable TT probes.
 
+        // Raw TT counters (probes/hits/stores/replaces) of exactly this search,
+        // copied straight out of the table. Lets the bench compute hit rate and
+        // replacement pressure without poking into the TT itself.
+        TTStats tt_stats{};
+
         StopReason stop_reason = StopReason::NONE;
     };
 
@@ -212,6 +217,19 @@ class ChessBot
         int score = 0;
         bool aborted = false;
     };
+
+    /**
+     * @brief Bundle the current search statistics into a SearchReport.
+     *
+     * Reads all the per-search counters off the member state (nodes, depths,
+     * stop reason, ...) and pulls the raw TT counters from the table. Keeping
+     * this in one place means the three return paths of think() can't drift
+     * apart when a new stat gets added.
+     *
+     * @param best_move The move the search decided on.
+     * @return A fully filled report for exactly this search.
+     */
+    [[nodiscard]] SearchReport build_report(const Move& best_move) const;
 
     /** @brief Active constraints for the current search (time/nodes/depth). */
     SearchConstraints constraint;
