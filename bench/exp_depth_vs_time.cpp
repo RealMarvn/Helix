@@ -35,6 +35,7 @@ void run_depth_vs_time(const std::vector<std::string>& args)
 
     auto csv = open_csv(OUT, "depth_vs_time", config.str());
     csv << "fen_id,budget_ms,rep,pvs,completed_depth,seldepth,nodes,qnodes,researches,"
+        << "tt_probes,tt_hits,tt_stores,tt_replaces,tt_hit_rate,"
         << "time_ms,bestmove,stop_reason\n";
 
     ChessBot bot;
@@ -61,9 +62,17 @@ void run_depth_vs_time(const std::vector<std::string>& args)
 
                 const SearchSample SAMPLE = run_search(bot, board, limits);
 
+                // TT is fresh per run here, so the hit rate shows how well a single
+                // search fills and reuses its own table within the given budget.
+                const TTStats& TT = SAMPLE.tt_stats;
+                const double HIT_RATE =
+                    TT.probes_ ? static_cast<double>(TT.hits_) / TT.probes_ : 0.0;
+
                 csv << fen_id << "," << BUDGET << "," << rep << "," << (PVS_ON ? "on" : "off")
                     << "," << SAMPLE.completed_depth << "," << SAMPLE.seldepth << ","
                     << SAMPLE.nodes << "," << SAMPLE.qnodes << "," << SAMPLE.researches << ","
+                    << TT.probes_ << "," << TT.hits_ << "," << TT.stores_ << "," << TT.replaces_
+                    << "," << std::fixed << std::setprecision(4) << HIT_RATE << ","
                     << SAMPLE.time_ms << "," << SAMPLE.move.to_string() << ","
                     << stop_reason_name(SAMPLE.stop_reason) << "\n";
             }
