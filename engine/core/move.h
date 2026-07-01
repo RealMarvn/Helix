@@ -69,6 +69,9 @@ struct Move {
      * @return A string representation of the Move object.
      */
     [[nodiscard]] std::string to_string() const {
+        if (is_null())
+            return "0000";
+
         std::ostringstream out;
         out << static_cast<char>((square_) % 8 + 'a') << (square_) / 8 + 1;
         out << static_cast<char>((move_square_) % 8 + 'a') << (move_square_) / 8 + 1;

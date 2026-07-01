@@ -132,6 +132,11 @@ ChessBot::SearchReport ChessBot::think(Board board, SearchConstraints config /* 
         const long long START_TIME_MS = search::time::TimeManager::now_ms();
 
         Move move = moveGenUtils::get_legal_fallback_move(board);
+
+        // No legal move? -> stop!
+        if (move.is_null())
+            return build_report(move);
+
         const auto [SCORE, ABORTED] = root_search(board, config.depth_, move);
 
         if (!ABORTED)
@@ -180,6 +185,11 @@ ChessBot::SearchReport ChessBot::build_report(const Move& best_move) const
 Move ChessBot::iterative_deepening(Board& board)
 {
     Move bestMove = moveGenUtils::get_legal_fallback_move(board);
+
+    // No legal move? -> stop!
+    if (bestMove.is_null())
+        return bestMove;
+
     const long long START_TIME_MS = search::time::TimeManager::now_ms();
 
     for (int i = 1;; i++)
