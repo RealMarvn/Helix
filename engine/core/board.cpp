@@ -157,10 +157,9 @@ bool Board::pop_last_move()
     // Set player back.
     player_ = player_ == WHITE ? BLACK : WHITE;
 
-    // Settings reset.
+    // Settings reset, the stored hash comes back with them.
     board_settings_ = history_.back();
-
-    build_hash_for_board();
+    board_hash_ = board_settings_.hash_;
     return true;
 }
 
@@ -235,8 +234,6 @@ bool Board::make_move(const Move& move)
 
     // Save move
     moves_.push_back(move);
-    // Save settings
-    history_.push_back(board_settings_);
     // Reset the player.
     player_ = player_ == WHITE ? BLACK : WHITE;
 
@@ -245,14 +242,18 @@ bool Board::make_move(const Move& move)
     else if (move.moving_piece_.piece_type_ == BK)
         black_king_sq_ = move.move_square_;
 
+    // Build the new hash and save the settings with it, so pop_last_move
+    // can restore both straight from the history.
+    build_hash_for_board();
+    board_settings_.hash_ = board_hash_;
+    history_.push_back(board_settings_);
+
     // Check if your king is in check after the move and pop if yes.
     if (is_king_in_check(player_ != WHITE))
     {
         pop_last_move();
         return false;
     }
-
-    build_hash_for_board();
 
     // return true if everything is fine.
     return true;
@@ -265,14 +266,14 @@ void Board::make_null_move()
     // against a move that never happened.
     board_settings_.ep_square_ = 100;
 
-    // Save the settings so pop_null_move can restore them.
-    // Note: nothing is pushed to moves_, a null move is not a real move!
-    history_.push_back(board_settings_);
-
     // Hand the turn over.
     player_ = player_ == WHITE ? BLACK : WHITE;
 
+    // Save the settings with the new hash so pop_null_move can restore them.
+    // Note: nothing is pushed to moves_, a null move is not a real move!
     build_hash_for_board();
+    board_settings_.hash_ = board_hash_;
+    history_.push_back(board_settings_);
 }
 
 void Board::pop_null_move()
@@ -281,11 +282,10 @@ void Board::pop_null_move()
     // Same pattern as pop_last_move: history_.back() always mirrors the current settings.
     history_.pop_back();
     board_settings_ = history_.back();
+    board_hash_ = board_settings_.hash_;
 
     // Give the turn back.
     player_ = player_ == WHITE ? BLACK : WHITE;
-
-    build_hash_for_board();
 }
 
 bool Board::has_non_pawn_material(const bool is_white) const
@@ -609,6 +609,7 @@ void Board::read_fen(const std::string& input)
 
     // Build the new hash.
     build_hash_for_board();
+    board_settings_.hash_ = board_hash_;
 
     // Save current settings.
     history_.push_back(board_settings_);

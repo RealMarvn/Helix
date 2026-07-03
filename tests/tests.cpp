@@ -171,6 +171,49 @@ TEST(Board, NullMoveMakeUnmake)
     }
 }
 
+TEST(Board, MakeUnmakeHashRestore)
+{
+    // Get Perft file!
+    std::ifstream epd_file(data_path("perft-positions.epd"));
+    ASSERT_TRUE(epd_file.good()) << "The path of the testing suite is wrong. Please change!";
+    Board myBoard;
+
+    std::string line;
+    // Read in perft file per line.
+    while (std::getline(epd_file, line))
+    {
+        std::istringstream ss(line);
+        std::string setting;
+        std::vector<std::string> settings;
+
+        // Cut the line into sections.
+        while (std::getline(ss, setting, ';'))
+        {
+            settings.push_back(setting);
+        }
+
+        // Read in FEN.
+        myBoard.read_fen(settings[0]);
+        const auto HASH_BEFORE = myBoard.get_hash();
+
+        // Make every legal move once and check the hash both ways.
+        for (Move& move : moveGenUtils::get_pseudo_legal_moves(myBoard, myBoard.player_ == WHITE))
+        {
+            if (!myBoard.make_move(move))
+                continue;
+
+            // The hash after the move must match one built fresh from the FEN.
+            Board freshBoard;
+            freshBoard.read_fen(myBoard.get_fen());
+            ASSERT_EQ(myBoard.get_hash(), freshBoard.get_hash());
+
+            // And popping must restore the hash exactly (no recomputation).
+            myBoard.pop_last_move();
+            ASSERT_EQ(myBoard.get_hash(), HASH_BEFORE);
+        }
+    }
+}
+
 TEST(Board, HasNonPawnMaterial)
 {
     Board myBoard;

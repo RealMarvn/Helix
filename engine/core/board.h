@@ -300,7 +300,7 @@ private:
     /**
      * @brief Precomputed Zobrist keys used to hash the board state.
      */
-    const Zobrist ZOBRIST_TABLES_;
+    inline static const Zobrist ZOBRIST_TABLES_{};
 
     /**
      * @brief Cached Zobrist hash for the current position.
