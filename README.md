@@ -26,6 +26,9 @@ CuteChess or Banksia.
 - [Technical Design](#technical-design)
 - [Project Structure](#project-structure)
 - [Build & Setup](#build--setup)
+    - [Compiling](#compiling)
+    - [Running the Tests](#running-the-tests)
+    - [Running a Benchmark](#running-a-benchmark)
 - [Usage](#usage)
     - [CLI Mode](#cli-mode)
     - [UCI Mode](#uci-mode)
@@ -289,6 +292,63 @@ This script:
 - Configures `build/debug` and `build/release`
 - Builds the engine and tests
 - Installs clang‑format and clang‑tidy Git hooks
+
+### Compiling
+
+After the initial setup, rebuilding is a single Ninja call into the desired build directory:
+
+```bash
+ninja -C build/release        # optimized build (engine, tests, bench)
+ninja -C build/debug          # debug build (engine only)
+```
+
+The engine binary is `build/release/helix` (or `build/debug/helix`). Note that the **tests and the
+bench harness are only built in the release configuration** — the debug directory contains just the
+engine.
+
+### Running the Tests
+
+The unit tests (move generation via Perft, FEN round‑trips, move parsing, null move make/unmake)
+run through Meson:
+
+```bash
+meson test -C build/release
+```
+
+For a single test or more detailed output, call the GTest binary directly:
+
+```bash
+./build/release/chess-tests --gtest_filter=Board.NullMoveMakeUnmake
+```
+
+### Running a Benchmark
+
+The bench harness `helix-bench` links the engine as a library and writes one timestamped CSV per
+run into `results/`. Run it without arguments to get the full usage overview:
+
+```bash
+./build/release/helix-bench
+```
+
+A typical A/B measurement (here: null move pruning on vs. off) looks like this:
+
+```bash
+./build/release/helix-bench depth-vs-time --suite tests/data/stockfish-defaults.epd --nmp off
+./build/release/helix-bench depth-vs-time --suite tests/data/stockfish-defaults.epd --nmp on
+python3 scripts/analyze_bench.py --depth-time results/depth_vs_time_<timestamp>.csv
+```
+
+For the quality side, `time-to-quality` records the chosen moves and
+`scripts/score_with_stockfish.py` adds the centipawn loss against Stockfish afterwards:
+
+```bash
+./build/release/helix-bench time-to-quality --suite tests/data/stockfish-defaults.epd
+python3 scripts/score_with_stockfish.py results/time_to_quality_<timestamp>.csv \
+    --stockfish /path/to/stockfish
+python3 scripts/analyze_bench.py --quality results/time_to_quality_<timestamp>_scored.csv
+```
+
+The Python scripts need `pandas` (plots additionally `matplotlib`, scoring `python-chess`).
 
 ---
 
