@@ -27,8 +27,9 @@ bool ChessBot::hard_stop()
         return true;
     }
 
-    // Hard time limit.
-    if (constraint.budget_.hard_time_up(search::time::TimeManager::now_ms()))
+    // Hard time limit. Reading the clock costs more than the check itself,
+    // so only do it every 1024 nodes. The lost precision is under a millisecond.
+    if ((nodes & 1023) == 0 && constraint.budget_.hard_time_up(search::time::TimeManager::now_ms()))
     {
         stop_reason = HARD_TIME;
         return true;
@@ -436,19 +437,24 @@ ChessBot::SearchResult ChessBot::quiescence(Board& board, int alpha, const int b
     if (!tt_move.is_null() && !board.is_legal_by_make_unmake(tt_move))
         tt_move = Move{};
 
-    // Sort so the best moves are first (TT move + captures + killer/history heuristics).
-    search::heuristics::order_moves(moveList, tt_move, ply, board.player_, killers, history);
+    // Quiescence only looks at captures, so filter them out before sorting.
+    // Ordering a handful of captures is way cheaper than ordering the full list.
+    MoveList captures;
+    for (Move& move : moveList)
+    {
+        if (move.captured_piece_.piece_type_ != EMPTY || move.move_type_ == EN_PASSANT)
+            captures.push_back(move);
+    }
+
+    // Sort so the best captures are first (TT move + MVV-LVA).
+    search::heuristics::order_moves(captures, tt_move, ply, board.player_, killers, history);
 
     // The best score should be initialized with the worst value possible.
     int bestScore = STAND_PAT;
 
-    for (Move& move : moveList)
+    for (Move& move : captures)
     {
         int score;
-
-        // Skip the normal moves so I only have captures.
-        if (move.captured_piece_.piece_type_ == EMPTY && move.move_type_ != EN_PASSANT)
-            continue;
 
         // Make every move and gather the value of the opponent.
         if (board.make_move(move))

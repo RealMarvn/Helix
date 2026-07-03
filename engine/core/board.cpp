@@ -602,10 +602,10 @@ void Board::read_fen(const std::string& input)
         board_settings_.ep_square_ = calculateSquare(COL, ROW);
     }
 
-    // Convert the char to an int and subtract 48 (ascii value).
-    // It is not pretty but I don't know a better way.
-    board_settings_.last_moves_since_pawn_or_capture_ = fenSettings[4][0] - 48;
-    board_settings_.turns_ = fenSettings[5][0] - 48;
+    // Parse the move counters. stoi instead of char math, otherwise
+    // multi-digit counters like "15" would be read as 1.
+    board_settings_.last_moves_since_pawn_or_capture_ = std::stoi(fenSettings[4]);
+    board_settings_.turns_ = std::stoi(fenSettings[5]);
 
     // Build the new hash.
     build_hash_for_board();
