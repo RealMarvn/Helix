@@ -180,6 +180,39 @@ public:
     bool pop_last_move();
 
     /**
+     * @brief Makes a null move (passes the turn without moving a piece).
+     *
+     * This function hands the turn to the opponent without touching any piece. It clears the
+     * en-passant square (the opponent can't capture en passant against a move that never happened)
+     * and rebuilds the hash. Used by the search for null move pruning, this is not a legal chess
+     * move!
+     *
+     * Every make_null_move must be undone with @see pop_null_move before any pop_last_move is
+     * called, because null moves are not stored in the move list.
+     */
+    void make_null_move();
+
+    /**
+     * @brief Undoes a null move made by @see make_null_move.
+     *
+     * This function restores the previous board settings (en-passant square, counters), gives the
+     * turn back and rebuilds the hash. Must be called exactly once for every make_null_move.
+     */
+    void pop_null_move();
+
+    /**
+     * @brief Checks if the given side still has pieces other than pawns and the king.
+     *
+     * This function is used by the search as a zugzwang guard for null move pruning. In pure
+     * pawn/king endgames "doing nothing" is often the best move, so null move pruning would cut
+     * away the truth there.
+     *
+     * @param is_white The side to check (true for white, false for black).
+     * @return True if the side has at least one knight, bishop, rook or queen.
+     */
+    [[nodiscard]] bool has_non_pawn_material(bool is_white) const;
+
+    /**
      * @brief Prints the current state of the chessboard.
      *
      * This function prints the current state of the chessboard visually.

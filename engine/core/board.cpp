@@ -258,6 +258,55 @@ bool Board::make_move(const Move& move)
     return true;
 }
 
+void Board::make_null_move()
+{
+    // No piece is touched here, we only hand the turn over.
+    // The EP square has to go: the opponent can't capture en passant
+    // against a move that never happened.
+    board_settings_.ep_square_ = 100;
+
+    // Save the settings so pop_null_move can restore them.
+    // Note: nothing is pushed to moves_, a null move is not a real move!
+    history_.push_back(board_settings_);
+
+    // Hand the turn over.
+    player_ = player_ == WHITE ? BLACK : WHITE;
+
+    build_hash_for_board();
+}
+
+void Board::pop_null_move()
+{
+    // Pop the settings saved by make_null_move and restore the ones before it.
+    // Same pattern as pop_last_move: history_.back() always mirrors the current settings.
+    history_.pop_back();
+    board_settings_ = history_.back();
+
+    // Give the turn back.
+    player_ = player_ == WHITE ? BLACK : WHITE;
+
+    build_hash_for_board();
+}
+
+bool Board::has_non_pawn_material(const bool is_white) const
+{
+    // Look for at least one knight, bishop, rook or queen of that side.
+    // Pawns and the king don't count, see the header for the zugzwang reasoning.
+    for (const Piece& PIECE : board_)
+    {
+        if (PIECE.piece_type_ == EMPTY)
+            continue;
+
+        if (PIECE.is_white() != is_white)
+            continue;
+
+        if (const int BASE = PIECE.piece_type_ % BP; BASE >= WN && BASE <= WQ)
+            return true;
+    }
+
+    return false;
+}
+
 void Board::handle_castling_permissions(const Move& move)
 {
     // If king is moved. disable everything.

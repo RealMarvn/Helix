@@ -10,8 +10,8 @@ and appends quality columns:
     cpl            - centipawn loss: max(0, sf_eval_best - sf_eval_played)
     agreement      - 1 if the engine picked Stockfish's move, else 0
 
-Scoring is separate from measuring on purpose: you can re-score old runs
-without re-running any search.
+Scoring is separate from measuring, so old runs can be re-scored without
+re-running any search.
 
 Usage:
     pip install python-chess
@@ -26,7 +26,7 @@ import sys
 import chess
 import chess.engine
 
-# Mate scores get capped so a single mate line does not dominate the averages.
+# Cap for mate scores, otherwise a single mate line dominates the averages.
 MATE_CAP_CP = 1000
 
 
@@ -49,7 +49,7 @@ def main():
 
     out_path = args.out or args.csv_in.replace(".csv", "_scored.csv")
 
-    # Keep the '#' config header lines so the scored file stays self-documenting.
+    # Keep the '#' config header lines from the input file.
     header_lines = []
     with open(args.csv_in) as f:
         for line in f:
@@ -67,24 +67,63 @@ def main():
     engine = chess.engine.SimpleEngine.popen_uci(args.stockfish)
     engine.configure({"Threads": 1})
 
-    # Cache per FEN (best move) and per FEN+move (played eval), the same
+    # Cache per FEN (best move) and per FEN+move (played eval). The same
     # position shows up once per budget and rep.
     best_cache = {}
     played_cache = {}
+
+    def blank_score(row):
+        """Leave the row unscored but keep the columns."""
+        row["sf_best"] = ""
+        row["sf_eval_best"] = ""
+        row["sf_eval_played"] = ""
+        row["cpl"] = ""
+        row["agreement"] = ""
+
+    skipped = 0
 
     try:
         for i, row in enumerate(rows):
             fen = row["fen"]
             board = chess.Board(fen)
 
+            # Mate/stalemate positions have no move to score.
+            if board.is_game_over():
+                blank_score(row)
+                skipped += 1
+                continue
+
             if fen not in best_cache:
                 info = engine.analyse(board, chess.engine.Limit(depth=args.depth))
-                sf_best = info["pv"][0]
-                sf_eval_best = info["score"].pov(board.turn).score(mate_score=MATE_CAP_CP * 10)
-                best_cache[fen] = (sf_best, sf_eval_best)
+                pv = info.get("pv")
+                if not pv:
+                    best_cache[fen] = None
+                else:
+                    sf_eval_best = info["score"].pov(board.turn).score(mate_score=MATE_CAP_CP * 10)
+                    best_cache[fen] = (pv[0], sf_eval_best)
+
+            if best_cache[fen] is None:
+                # Stockfish returned no PV for this position.
+                blank_score(row)
+                skipped += 1
+                continue
 
             sf_best, sf_eval_best = best_cache[fen]
-            played = chess.Move.from_uci(row["bestmove"])
+
+            # bestmove can be null ("0000") or illegal, skip those rows.
+            try:
+                played = chess.Move.from_uci(row["bestmove"])
+            except ValueError:
+                played = None
+
+            if played is None or played not in board.legal_moves:
+                row["sf_best"] = sf_best.uci()
+                row["sf_eval_best"] = sf_eval_best
+                row["sf_eval_played"] = ""
+                row["cpl"] = ""
+                row["agreement"] = 0
+                skipped += 1
+                continue
 
             key = (fen, row["bestmove"])
             if key not in played_cache:
@@ -107,6 +146,9 @@ def main():
                 print(f"{i + 1}/{len(rows)} rows scored")
     finally:
         engine.quit()
+
+    if skipped:
+        print(f"{skipped} rows skipped (terminal position or invalid bestmove)")
 
     with open(out_path, "w", newline="") as f:
         for line in header_lines:

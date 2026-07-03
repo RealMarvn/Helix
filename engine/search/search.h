@@ -9,6 +9,7 @@
  * Declares the ChessBot class which implements the engine's game-tree search:
  * - iterative deepening and fixed-depth search,
  * - negamax with alpha-beta pruning,
+ * - null move pruning,
  * - quiescence search,
  * - move ordering (TT move, killers, history),
  * - integration with the Transposition Table.
@@ -37,6 +38,7 @@
  *  - iterative deepening with time management,
  *  - fixed-depth searches,
  *  - negamax search with alpha-beta pruning,
+ *  - null move pruning,
  *  - quiescence search,
  *  - transposition tables,
  *  - killer and history heuristics.
@@ -84,8 +86,9 @@ class ChessBot
 
         long long nodes = 0;
         long long qnodes = 0;
-        long long researches = 0; // Failed null-window scouts.
-        int tt_returns = 0;       // Usable TT probes.
+        long long researches = 0;   // Failed null-window scouts.
+        long long null_cutoffs = 0; // Successful null move prunes.
+        int tt_returns = 0;         // Usable TT probes.
 
         // Raw TT counters (probes/hits/stores/replaces) of exactly this search,
         // copied straight out of the table. Lets the bench compute hit rate and
@@ -173,6 +176,24 @@ class ChessBot
         pvs.scout_after_move = std::max(1, N);
     }
 
+    /** @brief Turn null move pruning on and off. */
+    void set_nmp_enabled(const bool ON)
+    {
+        nmp.enabled = ON;
+    }
+
+    /** @brief Set the minimum depth at which null move pruning kicks in. */
+    void set_nmp_min_depth(const int N)
+    {
+        nmp.min_depth = std::max(2, N);
+    }
+
+    /** @brief Set the depth reduction R applied to the null move search. */
+    void set_nmp_reduction(const int R)
+    {
+        nmp.reduction = std::max(1, R);
+    }
+
   private:
     /**
      * @brief Config object holding the PVS tuning parameters.
@@ -191,6 +212,28 @@ class ChessBot
 
     /** @brief The current PVS config. */
     PvsConfig pvs;
+
+    /**
+     * @brief Config object holding the null move pruning parameters.
+     *
+     * The idea: hand the opponent a free move. If our position is still
+     * good enough that a reduced search fails high anyway, the real moves
+     * can only be better and the whole node gets cut immediately.
+     *
+     * min_depth: below this depth we skip the null move, the reduced
+     *            search would land straight in quiescence and prove nothing.
+     * reduction: how many plies R the null move search is shallower than
+     *            the normal search (classic value: 2).
+     */
+    struct NullMoveConfig
+    {
+        bool enabled = true;
+        int min_depth = 3;
+        int reduction = 2;
+    };
+
+    /** @brief The current null move pruning config. */
+    NullMoveConfig nmp;
 
     /**
      * @brief Config object used to hold the debug options.
@@ -248,6 +291,9 @@ class ChessBot
 
     /** @brief How often a null-window scout failed high and forced a full re-search. */
     long long researches = 0;
+
+    /** @brief How often a null move search failed high and pruned the whole node. */
+    long long null_cutoffs = 0;
 
     /** @brief Number of times a TT probe returned a usable score/bound. */
     int tt_returns = 0;
@@ -329,9 +375,13 @@ class ChessBot
      * @param beta Beta bound of the search window.
      * @param ply Current ply (half-move) depth from the root.
      * @param best_move Output parameter for the best move at root ply.
+     * @param can_null Whether null move pruning is allowed at this node.
+     *                 Passed as false directly after a null move so the
+     *                 search never plays two null moves in a row.
      * @return SearchResult containing the score and abort status.
      */
-    SearchResult negamax(Board& board, int depth, int alpha, int beta, int ply, Move& best_move);
+    SearchResult negamax(Board& board, int depth, int alpha, int beta, int ply, Move& best_move,
+                         bool can_null = true);
 
     /**
      * @brief Quiescence search to resolve tactical instability.

@@ -47,6 +47,7 @@ struct SearchSample
     long long nodes = 0;
     long long qnodes = 0;
     long long researches = 0;
+    long long null_cutoffs = 0;
     long long time_ms = 0;
     ChessBot::StopReason stop_reason = ChessBot::NONE;
 
@@ -69,6 +70,7 @@ inline SearchSample run_search(ChessBot& bot, const Board& board, const SearchCo
     sample.nodes = REPORT.nodes;
     sample.qnodes = REPORT.qnodes;
     sample.researches = REPORT.researches;
+    sample.null_cutoffs = REPORT.null_cutoffs;
     sample.time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(END - START).count();
     sample.stop_reason = REPORT.stop_reason;
     sample.tt_stats = REPORT.tt_stats;

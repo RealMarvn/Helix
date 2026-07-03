@@ -31,6 +31,7 @@ CuteChess or Banksia.
     - [UCI Mode](#uci-mode)
     - [Debugging & Instrumentation](#debugging--instrumentation)
     - [Search Tuning (PVS)](#search-tuning-pvs)
+    - [Search Tuning (Null Move Pruning)](#search-tuning-null-move-pruning)
 - [Notes](#notes)
 - [Prerequisites](#prerequisites)
 
@@ -72,6 +73,7 @@ making it suitable for empirical evaluation, debugging, and academic analysis.
 - **NegaMax** formulation (clean minimax variant for zero‑sum games)
 - **Alpha‑Beta pruning** to reduce the explored game tree
 - **Principal Variation Search (PVS)** with tunable null‑window scouting
+- **Null Move Pruning (NMP)** with zugzwang guard and tunable reduction
 - **Iterative deepening** for stable principal‑variation construction
 - **Quiescence search** to mitigate horizon effects
 - **Transposition Table (TT)** with depth‑sensitive bounds:
@@ -188,6 +190,47 @@ setoption name PvsScoutAfterMove value 2
 
 ---
 
+### Search Tuning (Null Move Pruning)
+
+Helix implements **Null Move Pruning (NMP)**: before searching the real moves at a node, the engine
+hands the opponent a free move and runs a reduced null‑window search around `beta`. If the position
+is still strong enough that even this "do nothing" search fails high, the real moves can only be
+better and the whole node is cut immediately.
+
+The pruning is guarded to stay sound:
+
+- skipped when the side to move is **in check** (passing would be illegal),
+- skipped when only **pawns and king** remain (zugzwang positions, where passing is often best),
+- skipped near **mate scores** (a fake move must not distort mate distances),
+- never applied **twice in a row** and never at the root.
+
+Three UCI options expose the NMP behavior so the trade‑off can be measured without recompiling:
+
+```
+setoption name NullMove value <true|false>
+setoption name NullMoveMinDepth value <int>
+setoption name NullMoveReduction value <int>
+```
+
+| Option              | Default | Description |
+|---------------------|---------|-------------|
+| `NullMove`          | `true`  | Enables or disables null move pruning entirely. Convenient for an on/off ablation. |
+| `NullMoveMinDepth`  | `3`     | Minimum remaining depth at which a null move is tried. Below this depth the reduced search would land straight in quiescence and prove nothing. |
+| `NullMoveReduction` | `2`     | Depth reduction `R` applied to the null move search (`depth − 1 − R`). Larger values prune more aggressively but risk overlooking deep threats. |
+
+Successful null move cutoffs are reported as `nullcuts` in the debug output and as the
+`null_cutoffs` column in the bench CSVs (`depth-vs-time` and `time-to-quality` both accept
+`--nmp on|off` for A/B measurements).
+
+Example:
+
+```
+setoption name NullMove value true
+setoption name NullMoveReduction value 3
+```
+
+---
+
 ## Technical Design
 
 ### 1. Board Representation
@@ -199,6 +242,7 @@ setoption name PvsScoutAfterMove value 2
 ### 2. Search System
 
 - Recursive NegaMax with alpha‑beta pruning
+- Null move pruning with zugzwang and mate‑score guards
 - Iterative deepening driver with time control and pondering
 - Transposition table with generation‑based aging
 - Modular move ordering subsystem
