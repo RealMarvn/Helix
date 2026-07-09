@@ -35,7 +35,7 @@ void run_pvs_sweep(const std::vector<std::string>& args)
 
     auto csv = open_csv(OUT, "pvs_sweep", config.str());
     csv << "fen_id,fen,min_depth,scout_after,rep,completed_depth,seldepth,nodes,qnodes,"
-        << "researches,time_ms,bestmove\n";
+        << "researches,tt_probes,tt_hits,tt_hit_rate,time_ms,bestmove\n";
 
     ChessBot bot;
     Board board;
@@ -62,10 +62,16 @@ void run_pvs_sweep(const std::vector<std::string>& args)
 
                     const SearchSample SAMPLE = run_search(bot, board, limits);
 
+                    const TTStats& TT = SAMPLE.tt_stats;
+                    const double HIT_RATE =
+                        TT.probes_ ? static_cast<double>(TT.hits_) / TT.probes_ : 0.0;
+
                     csv << fen_id << "," << FENS[fen_id] << "," << min_depth << "," << scout_after
                         << "," << rep << "," << SAMPLE.completed_depth << "," << SAMPLE.seldepth
                         << "," << SAMPLE.nodes << "," << SAMPLE.qnodes << "," << SAMPLE.researches
-                        << "," << SAMPLE.time_ms << "," << SAMPLE.move.to_string() << "\n";
+                        << "," << TT.probes_ << "," << TT.hits_ << "," << std::fixed
+                        << std::setprecision(4) << HIT_RATE << "," << SAMPLE.time_ms << ","
+                        << SAMPLE.move.to_string() << "\n";
                 }
             }
 

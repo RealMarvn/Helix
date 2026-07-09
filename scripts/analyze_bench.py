@@ -9,6 +9,10 @@ Takes the CSVs produced by helix-bench and prints one table per input:
   --depth-time   depth_vs_time CSV straight from the bench: NPS, depth,
                  nodes and TT hit rate per time budget, split by the
                  pvs/nmp flags if present.
+  --tt-sweep     tt_sweep CSV: depth, hit rate and replacement pressure
+                 per table size.
+  --pvs-sweep    pvs_sweep CSV: depth, nodes, re-searches and hit rate
+                 per PVS parameter combination.
 
 Usage:
     pip install pandas matplotlib
@@ -29,7 +33,11 @@ import pandas as pd
 # falls back to two decimals.
 COLUMN_FORMATS = {
     "budget_ms": lambda v: f"{v:d}",
+    "tt_mb": lambda v: f"{v:d}",
+    "min_depth": lambda v: f"{v:d}",
+    "scout_after": lambda v: f"{v:d}",
     "positions": lambda v: f"{v:d}",
+    "replace_rate": lambda v: f"{v:.3f}",
     "cpl": lambda v: f"{v:.1f}",
     "depth": lambda v: f"{v:.1f}",
     "completed_depth": lambda v: f"{v:.1f}",
@@ -112,6 +120,47 @@ def summarize_search(df):
     return df.groupby(group_cols).agg(**agg).reset_index().sort_values(group_cols)
 
 
+def summarize_tt_sweep(df):
+    """Depth, hit rate and replacement pressure per TT size from a tt_sweep CSV."""
+    if "tt_mb" not in df.columns:
+        raise ValueError("tt_sweep CSV has no 'tt_mb' column.")
+
+    df = df.copy()
+    # Replacement pressure: what fraction of stores had to evict an entry.
+    df["replace_rate"] = df.apply(
+        lambda r: (r["tt_replaces"] / r["tt_stores"]) if r["tt_stores"] > 0 else 0.0,
+        axis=1,
+    )
+
+    agg = {
+        "completed_depth": ("completed_depth", "mean"),
+        "nodes": ("nodes", "mean"),
+        "tt_hit_rate": ("tt_hit_rate", "mean"),
+        "replace_rate": ("replace_rate", "mean"),
+    }
+
+    return df.groupby("tt_mb").agg(**agg).reset_index().sort_values("tt_mb")
+
+
+def summarize_pvs_sweep(df):
+    """Depth, nodes, re-searches and hit rate per PVS parameter combination."""
+    needed = {"min_depth", "scout_after"}
+    missing = needed - set(df.columns)
+    if missing:
+        raise ValueError(f"pvs_sweep CSV is missing columns {sorted(missing)}.")
+
+    agg = {
+        "completed_depth": ("completed_depth", "mean"),
+        "nodes": ("nodes", "mean"),
+        "researches": ("researches", "mean"),
+    }
+    if "tt_hit_rate" in df.columns:
+        agg["tt_hit_rate"] = ("tt_hit_rate", "mean")
+
+    group_cols = ["min_depth", "scout_after"]
+    return df.groupby(group_cols).agg(**agg).reset_index().sort_values(group_cols)
+
+
 def make_plots(quality, search, out_dir):
     """Write the two diagnostic plots. Imported lazily so the text report works
     even without matplotlib installed."""
@@ -190,11 +239,13 @@ def main():
     )
     parser.add_argument("--quality", help="scored time_to_quality CSV (needs a 'cpl' column)")
     parser.add_argument("--depth-time", help="depth_vs_time CSV from the bench")
+    parser.add_argument("--tt-sweep", help="tt_sweep CSV from the bench")
+    parser.add_argument("--pvs-sweep", help="pvs_sweep CSV from the bench")
     parser.add_argument("--plots", help="directory for PNG plots (optional)")
     args = parser.parse_args()
 
-    if not args.quality and not args.depth_time:
-        parser.error("pass at least one of --quality or --depth-time")
+    if not args.quality and not args.depth_time and not args.tt_sweep and not args.pvs_sweep:
+        parser.error("pass at least one of --quality, --depth-time, --tt-sweep or --pvs-sweep")
 
     quality_tbl = None
     search_tbl = None
@@ -206,6 +257,14 @@ def main():
     if args.depth_time:
         search_tbl = summarize_search(load_csv(args.depth_time))
         print_table("Search per budget", search_tbl)
+
+    if args.tt_sweep:
+        tt_tbl = summarize_tt_sweep(load_csv(args.tt_sweep))
+        print_table("Search per TT size", tt_tbl)
+
+    if args.pvs_sweep:
+        pvs_tbl = summarize_pvs_sweep(load_csv(args.pvs_sweep))
+        print_table("Search per PVS config", pvs_tbl)
 
     if args.plots:
         written = make_plots(quality_tbl, search_tbl, args.plots)
