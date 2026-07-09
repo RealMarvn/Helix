@@ -27,8 +27,9 @@ bool ChessBot::hard_stop()
         return true;
     }
 
-    // Hard time limit.
-    if (constraint.budget_.hard_time_up(search::time::TimeManager::now_ms()))
+    // Hard time limit. Reading the clock costs more than the check itself,
+    // so only do it every 1024 nodes. The lost precision is under a millisecond.
+    if ((nodes & 1023) == 0 && constraint.budget_.hard_time_up(search::time::TimeManager::now_ms()))
     {
         stop_reason = HARD_TIME;
         return true;
@@ -52,6 +53,7 @@ void ChessBot::reset_search_state()
     seldepth = 0;        // Resets the seldepth for a new search.
     completed_depth = 0; // Resets the last completed depth for a new search.
     researches = 0;      // Resets the PVS re-search counter for a new search.
+    null_cutoffs = 0;    // Resets the null move cutoff counter for a new search.
     stop_reason = NONE;  // Resets the stop reason for a new search.
     tt_returns = 0;      // Resets the tt_returns counter for a new search.
     tt.new_search();     // Reset transposition table stats and age it.
@@ -100,8 +102,9 @@ void ChessBot::print_debug(Board& board, const int depth, const int score,
 
     std::cout << "info string DBG"
               << " depth=" << depth << " seldepth=" << seldepth << " nodes=" << nodes
-              << " researches=" << researches << " time=" << time_ms << " nps=" << nps
-              << " reason=" << stop_reason_to_cstr(stop_reason) << " score=" << score << std::endl;
+              << " researches=" << researches << " nullcuts=" << null_cutoffs << " time=" << time_ms
+              << " nps=" << nps << " reason=" << stop_reason_to_cstr(stop_reason)
+              << " score=" << score << std::endl;
 
     if (debug.level >= DebugLevel::MEDIUM)
     {
@@ -176,6 +179,7 @@ ChessBot::SearchReport ChessBot::build_report(const Move& best_move) const
     report.nodes = nodes;
     report.qnodes = qnodes;
     report.researches = researches;
+    report.null_cutoffs = null_cutoffs;
     report.tt_returns = tt_returns;
     report.tt_stats = tt.get_stats(); // Raw counters of exactly this search.
     report.stop_reason = stop_reason;
@@ -227,7 +231,7 @@ Move ChessBot::iterative_deepening(Board& board)
 }
 
 ChessBot::SearchResult ChessBot::negamax(Board& board, const int depth, int alpha, const int beta,
-                                         const int ply, Move& best_move)
+                                         const int ply, Move& best_move, const bool can_null)
 {
     // Update stats.
     updateStats(ply);
@@ -259,6 +263,39 @@ ChessBot::SearchResult ChessBot::negamax(Board& board, const int depth, int alph
     // If tt is not legal, reset it!
     if (!tt_move.is_null() && !board.is_legal_by_make_unmake(tt_move))
         tt_move = Move{};
+
+    // Null move pruning skipped when:
+    //  - directly after another null move (two passes in a row make no sense),
+    //  - at the root (we always need a real best move there),
+    //  - the depth is too shallow (the reduced search would prove nothing),
+    //  - beta is a mate score (mate distances get distorted by a fake move),
+    //  - we are in check (passing would be illegal, the king is hanging),
+    //  - only pawns and king are left (zugzwang, passing is often best there).
+    if (nmp.enabled && can_null && ply > 0 && depth >= nmp.min_depth &&
+        std::abs(beta) < tt_score_constants::kMate - tt_score_constants::kMateWindow &&
+        !board.is_king_in_check(board.player_ == WHITE) &&
+        board.has_non_pawn_material(board.player_ == WHITE))
+    {
+        board.make_null_move();
+
+        // Reduced search with a null window around beta.
+        Move null_best{};
+        const auto [NULL_SCORE, NULL_ABORTED] =
+            negamax(board, depth - 1 - nmp.reduction, -beta, -beta + 1, ply + 1, null_best, false);
+
+        board.pop_null_move();
+
+        // Abort too.
+        if (NULL_ABORTED)
+            return {-tt_score_constants::kInfinity, true};
+
+        if (-NULL_SCORE >= beta)
+        {
+            ++null_cutoffs;
+            // Return beta and not the raw score.
+            return {beta, false};
+        }
+    }
 
     // Get all possible moves.
     auto moveList = moveGenUtils::get_pseudo_legal_moves(board, board.player_ == WHITE);
@@ -400,19 +437,24 @@ ChessBot::SearchResult ChessBot::quiescence(Board& board, int alpha, const int b
     if (!tt_move.is_null() && !board.is_legal_by_make_unmake(tt_move))
         tt_move = Move{};
 
-    // Sort so the best moves are first (TT move + captures + killer/history heuristics).
-    search::heuristics::order_moves(moveList, tt_move, ply, board.player_, killers, history);
+    // Quiescence only looks at captures, so filter them out before sorting.
+    // Ordering a handful of captures is way cheaper than ordering the full list.
+    MoveList captures;
+    for (Move& move : moveList)
+    {
+        if (move.captured_piece_.piece_type_ != EMPTY || move.move_type_ == EN_PASSANT)
+            captures.push_back(move);
+    }
+
+    // Sort so the best captures are first (TT move + MVV-LVA).
+    search::heuristics::order_moves(captures, tt_move, ply, board.player_, killers, history);
 
     // The best score should be initialized with the worst value possible.
     int bestScore = STAND_PAT;
 
-    for (Move& move : moveList)
+    for (Move& move : captures)
     {
         int score;
-
-        // Skip the normal moves so I only have captures.
-        if (move.captured_piece_.piece_type_ == EMPTY && move.move_type_ != EN_PASSANT)
-            continue;
 
         // Make every move and gather the value of the opponent.
         if (board.make_move(move))

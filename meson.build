@@ -147,6 +147,7 @@ if not is_debug
             'bench/exp_pvs_sweep.cpp',
             'bench/exp_time_to_quality.cpp',
             'bench/exp_tree_reuse.cpp',
+            'bench/exp_tt_sweep.cpp',
         ),
         include_directories : engine_inc,
         link_with : chess_engine_lib,

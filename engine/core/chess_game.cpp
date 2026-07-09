@@ -211,8 +211,12 @@ void ChessGame::parser_parse_uci(const std::string& line)
     {
         std::cout << "id name Helix" << std::endl;
         std::cout << "id author Marvin Becker" << std::endl;
+        std::cout << "option name Hash type spin default 32 min 1 max 1024" << std::endl;
         std::cout << "option name PvsMinDepth type spin default 2 min 1 max 64" << std::endl;
         std::cout << "option name PvsScoutAfterMove type spin default 1 min 1 max 64" << std::endl;
+        std::cout << "option name NullMove type check default true" << std::endl;
+        std::cout << "option name NullMoveMinDepth type spin default 3 min 2 max 64" << std::endl;
+        std::cout << "option name NullMoveReduction type spin default 2 min 1 max 4" << std::endl;
         std::cout
             << "option name Debug type combo default none var none var basic var medium var verbose"
             << std::endl;
@@ -287,6 +291,23 @@ void ChessGame::parser_parse_uci(const std::string& line)
         iss >> token; // name
         iss >> name;  // Debug
 
+        if (name == "Hash")
+        {
+            iss >> token; // value
+            iss >> value;
+
+            try
+            {
+                chess_bot_.set_tt_size_mb(std::stoi(value));
+            }
+            catch (const std::exception&)
+            {
+                // Ignore malformed values.
+            }
+
+            return;
+        }
+
         if (name == "PvsMinDepth")
         {
             iss >> token; // value
@@ -312,6 +333,50 @@ void ChessGame::parser_parse_uci(const std::string& line)
             try
             {
                 chess_bot_.set_pvs_scout_after_move(std::stoi(value));
+            }
+            catch (const std::exception&)
+            {
+                // Ignore malformed values.
+            }
+
+            return;
+        }
+
+        if (name == "NullMove")
+        {
+            iss >> token; // value
+            iss >> value;
+
+            // UCI check options send "true" or "false".
+            chess_bot_.set_nmp_enabled(value == "true");
+            return;
+        }
+
+        if (name == "NullMoveMinDepth")
+        {
+            iss >> token; // value
+            iss >> value;
+
+            try
+            {
+                chess_bot_.set_nmp_min_depth(std::stoi(value));
+            }
+            catch (const std::exception&)
+            {
+                // Ignore malformed values.
+            }
+
+            return;
+        }
+
+        if (name == "NullMoveReduction")
+        {
+            iss >> token; // value
+            iss >> value;
+
+            try
+            {
+                chess_bot_.set_nmp_reduction(std::stoi(value));
             }
             catch (const std::exception&)
             {

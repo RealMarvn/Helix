@@ -4,12 +4,13 @@
 
 /**
  * @file exp_depth_vs_time.cpp
- * @brief Experiment 3: reachable depth per time budget, with and without PVS.
+ * @brief Experiment 3: reachable depth per time budget, with and without PVS/NMP.
  *
  * Every position is searched once per budget and repetition with a fresh TT,
  * so the budgets do not profit from each other. PVS is switched off by
- * raising the scout threshold so high that the scout never kicks in, the
- * search code itself stays untouched.
+ * raising the scout threshold so high that the scout never kicks in, null
+ * move pruning has its own on/off switch. The search code itself stays
+ * untouched either way.
  */
 
 #include "bench_common.h"
@@ -23,19 +24,21 @@ void run_depth_vs_time(const std::vector<std::string>& args)
     const std::string SUITE = get_arg(args, "--suite", "tests/data/thesis-positions.epd");
     const std::string OUT = get_arg(args, "--out", "results");
     const std::string PVS = get_arg(args, "--pvs", "on");
+    const std::string NMP = get_arg(args, "--nmp", "on");
     const int REPS = get_int_arg(args, "--reps", 3);
     const auto BUDGETS = parse_int_list(get_arg(args, "--budgets", "10,25,50,100,250,500,1000"));
 
     const auto FENS = load_suite(SUITE);
     const bool PVS_ON = (PVS == "on");
+    const bool NMP_ON = (NMP == "on");
 
     std::ostringstream config;
-    config << "suite=" << SUITE << " pvs=" << PVS << " reps=" << REPS
+    config << "suite=" << SUITE << " pvs=" << PVS << " nmp=" << NMP << " reps=" << REPS
            << " positions=" << FENS.size();
 
     auto csv = open_csv(OUT, "depth_vs_time", config.str());
-    csv << "fen_id,budget_ms,rep,pvs,completed_depth,seldepth,nodes,qnodes,researches,"
-        << "tt_probes,tt_hits,tt_stores,tt_replaces,tt_hit_rate,"
+    csv << "fen_id,budget_ms,rep,pvs,nmp,completed_depth,seldepth,nodes,qnodes,researches,"
+        << "null_cutoffs,tt_probes,tt_hits,tt_stores,tt_replaces,tt_hit_rate,"
         << "time_ms,bestmove,stop_reason\n";
 
     ChessBot bot;
@@ -44,6 +47,9 @@ void run_depth_vs_time(const std::vector<std::string>& args)
     // PVS off = the scout never triggers because no search gets that deep.
     if (!PVS_ON)
         bot.set_pvs_min_depth(64);
+
+    // NMP has a real switch, no trick needed here.
+    bot.set_nmp_enabled(NMP_ON);
 
     for (std::size_t fen_id = 0; fen_id < FENS.size(); fen_id++)
     {
@@ -69,12 +75,13 @@ void run_depth_vs_time(const std::vector<std::string>& args)
                     TT.probes_ ? static_cast<double>(TT.hits_) / TT.probes_ : 0.0;
 
                 csv << fen_id << "," << BUDGET << "," << rep << "," << (PVS_ON ? "on" : "off")
-                    << "," << SAMPLE.completed_depth << "," << SAMPLE.seldepth << ","
-                    << SAMPLE.nodes << "," << SAMPLE.qnodes << "," << SAMPLE.researches << ","
-                    << TT.probes_ << "," << TT.hits_ << "," << TT.stores_ << "," << TT.replaces_
-                    << "," << std::fixed << std::setprecision(4) << HIT_RATE << ","
-                    << SAMPLE.time_ms << "," << SAMPLE.move.to_string() << ","
-                    << stop_reason_name(SAMPLE.stop_reason) << "\n";
+                    << "," << (NMP_ON ? "on" : "off") << "," << SAMPLE.completed_depth << ","
+                    << SAMPLE.seldepth << "," << SAMPLE.nodes << "," << SAMPLE.qnodes << ","
+                    << SAMPLE.researches << "," << SAMPLE.null_cutoffs << "," << TT.probes_ << ","
+                    << TT.hits_ << "," << TT.stores_ << "," << TT.replaces_ << "," << std::fixed
+                    << std::setprecision(4) << HIT_RATE << "," << SAMPLE.time_ms << ","
+                    << SAMPLE.move.to_string() << "," << stop_reason_name(SAMPLE.stop_reason)
+                    << "\n";
             }
         }
 

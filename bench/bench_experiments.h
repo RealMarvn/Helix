@@ -32,4 +32,7 @@ void run_time_to_quality(const std::vector<std::string>& args);
 /** @brief Searches along real games, with persistent TT vs. cleared TT. */
 void run_tree_reuse(const std::vector<std::string>& args);
 
+/** @brief Sweep over the TT size (in MB) at a fixed budget. */
+void run_tt_sweep(const std::vector<std::string>& args);
+
 } // namespace bench

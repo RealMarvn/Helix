@@ -157,10 +157,9 @@ bool Board::pop_last_move()
     // Set player back.
     player_ = player_ == WHITE ? BLACK : WHITE;
 
-    // Settings reset.
+    // Settings reset, the stored hash comes back with them.
     board_settings_ = history_.back();
-
-    build_hash_for_board();
+    board_hash_ = board_settings_.hash_;
     return true;
 }
 
@@ -235,8 +234,6 @@ bool Board::make_move(const Move& move)
 
     // Save move
     moves_.push_back(move);
-    // Save settings
-    history_.push_back(board_settings_);
     // Reset the player.
     player_ = player_ == WHITE ? BLACK : WHITE;
 
@@ -245,6 +242,12 @@ bool Board::make_move(const Move& move)
     else if (move.moving_piece_.piece_type_ == BK)
         black_king_sq_ = move.move_square_;
 
+    // Build the new hash and save the settings with it, so pop_last_move
+    // can restore both straight from the history.
+    build_hash_for_board();
+    board_settings_.hash_ = board_hash_;
+    history_.push_back(board_settings_);
+
     // Check if your king is in check after the move and pop if yes.
     if (is_king_in_check(player_ != WHITE))
     {
@@ -252,10 +255,56 @@ bool Board::make_move(const Move& move)
         return false;
     }
 
-    build_hash_for_board();
-
     // return true if everything is fine.
     return true;
+}
+
+void Board::make_null_move()
+{
+    // No piece is touched here, we only hand the turn over.
+    // The EP square has to go: the opponent can't capture en passant
+    // against a move that never happened.
+    board_settings_.ep_square_ = 100;
+
+    // Hand the turn over.
+    player_ = player_ == WHITE ? BLACK : WHITE;
+
+    // Save the settings with the new hash so pop_null_move can restore them.
+    // Note: nothing is pushed to moves_, a null move is not a real move!
+    build_hash_for_board();
+    board_settings_.hash_ = board_hash_;
+    history_.push_back(board_settings_);
+}
+
+void Board::pop_null_move()
+{
+    // Pop the settings saved by make_null_move and restore the ones before it.
+    // Same pattern as pop_last_move: history_.back() always mirrors the current settings.
+    history_.pop_back();
+    board_settings_ = history_.back();
+    board_hash_ = board_settings_.hash_;
+
+    // Give the turn back.
+    player_ = player_ == WHITE ? BLACK : WHITE;
+}
+
+bool Board::has_non_pawn_material(const bool is_white) const
+{
+    // Look for at least one knight, bishop, rook or queen of that side.
+    // Pawns and the king don't count, see the header for the zugzwang reasoning.
+    for (const Piece& PIECE : board_)
+    {
+        if (PIECE.piece_type_ == EMPTY)
+            continue;
+
+        if (PIECE.is_white() != is_white)
+            continue;
+
+        if (const int BASE = PIECE.piece_type_ % BP; BASE >= WN && BASE <= WQ)
+            return true;
+    }
+
+    return false;
 }
 
 void Board::handle_castling_permissions(const Move& move)
@@ -553,13 +602,14 @@ void Board::read_fen(const std::string& input)
         board_settings_.ep_square_ = calculateSquare(COL, ROW);
     }
 
-    // Convert the char to an int and subtract 48 (ascii value).
-    // It is not pretty but I don't know a better way.
-    board_settings_.last_moves_since_pawn_or_capture_ = fenSettings[4][0] - 48;
-    board_settings_.turns_ = fenSettings[5][0] - 48;
+    // Parse the move counters. stoi instead of char math, otherwise
+    // multi-digit counters like "15" would be read as 1.
+    board_settings_.last_moves_since_pawn_or_capture_ = std::stoi(fenSettings[4]);
+    board_settings_.turns_ = std::stoi(fenSettings[5]);
 
     // Build the new hash.
     build_hash_for_board();
+    board_settings_.hash_ = board_hash_;
 
     // Save current settings.
     history_.push_back(board_settings_);

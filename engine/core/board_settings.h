@@ -52,4 +52,12 @@ struct board_setting {
      * Starts at 1 and increments after Black's move, as defined by PGN/FEN.
      */
     int turns_{1};
+
+    /**
+     * @brief Zobrist hash of the position these settings belong to.
+     *
+     * Stored here so undo operations can restore the hash straight from the
+     * history instead of recomputing it over all 64 squares.
+     */
+    uint64_t hash_{0};
 };

@@ -22,20 +22,27 @@ void run_time_to_quality(const std::vector<std::string>& args)
 {
     const std::string SUITE = get_arg(args, "--suite", "tests/data/thesis-positions.epd");
     const std::string OUT = get_arg(args, "--out", "results");
+    const std::string NMP = get_arg(args, "--nmp", "on");
     const int REPS = get_int_arg(args, "--reps", 3);
     const auto BUDGETS =
         parse_int_list(get_arg(args, "--budgets", "10,25,50,100,250,500,1000,2000,5000"));
 
     const auto FENS = load_suite(SUITE);
+    const bool NMP_ON = (NMP == "on");
 
     std::ostringstream config;
-    config << "suite=" << SUITE << " reps=" << REPS << " positions=" << FENS.size();
+    config << "suite=" << SUITE << " nmp=" << NMP << " reps=" << REPS
+           << " positions=" << FENS.size();
 
     auto csv = open_csv(OUT, "time_to_quality", config.str());
-    csv << "fen_id,fen,budget_ms,rep,bestmove,completed_depth,nodes,time_ms,stop_reason\n";
+    csv << "fen_id,fen,budget_ms,rep,nmp,bestmove,completed_depth,nodes,time_ms,stop_reason\n";
 
     ChessBot bot;
     Board board;
+
+    // NMP is a pruning technique, so we want to see if the saved nodes are
+    // worth a possible drop in move quality. That is exactly this experiment.
+    bot.set_nmp_enabled(NMP_ON);
 
     for (std::size_t fen_id = 0; fen_id < FENS.size(); fen_id++)
     {
@@ -55,8 +62,8 @@ void run_time_to_quality(const std::vector<std::string>& args)
                 const SearchSample SAMPLE = run_search(bot, board, limits);
 
                 csv << fen_id << "," << FENS[fen_id] << "," << BUDGET << "," << rep << ","
-                    << SAMPLE.move.to_string() << "," << SAMPLE.completed_depth << ","
-                    << SAMPLE.nodes << "," << SAMPLE.time_ms << ","
+                    << (NMP_ON ? "on" : "off") << "," << SAMPLE.move.to_string() << ","
+                    << SAMPLE.completed_depth << "," << SAMPLE.nodes << "," << SAMPLE.time_ms << ","
                     << stop_reason_name(SAMPLE.stop_reason) << "\n";
             }
         }
