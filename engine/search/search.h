@@ -194,6 +194,25 @@ class ChessBot
         nmp.reduction = std::max(1, R);
     }
 
+    /**
+     * @brief Resize the transposition table to roughly MB megabytes.
+     *
+     * The entry count is rounded DOWN to a power of two, so the table never
+     * uses more memory than requested. Clears the table, so only call
+     * between searches (UCI "Hash" / bench sweeps).
+     */
+    void set_tt_size_mb(const int MB)
+    {
+        const std::size_t BYTES = static_cast<std::size_t>(std::max(1, MB)) * 1024 * 1024;
+        const std::size_t ENTRIES = BYTES / TranspositionTable::entry_size();
+
+        std::size_t pow2 = 1;
+        while (pow2 * 2 <= ENTRIES)
+            pow2 *= 2;
+
+        tt.resize(pow2);
+    }
+
   private:
     /**
      * @brief Config object holding the PVS tuning parameters.

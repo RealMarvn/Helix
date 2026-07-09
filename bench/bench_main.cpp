@@ -32,6 +32,8 @@ static void print_usage()
         << "  time-to-quality  --suite <epd> [--out results] [--budgets ...] [--reps 3]\n"
         << "                   [--nmp on|off]\n"
         << "  tree-reuse       --games <txt> [--out results] [--budget 500] [--mode keep|clear]\n"
+        << "  tt-sweep         --suite <epd> [--out results] [--budget 1000] [--reps 3]\n"
+        << "                   [--mb 1,4,16,64,256]\n"
         << "\n"
         << "Suite format:  one FEN per line, everything after ';' is ignored (EPD).\n"
         << "Games format:  one game per line as UCI moves from the start position,\n"
@@ -61,6 +63,8 @@ int main(const int argc, const char** argv)
         bench::run_time_to_quality(args);
     else if (EXPERIMENT == "tree-reuse")
         bench::run_tree_reuse(args);
+    else if (EXPERIMENT == "tt-sweep")
+        bench::run_tt_sweep(args);
     else
     {
         std::cerr << "Unknown experiment: " << EXPERIMENT << "\n\n";

@@ -348,6 +348,19 @@ python3 scripts/score_with_stockfish.py results/time_to_quality_<timestamp>.csv 
 python3 scripts/analyze_bench.py --quality results/time_to_quality_<timestamp>_scored.csv
 ```
 
+The transposition table size can be swept the same way (`tt-sweep`), recording reached depth,
+hit rate and replacement pressure per table size:
+
+```bash
+./build/release/helix-bench tt-sweep --suite tests/data/stockfish-defaults.epd --mb 1,4,16,64,256
+```
+
+At runtime the table size is controlled via the standard UCI option `Hash` (in MB, default 32):
+
+```
+setoption name Hash value 128
+```
+
 The Python scripts need `pandas` (plots additionally `matplotlib`, scoring `python-chess`).
 
 ---

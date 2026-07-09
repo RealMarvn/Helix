@@ -122,6 +122,27 @@ public:
     }
 
     /**
+     * @brief Resize the table to approximately ENTRIES slots and clear it.
+     *
+     * Rounds up to the next power of two, same as the constructor. All stored
+     * entries are lost.
+     *
+     * @param entries Requested number of entries (approximate).
+     */
+    void resize(const std::size_t entries)
+    {
+        mask_ = compute_mask(entries);
+        table_.assign(mask_ + 1, Entry{});
+        stats_ = {};
+    }
+
+    /** @brief Number of slots in the table (always a power of two). */
+    [[nodiscard]] std::size_t entry_count() const { return mask_ + 1; }
+
+    /** @brief Size of a single table entry in bytes, for MB <-> entries conversion. */
+    static constexpr std::size_t entry_size() { return sizeof(Entry); }
+
+    /**
      * @brief Start a new root search (iterative deepening iteration or fixed-depth search).
      *
      * Increments the generation counter so that older entries become cheaper to replace.

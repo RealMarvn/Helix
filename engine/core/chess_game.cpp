@@ -211,6 +211,7 @@ void ChessGame::parser_parse_uci(const std::string& line)
     {
         std::cout << "id name Helix" << std::endl;
         std::cout << "id author Marvin Becker" << std::endl;
+        std::cout << "option name Hash type spin default 32 min 1 max 1024" << std::endl;
         std::cout << "option name PvsMinDepth type spin default 2 min 1 max 64" << std::endl;
         std::cout << "option name PvsScoutAfterMove type spin default 1 min 1 max 64" << std::endl;
         std::cout << "option name NullMove type check default true" << std::endl;
@@ -289,6 +290,23 @@ void ChessGame::parser_parse_uci(const std::string& line)
         iss >> token; // setoption
         iss >> token; // name
         iss >> name;  // Debug
+
+        if (name == "Hash")
+        {
+            iss >> token; // value
+            iss >> value;
+
+            try
+            {
+                chess_bot_.set_tt_size_mb(std::stoi(value));
+            }
+            catch (const std::exception&)
+            {
+                // Ignore malformed values.
+            }
+
+            return;
+        }
 
         if (name == "PvsMinDepth")
         {

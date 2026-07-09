@@ -127,16 +127,28 @@ def make_plots(quality, search, out_dir):
 
     if quality is not None:
         fig, ax1 = plt.subplots(figsize=(7, 4.5))
-        ax1.plot(quality["budget_ms"], quality["cpl"], "o-", color="tab:red", label="cpl")
+        ax2 = ax1.twinx()
+
+        # One cpl/depth curve pair per nmp value, if the column exists.
+        groups = quality.groupby("nmp") if "nmp" in quality.columns else [("", quality)]
+        styles = ["o-", "o--"]
+        for i, (nmp_val, grp) in enumerate(groups):
+            suffix = f" (nmp={nmp_val})" if nmp_val != "" else ""
+            ax1.plot(grp["budget_ms"], grp["cpl"], styles[i % 2], color="tab:red",
+                     label=f"cpl{suffix}")
+            ax2.plot(grp["budget_ms"], grp["depth"], "s" + styles[i % 2][1:], color="tab:blue",
+                     label=f"depth{suffix}")
+
         ax1.set_xscale("log")
         ax1.set_xlabel("time budget [ms] (log)")
         ax1.set_ylabel("mean centipawn loss", color="tab:red")
         ax1.tick_params(axis="y", labelcolor="tab:red")
-
-        ax2 = ax1.twinx()
-        ax2.plot(quality["budget_ms"], quality["depth"], "s--", color="tab:blue", label="depth")
         ax2.set_ylabel("mean completed depth", color="tab:blue")
         ax2.tick_params(axis="y", labelcolor="tab:blue")
+
+        if "nmp" in quality.columns:
+            ax1.legend(loc="upper left")
+            ax2.legend(loc="upper right")
 
         ax1.set_title("Quality vs. depth over time budget")
         fig.tight_layout()
