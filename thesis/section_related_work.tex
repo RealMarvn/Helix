@@ -3,7 +3,7 @@
 % Classical chess engines, alpha-beta, iterative deepening, time control
 
 The problem of efficient search in chess engines has been studied extensively
-over several decades. Early approaches were based on the Minimax algorithm,
+over several decades~\cite{marsland1986review}. Early approaches were based on the Minimax algorithm,
 which provides an optimal decision strategy under the assumption of perfect
 play~\cite{russell2010aima}. However, due to the exponential growth of the game tree, Minimax quickly becomes infeasible even at moderate depths.
 
@@ -13,7 +13,7 @@ correctness of the result~\cite{knuth1975alphabeta}. Subsequent work showed that
 the effectiveness of Alpha-Beta pruning depends crucially on the order in which
 moves are explored. With perfect move ordering, the effective branching factor can be reduced dramatically, enabling much deeper searches within the same computational budget~\cite{marsland1986review}.
 
-Iterative deepening has emerged as a standard technique to improve move ordering
+Iterative deepening~\cite{korf1985iterative} has emerged as a standard technique to improve move ordering
 and to support time-controlled search. By repeatedly searching the game tree with
 increasing depth limits, iterative deepening ensures that a valid best move is
 always available while simultaneously refining the move ordering for deeper

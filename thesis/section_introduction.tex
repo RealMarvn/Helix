@@ -3,7 +3,8 @@
 % Motivation, problem statement, goals, research question
 
 Chess has long been regarded as a canonical benchmark problem in artificial
-intelligence and algorithm engineering. Despite its simple and fully specified
+intelligence and algorithm engineering~\cite{russell2010aima, knuth1975alphabeta, silver2018alphazero}.
+Despite its simple and fully specified
 rules, the game exhibits an enormous search space caused by its high branching
 factor and strategic depth. As a consequence, exhaustive search of the complete
 game tree is computationally infeasible, even with modern hardware, and chess
@@ -14,10 +15,10 @@ At the core of most classical chess engines lies a depth-limited game tree
 search based on Minimax or Negamax, enhanced by Alpha-Beta pruning. Over the
 years, a variety of improvements have been proposed to increase search
 efficiency, including iterative deepening, transposition tables, quiescence
-search, and heuristic move ordering. Among these techniques, iterative
-deepening has become a standard approach, particularly in time-controlled
-settings, as it allows the engine to gradually refine its decision while always
-maintaining a valid best move.
+search, and heuristic move ordering~\cite{marsland1986review}. Among these
+techniques, iterative deepening~\cite{korf1985iterative} has become a standard
+approach, particularly in time-controlled settings, as it allows the engine to
+gradually refine its decision while always maintaining a valid best move.
 
 The primary motivation of this work is to understand how a chess engine should
 spend its limited time. More search time generally yields deeper searches and

@@ -180,6 +180,59 @@ The implementation uses the standard \emph{stand-pat} scheme:
 As with the main search, \texttt{hard\_stop()} is checked inside quiescence to
 enforce hard termination constraints consistently.
 
+\subsubsection{Null-Move Pruning}
+\label{subsec:null_move_pruning}
+
+In addition to the exact Alpha-Beta framework, the engine applies null-move
+pruning as a forward-pruning enhancement of the baseline search. The underlying
+observation is that in most positions having the right to move is an advantage:
+if a side is allowed to skip its turn (a \emph{null move}) and the resulting
+position, searched to a reduced depth, is still good enough to produce a beta
+cutoff, then the position is almost certainly too strong for the opponent and the
+whole subtree can be pruned without a full-depth search. The technique goes back
+to Beal~\cite{beal1989nullmove} and is a standard component of classical engines.
+
+The pruning is performed inside \texttt{negamax}, after the transposition table
+probe but before the moves are generated and ordered. The engine plays a null
+move via \texttt{board.make\_null\_move()}, searches the resulting position to a
+reduced depth $d-1-R$ with a null window around $\beta$ (realized as
+$[-\beta, -\beta+1]$ in the Negamax formulation), and restores the position with
+\texttt{board.pop\_null\_move()}. If the returned score satisfies
+$-\text{score} \ge \beta$, the node fails high and $\beta$ is returned directly.
+The number of such cutoffs is tracked in the \texttt{null\_cutoffs} counter for
+the experimental instrumentation.
+
+Because null-move pruning is a heuristic rather than an exact technique, it is
+guarded by several conditions. The reduced search is only attempted when all of
+the following hold:
+\begin{itemize}
+    \item pruning is enabled and this node was not already reached through a null
+    move (\texttt{can\_null}); two consecutive passes are never searched, as they
+    correspond to no meaningful line of play,
+    \item the node is not the root ($ply > 0$), since the root must always return
+    a real best move,
+    \item the remaining depth is at least \texttt{min\_depth}; below this the
+    reduced search would be too shallow to justify the risk,
+    \item $\beta$ is not already a mate score
+    ($|\beta| < \texttt{kMate} - \texttt{kMateWindow}$), because a fabricated
+    move would distort mate distances,
+    \item the side to move is not in check, since passing while in check would
+    leave the king en prise,
+    \item the side to move still has non-pawn material
+    (\texttt{has\_non\_pawn\_material}); in pawn-only endgames zugzwang makes
+    passing frequently favourable, which would invalidate the pruning assumption.
+\end{itemize}
+
+As in the rest of the search, an aborted reduced search is not trusted: if the
+null-move search is terminated by a hard stop, the abort is propagated upward and
+no cutoff is derived from the incomplete result. The behaviour is controlled by a
+\texttt{NullMoveConfig} structure exposing whether the technique is enabled, the
+minimum remaining depth (\texttt{min\_depth}, default $3$), and the depth
+reduction (\texttt{reduction}, default $2$). All three are exposed as the UCI
+options \texttt{NullMove}, \texttt{NullMoveMinDepth}, and
+\texttt{NullMoveReduction}, so the pruning can be toggled and tuned without
+recompiling.
+
 \subsubsection{Transposition Table Integration}
 
 The search consults the transposition table early in \texttt{negamax} via
