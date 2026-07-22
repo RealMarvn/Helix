@@ -1,8 +1,7 @@
 \subsection{Evaluation Function}
 \label{sec:evaluation_function}
 
-This section describes the static evaluation function used by the engine. Since
-the search explores only a limited portion of the game tree, a heuristic
+Since the search explores only a limited portion of the game tree, a heuristic
 evaluation is required to estimate the quality of non-terminal positions. The
 implemented evaluation follows a classical \emph{tapered} approach with separate
 midgame (MG) and endgame (EG) scores, piece-square tables (PSQT), a phase-based

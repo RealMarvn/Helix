@@ -1,11 +1,10 @@
 \subsection{Search Algorithms}
 \label{sec:search}
 
-This section describes the concrete implementation of the engine's search
-procedure. The underlying algorithms (Negamax, Alpha-Beta pruning, and
-quiescence search) were introduced in \cref{sec:preliminaries}; here, the focus
-is on how these ideas are realized in code and how the individual mechanisms
-interact in practice. Particular attention is paid to the two refinements of
+The underlying algorithms (Negamax, Alpha-Beta pruning, and quiescence search)
+were introduced in \cref{sec:preliminaries}. This subsection turns to their
+concrete realization in code and to how the individual mechanisms interact in
+practice. Particular attention is paid to the two refinements of
 this thesis: the move loop is organized as a Principal Variation Search
 (\cref{subsec:pvs_implementation}), and previous search trees are resumed
 through the persistent transposition table (\cref{subsec:tree_reuse}).

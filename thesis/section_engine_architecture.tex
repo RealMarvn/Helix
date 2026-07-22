@@ -1,10 +1,9 @@
 \subsection{Engine Architecture}
 \label{sec:architecture}
 
-This section describes the overall architecture of the implemented chess engine.
-The focus lies on the structural design decisions and the interaction between
-the core components; the rationale behind these decisions is summarized at the
-end of the section.
+The implemented chess engine follows a layered architecture whose structural
+design decisions and component interactions are the focus of this subsection; the
+rationale behind these decisions is summarized at the end.
 
 \subsubsection{Overall Design}
 
@@ -140,6 +139,25 @@ current position, applies and reverts moves, and invokes the search procedure.
 This component acts as a bridge between the external UCI interface and the
 internal search and evaluation modules, ensuring a clean separation between
 protocol handling and algorithmic logic.
+
+\subsubsection{Universal Chess Interface (UCI)}
+\label{subsec:uci}
+
+Externally, the engine is controlled through the \emph{Universal Chess Interface}
+(UCI), the most widely used communication protocol in modern computer chess. UCI
+specifies a text-based command interface that allows external tools to set up
+positions, initiate searches, and receive search results; search constraints such
+as time limits, depth limits, node limits, and pondering are communicated via the
+\texttt{go} command.
+
+The protocol itself is independent of the engine's internal implementation and
+therefore separates external control from internal search logic. This separation
+is reflected directly in the design described above: incoming UCI parameters are
+first mapped to the abstract \texttt{SearchConstraints} representation
+(\cref{sec:time_management}) before being enforced during search. All experiments
+reported in this work are conducted through UCI-compatible interfaces and
+tournament frameworks, which makes UCI the practical context in which
+time-constrained search and iterative deepening are evaluated.
 
 \subsubsection{Design Rationale}
 

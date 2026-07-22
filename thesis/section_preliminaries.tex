@@ -20,39 +20,56 @@ availability. Players alternate turns by selecting legal moves, and the game
 terminates in a win, loss, or draw according to the rules of chess.
 
 \paragraph{Formal Representation}
-From a theoretical perspective, the game can be represented as a directed graph.
-Each node corresponds to a legal position, and each directed edge corresponds to
-a legal move transforming one position into another. Terminal nodes represent
-positions in which no legal moves are available, such as checkmate or stalemate,
-as well as positions that are declared drawn by the rules of chess.
+More formally, let $\mathcal{T} = \{\text{pawn}, \text{knight}, \text{bishop},
+\text{rook}, \text{queen}, \text{king}\}$ denote the set of piece types and
+$\mathcal{C} = \{\text{white}, \text{black}\}$ the set of colours. A piece is then
+an element of $\mathcal{F} = \mathcal{T} \times \mathcal{C}$, and the placement of
+pieces on the board is described by a mapping
+\[
+b : \{1, \dots, 8\}^2 \rightarrow \mathcal{F} \cup \{\varnothing\},
+\]
+which assigns to each square either a piece or the empty symbol $\varnothing$. A
+complete game state $s = (b, t, r, e)$ additionally comprises the side to move
+$t \in \mathcal{C}$, the castling rights $r$, and the en-passant target $e$. The
+latter two are part of the state because the legality of a move can depend on the
+movement history, for instance on whether a king or rook has already moved. We
+write $\mathcal{S}$ for the set of all legal states.
+
+The rules of chess induce a transition relation
+$\delta \subseteq \mathcal{S} \times \mathcal{S}$, where $(s, s') \in \delta$ if
+and only if $s'$ can be reached from $s$ by exactly one legal move. This relation
+defines a directed graph $G = (\mathcal{S}, \delta)$ in which each node is a legal
+position and each edge is a legal move. A state $s$ is \emph{terminal} if it has
+no outgoing edges, as in checkmate or stalemate, or if it is declared drawn by
+the rules of chess.
 
 \paragraph{Game Tree Interpretation}
-For decision making, the directed graph induces a game tree rooted at the
+For decision making, the graph $G$ is unrolled into a game tree rooted at the
 current position. Each level of the tree corresponds to one ply. Due to the high
 branching factor of chess, which typically lies between 30 and 40 in middlegame
-positions, the size of the game tree grows exponentially with depth. As a
-result, even moderately deep exhaustive search is computationally infeasible.
+positions~\cite{russell2010aima}, the number of nodes grows exponentially with
+depth. As a result, even moderately deep exhaustive search is computationally
+infeasible.
 
 \subsection{Search Problem Formulation}
 
 Given a current position, the task of a chess engine is to select a legal move
 that maximizes the expected outcome under the assumption of optimal play by both
-sides. In the classical formulation, outcomes are mapped to numerical values,
-for example win, draw, and loss.
+sides. In the classical formulation, the possible outcomes are associated with
+numerical values, for example $+1$ for a win, $0$ for a draw, and $-1$ for a
+loss.
 
 This decision problem is commonly formulated as a game tree search problem, in
 which the engine explores a subset of the game tree to estimate the value of
 available moves. The root of the tree corresponds to the current position, while
 internal nodes represent positions reachable through sequences of legal moves.
 
-\paragraph{Resource Constraints}
-Due to the exponential growth of the search tree, it is impossible to evaluate
+Due to the exponential growth of the search tree, it is infeasible to evaluate
 all reachable positions. Consequently, the search must be limited by depth,
 time, or other computational resources. This limitation introduces approximation:
 the engine can no longer guarantee optimal play, but instead aims to select the
 best move according to the information explored within the available budget.
 
-\paragraph{Role of Approximation}
 The quality of a move selected by a chess engine therefore depends on two main
 factors: the effectiveness of the search algorithm in selecting which parts of
 the tree to explore, and the accuracy of the evaluation function used to estimate
@@ -61,7 +78,7 @@ the value of positions at the search frontier.
 \subsection{Minimax, Negamax, Quiescence and Alpha-Beta Pruning}
 \label{subsec:minimax_alphabeta}
 
-The classical algorithmic solution to game tree search in two-player zero-sum
+The classic algorithmic solution to game tree search in two-player zero-sum
 games with perfect information is the Minimax algorithm. Minimax assumes that
 one player aims to maximize the evaluation value of a position, while the
 opponent aims to minimize it. Terminal positions are assigned fixed values
@@ -106,10 +123,10 @@ evaluation function is applied and the resulting score is propagated back up the
 search tree.
 
 In practice, quiescence search is commonly implemented using Alpha-Beta pruning
-with a so-called \emph{stand-pat} evaluation, which represents the static
-evaluation of the current position before any tactical extensions are explored.
-If the stand-pat score already exceeds the current bounds, the node can be
-pruned early.
+with a so-called \emph{stand-pat} evaluation~\cite{marsland1986review}, which
+represents the static evaluation of the current position before any tactical
+extensions are explored. If the stand-pat score already exceeds the current
+bounds, the node can be pruned early.
 
 Quiescence search significantly improves evaluation stability in tactical
 positions and has become a standard component of classical chess engines. A
@@ -152,7 +169,7 @@ The effectiveness of Alpha-Beta pruning therefore depends strongly on the order
 in which moves are explored. Techniques such as heuristic move ordering,
 transposition tables, and iterative deepening are commonly employed to improve
 this order and thereby increase pruning efficiency. These aspects are discussed
-in more detail in later sections of this thesis.
+in more detail in \cref{sec:algorithm_implementation}.
 
 \paragraph{Principal Variation Search}
 Principal Variation Search (PVS) is a refinement of Alpha-Beta pruning that
@@ -192,6 +209,25 @@ are typically handcrafted and encode domain knowledge about the game of chess.
 The design of the evaluation function has a significant impact on the playing
 strength of the engine, particularly when search depth is limited.
 
+Conceptually, the score returned by an evaluation function is expressed in a
+common unit, most often \emph{centipawns}, where one pawn corresponds to a value
+of $100$. Expressing heterogeneous factors, such as material imbalance and
+positional advantages, on a single comparable scale allows them to be combined
+into one number that the search can compare consistently across positions.
+
+A refinement that is widely used in classical engines is the \emph{tapered}
+evaluation. Since the relative importance of individual features changes over the
+course of a game, for example when kings become active in the endgame, the
+evaluation maintains two scores, one tuned for the midgame and one for the
+endgame, and interpolates between them according to a game-phase measure derived
+from the remaining material. The concrete evaluation used in this thesis follows
+exactly this scheme and is described in detail in \cref{sec:evaluation_function}.
+
+Finally, there is an inherent tension between the richness of the evaluation and
+the depth of the search. A more detailed evaluation captures more chess knowledge
+per node but is more expensive to compute, which reduces the number of nodes that
+can be searched within a fixed time budget.
+
 \subsection{Time-Constrained Search}
 
 In practical settings, chess engines are required to operate under strict time
@@ -199,10 +235,22 @@ constraints. Rather than searching to a fixed depth, the engine must dynamically
 adapt its search behavior to the available time budget.
 
 \paragraph{Iterative Deepening}
-Iterative deepening is a widely used technique to address this requirement. The
-search is performed repeatedly with increasing depth limits, starting from a
-shallow search. This approach ensures that a valid move is always available, even
-if the search is interrupted prematurely.
+Iterative deepening addresses this requirement by turning a single fixed-depth
+search into a sequence of searches with increasing depth limit
+$d = 1, 2, 3, \dots$, each starting again from the root~\cite{korf1985iterative}.
+After every completed iteration the engine holds a fully valid best move for that
+depth, so the search can be interrupted at essentially any point and still return
+a well-founded decision. This \emph{anytime} property is precisely what makes the
+technique well suited to time-controlled play, where the exact amount of
+available time is not known in advance.
+
+At first glance, repeatedly re-searching the shallow part of the tree appears
+wasteful. In practice the overhead is small: because the number of nodes grows
+exponentially with depth, the cost of the final iteration dominates the sum of
+all previous ones, so re-searching depths $1$ to $d-1$ adds only a constant
+factor to the cost of the depth-$d$ search. As discussed next, this overhead is
+typically more than recovered through the improved move ordering that earlier
+iterations provide.
 
 \paragraph{Interaction with Pruning}
 In addition to providing robustness under time constraints, iterative deepening
@@ -224,25 +272,3 @@ the game.
 The interaction between heuristic evaluation, Alpha-Beta pruning, and
 time-constrained iterative deepening forms the foundation of modern chess
 engines and is a central aspect of this work.
-
-\subsection{Universal Chess Interface (UCI)}
-\label{subsec:uci}
-
-In practice, chess engines are controlled through standardized communication
-protocols. The most widely used protocol in modern computer chess is the
-\emph{Universal Chess Interface} (UCI).
-
-UCI specifies a text-based command interface that allows external tools to set up
-positions, initiate searches, and receive search results. In particular, search
-constraints such as time limits, depth limits, node limits, and pondering are
-communicated via the \texttt{go} command.
-
-The protocol itself is independent of the engine’s internal implementation. As a
-result, UCI naturally separates external control from internal search logic.
-This separation is reflected in the design of the engine presented in this work,
-where UCI parameters are first mapped to an abstract constraint representation
-before being enforced during search.
-
-All experiments reported in this work are conducted using UCI-compatible
-interfaces and tournament frameworks. UCI therefore provides the practical
-context in which time-constrained search and iterative deepening are evaluated.
