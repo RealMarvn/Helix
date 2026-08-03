@@ -22,6 +22,7 @@
 #include <climits>
 #include <cstdint>
 #include <memory>
+#include <vector>
 
 #include "../movement/move_gen.h"
 #include "./search/heuristics.h"
@@ -96,6 +97,21 @@ class ChessBot
         TTStats tt_stats{};
 
         StopReason stop_reason = StopReason::NONE;
+
+        // Snapshot of one finished iterative-deepening iteration: the best move
+        // at that depth plus the running stats when it finished.
+        struct DepthSnapshot
+        {
+            int depth = 0;
+            Move move{};
+            long long nodes = 0;
+            long long qnodes = 0;
+            int seldepth = 0;
+            long long time_ms = 0;
+        };
+
+        // One entry per completed iteration
+        std::vector<DepthSnapshot> iterations{};
     };
 
     /**
@@ -307,6 +323,9 @@ class ChessBot
 
     /** @brief Depth of the last fully completed iteration (for measurements). */
     int completed_depth = 0;
+
+    /** @brief Best move + stats of every completed ID iteration (move-stability). */
+    std::vector<SearchReport::DepthSnapshot> iterations_{};
 
     /** @brief How often a null-window scout failed high and forced a full re-search. */
     long long researches = 0;

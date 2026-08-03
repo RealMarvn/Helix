@@ -59,6 +59,7 @@ void ChessBot::reset_search_state()
     tt.new_search();     // Reset transposition table stats and age it.
     killers.clear();     // Reset killer table.
     history.clear();     // Reset history table.
+    iterations_.clear(); // Reset the per-iteration log for a new search.
 }
 
 void ChessBot::print_info(const int depth, const int score, const Move& pv_move,
@@ -183,6 +184,7 @@ ChessBot::SearchReport ChessBot::build_report(const Move& best_move) const
     report.tt_returns = tt_returns;
     report.tt_stats = tt.get_stats(); // Raw counters of exactly this search.
     report.stop_reason = stop_reason;
+    report.iterations = iterations_; // Per-iteration best moves for measurements.
     return report;
 }
 
@@ -213,6 +215,11 @@ Move ChessBot::iterative_deepening(Board& board)
         // Set the move if the search is fully done.
         bestMove = move;
         completed_depth = i;
+
+        // Record this finished iteration so experiments can see when the root
+        // move settles (move-stability reads this).
+        iterations_.push_back({i, move, nodes, qnodes, seldepth,
+                               search::time::TimeManager::now_ms() - START_TIME_MS});
 
         print_info(i, score, move, START_TIME_MS);
 

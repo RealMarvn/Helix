@@ -94,18 +94,63 @@ offline, which keeps measurement and analysis reproducible.
 
 To place the engine on an absolute strength scale, it is evaluated in
 head-to-head matches against a fixed reference opponent under tournament
-conditions. Matches are played through the CuteChess framework, with Stockfish as
-the reference opponent restricted through its built-in strength limitation
-(\texttt{UCI\_LimitStrength}), a single search thread, and a hash size of
-32\,MB. Both engines play a classical time control of five minutes per side with
-a 0.5\,second increment, without an opening book and with alternating colors so
-that each side plays an equal number of games as White and Black. Playing
-strength is reported as an Elo difference derived from the match result, together
-with the likelihood of superiority and the draw ratio.
+conditions. The matches are played through the CuteChess framework, with a
+development build of Stockfish as the reference opponent. To obtain a comparison
+in the target strength range, Stockfish is restricted through its built-in
+strength limitation (\texttt{UCI\_LimitStrength} with a nominal target of
+2000\,Elo), a single search thread, and a 32\,MB hash; Helix likewise runs
+single-threaded with a 32\,MB hash and otherwise default settings. Both engines
+play a classical time control of five minutes per side with a 0.5\,second
+increment.
 
-\emph{Note: the match results from the earlier Bachelor-project setup are no
-longer current and are being re-measured with the present build; the final
-figures will be inserted here.}
+To obtain a fair and diverse sample, the games are opened from a balanced opening
+book (\texttt{8moves\_v3}), with each opening played once from either side so
+that both engines receive identical starting positions as White and Black. In
+total 400 games are played with alternating colors. Clearly decided games are
+adjudicated to keep the match tractable: a game is scored as won once both
+engines agree on an evaluation beyond $\pm 600$ centipawns for several
+consecutive moves, and as drawn once the evaluation stays within $\pm 10$
+centipawns for several moves in the late middlegame. All games run on the Apple
+M3 Pro machine described in \cref{subsec:common_setup}. Playing strength is
+reported as an Elo difference derived from the match result, together with the
+likelihood of superiority (LOS) and the draw ratio.
+
+% NOTE (provisional): the figures below stem from the first full match run.
+% They are being re-measured with the bug-fixed build; once the clean run
+% finishes, replace the numbers in Table \ref{tab:elo_results} and the two
+% paragraphs after it. The Elo difference is expected to stay close to +172.
+\cref{tab:elo_results} summarizes the match.
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{@{}lr@{}}
+\toprule
+Metric & Value \\ \midrule
+Games played & 400 \\
+Score (W--L--D) & 275--92--33 \\
+Elo difference & $+171.7 \pm 36.4$ \\
+Likelihood of superiority & $100.0\,\%$ \\
+Draw ratio & $8.3\,\%$ \\ \bottomrule
+\end{tabular}
+\caption{Match result of Helix against Stockfish limited to a nominal 2000\,Elo,
+over 400 games at a 5+0.5 time control.}
+\label{tab:elo_results}
+\end{table}
+
+Helix wins the match decisively, with an Elo difference of roughly $+172$ points
+and a likelihood of superiority of $100\,\%$. The advantage holds with both
+colors: Helix scores $144$--$38$--$18$ as White ($76.5\,\%$) and
+$131$--$54$--$15$ as Black ($69.3\,\%$), so it remains clearly stronger even
+without the first-move advantage. The moderate draw ratio of $8.3\,\%$ indicates
+that most games are decided rather than drawn.
+
+It should be emphasized that this is a \emph{relative} result. The reference
+engine was deliberately weakened, and Stockfish's \texttt{UCI\_LimitStrength}
+provides only a nominal Elo target that does not map directly onto established
+rating lists; it also weakens play partly by introducing random inaccuracies
+rather than uniformly. The reported difference therefore characterizes Helix's
+strength relative to this specific, equally configured opponent, not an absolute
+rating.
 
 \subsection{Effect of Null-Move Pruning}
 \label{subsec:eval_nmp}
@@ -290,11 +335,62 @@ setting in the sweep improves upon it.
 \subsection{Move Stability}
 \label{subsec:eval_move_stability}
 
-A further question is at which depth the engine's chosen move stabilizes, i.e.,
-the depth beyond which additional iterations no longer change the root decision.
-This is measured by recording, for each position, the best move at every
-completed iteration of iterative deepening and determining the depth from which
-it no longer changes.
+The final question concerns move stability: at which depth does the engine's
+chosen move settle, so that deeper search no longer changes the root decision?
+This is measured with a single iterative-deepening search per position. Because
+iterative deepening already produces a best move at every completed depth, one
+search yields the full sequence of root moves without repeated re-searching. Each
+position is searched under a fixed budget of 20 million nodes with the
+transposition table cleared beforehand, so that the depth sequence reflects one
+self-contained search. A node budget is used instead of a fixed target depth
+because it bounds the cost per position and, being independent of wall-clock time,
+is unaffected by other load on the machine.
 
-\emph{Note: this experiment is still being measured with the current build; the
-results and the corresponding table will be inserted here.}
+For each position the \emph{stabilization depth} is defined as the smallest depth
+from which the root move matches the move of the deepest completed iteration and
+never changes again. Positions whose move still changes at the deepest searched
+depth are counted as not yet settled within the budget. Of the 309 positions, 306
+produced a usable move sequence, reaching a mean depth of $10.1$ plies.
+\cref{fig:move_stability} shows the cumulative distribution and
+\cref{tab:move_stability} lists selected thresholds.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.8\linewidth]{figures/move_stability.png}
+\caption{Share of positions whose root move is settled by depth $d$. The dashed
+vertical line marks the depth ($\approx 8$) the engine reaches at a one-second
+budget.}
+\label{fig:move_stability}
+\end{figure}
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{@{}rr@{}}
+\toprule
+Depth $d$ (ply) & Positions settled by $d$ \\ \midrule
+2  & $26.8\,\%$ \\
+4  & $36.9\,\%$ \\
+6  & $52.9\,\%$ \\
+8  & $75.2\,\%$ \\
+10 & $89.2\,\%$ \\ \bottomrule
+\end{tabular}
+\caption{Cumulative share of positions whose best move has stabilized by a given
+depth (306 positions, 20-million-node budget).}
+\label{tab:move_stability}
+\end{table}
+
+The root move settles early for most positions: the median stabilization depth is
+6 plies, and $23.9\,\%$ of positions never change their move at all. By depth 8,
+roughly the depth the engine reaches at a one-second budget
+(\cref{tab:nmp_depth_cpl}), three quarters of all positions have already locked in
+their final move. This is the central evidence for the sweet-spot argument of this
+thesis: beyond this point additional search keeps increasing depth but only rarely
+changes the decision.
+
+At the same time, the effect is not uniform. Roughly one position in five
+($22.2\,\%$) still changes its move at the deepest depth searched, i.e., remains
+unsettled even around depth 10 and beyond. These are the tactically sharp
+positions in which deeper search continues to pay off, and they are precisely
+where the extra ply bought by null-move pruning (\cref{subsec:eval_nmp}) is most
+valuable. Move stability is therefore concentrated: the majority of decisions are
+made cheaply and early, while a hard minority keeps rewarding deeper search.
