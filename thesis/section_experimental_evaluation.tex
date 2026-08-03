@@ -3,12 +3,13 @@
 
 This section presents the experimental evaluation of the implemented chess
 engine. The evaluation pursues the central question of this thesis: where lies
-the sweet spot between invested search time and decision quality? To this end,
-it first establishes a reliable baseline for the playing strength of the engine
-and quantifies the effect of the search optimizations, and then studies
-time-dependent decision making directly through move stability, time-to-quality,
-and depth-versus-time measurements, including the influence of Principal
-Variation Search and its tuning parameters.
+the sweet spot between invested search time and decision quality, and how do the
+individual search refinements shift this trade-off? The strongest empirical
+effect is produced by null-move pruning, which is therefore examined in detail,
+while the Principal Variation Search parameter sweep yields a deliberate null
+result that is reported and explained rather than hidden. All measurements are
+based on a common position suite and a uniform scoring methodology, so that the
+individual experiments remain directly comparable.
 
 \subsection{Research Objectives}
 \label{subsec:research_objectives}
@@ -16,175 +17,284 @@ Variation Search and its tuning parameters.
 The experimental evaluation addresses the following research questions:
 
 \begin{itemize}
-    \item How strong is the optimized engine under realistic tournament time
-    controls when compared to a fixed reference opponent?
-    \item How large is the performance difference between optimized search and
-    plain Negamax with Alpha-Beta pruning when evaluated on identical positions?
-    \item \textbf{Move stability:} at which search depth does the best move
-    stabilize, so that deeper search no longer changes the decision?
-    \item \textbf{Time-to-quality:} how does move quality change as the time
-    limit is increased, and where does additional time stop paying off?
-    \item \textbf{Depth versus time:} how does the reachable depth per time
-    budget differ with and without Principal Variation Search?
+    \item \textbf{Playing strength:} how strong is the engine under realistic
+    tournament time controls when compared to a fixed reference opponent?
+    \item \textbf{Null-move pruning:} how does null-move pruning affect reachable
+    depth, node throughput, transposition table behavior, and move quality across
+    time budgets?
+    \item \textbf{Transposition table size:} from which table size onward does
+    the available memory stop limiting the search?
+    \item \textbf{Time-to-quality and depth-versus-time:} how do reachable depth
+    and move quality develop as the time budget increases, and where does
+    additional time stop paying off?
     \item \textbf{PVS parameter sweep:} which combination of minimum scouting
     depth (\texttt{PvsMinDepth}) and number of fully searched moves
-    (\texttt{PvsScoutAfterMove}) yields the best ratio of cost reduction to
-    move quality?
+    (\texttt{PvsScoutAfterMove}) yields the best ratio of cost reduction to move
+    quality?
+    \item \textbf{Move stability:} at which search depth does the best move
+    stabilize, so that deeper search no longer changes the decision?
 \end{itemize}
 
-The first two questions establish the baseline strength and the effect of the
-search optimizations; the remaining four questions form the core of this thesis
-and characterize time-dependent decision making directly.
+The playing-strength question establishes an absolute reference point, while the
+remaining questions characterize time-dependent decision making directly and
+quantify the effect of the individual search refinements.
 
-\subsection{Engine-versus-Engine Evaluation}
+\subsection{Experimental Setup}
+\label{subsec:common_setup}
+
+Unless stated otherwise, all experiments share the following configuration.
+
+\paragraph{Hardware and Build.}
+All measurements were conducted on a MacBook Pro with an Apple M3 Pro processor
+and 18\,GB of RAM. The engine was compiled in release mode and executed as a
+single-threaded process. Apart from the parameter that is varied in a given
+experiment, all engine options were kept at their defaults throughout.
+
+\paragraph{Position Suite.}
+The experiments use a fixed suite of 309 positions
+(\texttt{tests/data/stockfish-bench-all.epd}), derived from the position set that
+Stockfish uses for its own benchmark. Each configuration is measured with three
+repetitions per position to average out scheduling noise, and reported figures
+are means over positions and repetitions.
+
+\paragraph{Time Budgets.}
+Time-dependent experiments sweep a fixed set of per-move budgets of
+$10, 25, 50, 100, 250, 500, 1000, 2000$, and $5000$\,ms. This range spans from
+very short thinking times, where only shallow searches are possible, to budgets
+that reach depths well into the middlegame.
+
+\paragraph{Quality Scoring.}
+Because the positions have no known ground-truth best move, move quality is
+measured against a strong reference. For every position, Stockfish is run to a
+fixed depth of 20 to obtain both a reference best move and a reference
+evaluation. Two metrics are derived from this reference:
+\begin{itemize}
+    \item \textbf{Centipawn loss (CPL):} the difference, in centipawns and from
+    the perspective of the side to move, between the reference evaluation of
+    Stockfish's preferred move and the reference evaluation of the move actually
+    played by the engine. Lower is better; a value of $0$ means the engine played
+    a move of equal reference value.
+    \item \textbf{Agreement:} the fraction of positions in which the engine's
+    chosen move coincides exactly with Stockfish's reference move.
+\end{itemize}
+CPL is the primary quality metric, as it also credits moves that differ from the
+reference move but are of comparable value; agreement is reported as a
+complementary, stricter indicator.
+
+\paragraph{Benchmark Harness.}
+All experiments are driven by the dedicated benchmarking harness in the
+\texttt{bench/} directory, which records for each search, among others, the
+completed depth, selective depth, node and quiescence-node counts, the number of
+PVS re-searches and null-move cutoffs, transposition table statistics, and the
+elapsed time. The raw per-search records are written to CSV files and aggregated
+offline, which keeps measurement and analysis reproducible.
+
+\subsection{Playing Strength (Engine versus Engine)}
 \label{subsec:engine_eval}
 
-\subsubsection{Experimental Setup}
-\label{subsubsec:engine_setup}
+To place the engine on an absolute strength scale, it is evaluated in
+head-to-head matches against a fixed reference opponent under tournament
+conditions. Matches are played through the CuteChess framework, with Stockfish as
+the reference opponent restricted through its built-in strength limitation
+(\texttt{UCI\_LimitStrength}), a single search thread, and a hash size of
+32\,MB. Both engines play a classical time control of five minutes per side with
+a 0.5\,second increment, without an opening book and with alternating colors so
+that each side plays an equal number of games as White and Black. Playing
+strength is reported as an Elo difference derived from the match result, together
+with the likelihood of superiority and the draw ratio.
 
-The engine under evaluation (\emph{Helix}) was tested in head-to-head matches
-against a fixed reference opponent under controlled and reproducible conditions.
+\emph{Note: the match results from the earlier Bachelor-project setup are no
+longer current and are being re-measured with the present build; the final
+figures will be inserted here.}
 
-\paragraph{Engines.}
-Helix was evaluated against a development version of Stockfish
-(\texttt{Stockfish dev-20251117-035cb146}). To obtain a meaningful comparison in
-the target strength range, Stockfish was configured using its built-in Elo
-limitation mechanism with \texttt{UCI\_LimitStrength} enabled and a target
-strength of 2000 Elo. In addition, Stockfish was restricted to a single search
-thread and a hash size of 32\,MB. Pondering was disabled for both engines.
+\subsection{Effect of Null-Move Pruning}
+\label{subsec:eval_nmp}
 
-\paragraph{Time Control.}
-All games were played using a classical tournament time control of 5 minutes per
-side with an increment of 0.5 seconds per move. This setting ensures that time
-management and iterative deepening behavior have a significant influence on
-search quality while still allowing sufficiently deep searches.
-
-\paragraph{Match Configuration.}
-A total of 400 games were played using the CuteChess testing framework. No opening
-book was used; all games started from the standard initial position. Colors were
-alternated, and each engine played an equal number of games as White and Black to
-ensure fairness.
-
-\paragraph{Hardware and Software Environment.}
-All experiments were conducted on a MacBook Pro equipped with an Apple M3 Pro
-processor and 18\,GB of RAM. Both engines were compiled in release mode and run as
-single-threaded processes. Apart from the explicitly stated options, all engine
-parameters were kept constant throughout the experiments.
-
-\paragraph{Evaluation Methodology.}
-Playing strength was measured using Elo difference estimates derived from match
-results. In addition to the Elo estimate, the likelihood of superiority (LOS) and
-the draw ratio were recorded to assess statistical confidence and game
-decisiveness.
-
-\subsubsection{Results}
-\label{subsubsec:engine_results}
-
-Table~\ref{tab:elo_results} summarizes the results of the match series between
-Helix and the reference Stockfish configuration.
+Null-move pruning (\cref{subsec:null_move_pruning}) is the search refinement with
+the largest measured effect on the engine. It was evaluated by running the full
+time-budget sweep twice, once with pruning enabled and once disabled, on the
+common suite. \cref{tab:nmp_depth_cpl} reports the reachable depth and the
+centipawn loss for both configurations.
 
 \begin{table}[ht]
 \centering
-\begin{tabular}{@{}lr@{}}
+\begin{tabular}{@{}rcccc@{}}
 \toprule
-Metric & Value \\ \midrule
-Games played & 400 \\
-Elo difference & $+161.9 \pm 36.2$ \\
-Likelihood of Superiority (LOS) & $100.0\,\%$ \\
-Draw ratio & $7.5\,\%$ \\ \bottomrule
+ & \multicolumn{2}{c}{Completed depth (ply)} & \multicolumn{2}{c}{Centipawn loss} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+Budget (ms) & without NMP & with NMP & without NMP & with NMP \\ \midrule
+10   & 3.66 & 3.89 & 58.7 & 61.4 \\
+25   & 4.29 & 4.64 & 57.6 & 60.0 \\
+50   & 4.85 & 5.28 & 53.7 & 54.9 \\
+100  & 5.36 & 5.94 & 52.1 & 57.0 \\
+250  & 6.01 & 6.77 & 50.9 & 53.9 \\
+500  & 6.48 & 7.49 & 54.1 & 52.1 \\
+1000 & 7.03 & 8.15 & 53.6 & 50.7 \\
+2000 & 7.50 & 8.77 & 47.4 & 51.7 \\
+5000 & 8.05 & 9.40 & 43.9 & 42.3 \\ \bottomrule
 \end{tabular}
-\caption{Match results of Helix against Stockfish limited to 2000 Elo.}
-\label{tab:elo_results}
+\caption{Reachable depth and centipawn loss with and without null-move pruning,
+averaged over 309 positions and three repetitions per budget.}
+\label{tab:nmp_depth_cpl}
 \end{table}
 
-Out of the 400 games played, Helix achieved a clear majority of wins. The low draw
-ratio indicates that most games were decided decisively rather than through
-repetition or stalemate.
+The clearest and most robust effect is on search depth: null-move pruning reaches
+a greater depth at \emph{every} budget, and the gap widens with more time, from
+$+0.23$\,ply at 10\,ms to a full ply ($8.15$ versus $7.03$) at one second and
+$+1.35$\,ply at five seconds. This confirms that skipping provably weak subtrees
+lets the engine invest the saved effort into depth.
 
-A breakdown of decisive outcomes shows that Helix won 279 games by checkmate
-(130 as Black and 149 as White), while Stockfish won 91 games by checkmate
-(38 as Black and 53 as White). The remaining 30 games ended in draws due to
-threefold repetition.
+This additional depth is not bought at the cost of node throughput. At the
+one-second budget the engine reaches about $1.68$ million nodes per second with
+pruning versus $1.58$ million without, so pruning is if anything slightly faster
+per node as well. What does change is the transposition table hit rate, which
+drops from $0.201$ to $0.155$ at one second: by pruning subtrees, the search
+visits a larger number of \emph{distinct} positions and re-visits known entries
+less often. The hit rate is therefore best read as a symptom of the search shape
+rather than as a quality target in itself.
 
-The estimated Elo difference of approximately $+162$ points in favor of Helix is
-statistically significant, as indicated by the $100\,\%$ likelihood of
-superiority. It should be emphasized that the reference engine was deliberately
-limited to 2000 Elo; the reported difference therefore reflects relative
-performance under this configuration rather than an absolute strength comparison.
+The effect on move quality is more nuanced, and it is reported here without
+smoothing. For budgets up to 250\,ms the centipawn loss with pruning is
+consistently \emph{higher} (worse), because at shallow depths the reduced
+searches occasionally miss tactics that the fuller search would have seen. From
+500\,ms onward the picture is mixed: pruning is slightly better at 500\,ms,
+1000\,ms, and 5000\,ms, but slightly worse at 2000\,ms, with differences of only
+a few centipawns that, given three repetitions, are partly noise. In other words,
+null-move pruning trades a small amount of local accuracy for a substantial and
+monotone gain in depth; the depth gain is the reliable finding, whereas the
+quality effect only turns favorable once the budget is large enough for the extra
+depth to compensate for the occasional missed tactic.
+\cref{fig:quality_vs_depth,fig:search_nps} visualize the quality-versus-depth
+relationship and the node throughput across budgets.
 
-\subsection{Search Optimization Ablation Study}
-\label{subsec:ablation}
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.8\linewidth]{figures/quality_vs_depth.png}
+\caption{Centipawn loss as a function of the reached depth (and thus time budget)
+with and without null-move pruning.}
+\label{fig:quality_vs_depth}
+\end{figure}
 
-To isolate the effect of the implemented search optimizations, an additional
-controlled ablation experiment was conducted. In contrast to the
-engine-versus-engine evaluation, this experiment focuses exclusively on search
-efficiency under identical time constraints.
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.8\linewidth]{figures/search_nps.png}
+\caption{Node throughput (nodes per second) across time budgets with and without
+null-move pruning.}
+\label{fig:search_nps}
+\end{figure}
 
-\subsubsection{Experimental Design}
+\subsection{Transposition Table Size}
+\label{subsec:eval_tt_size}
 
-The engine was evaluated in two configurations:
-\begin{itemize}
-    \item \textbf{Optimized search:} Full implementation including transposition
-    tables and heuristic move ordering (TT move, captures, killer moves, history
-    heuristic).
-    \item \textbf{Unoptimized search:} Plain Negamax with Alpha-Beta pruning,
-    without transposition tables and without heuristic move ordering. Moves are
-    explored in their generated order.
-\end{itemize}
-
-Both configurations use the same board representation, move generator, and
-evaluation function. Any observed differences can therefore be attributed
-directly to the presence or absence of search optimizations.
-
-\subsubsection{Positions and Time Control}
-
-The experiment was performed on a fixed set of 128 predefined chess positions.
-For each position, both engine configurations were given a fixed search time
-limit of 2 seconds. No depth or node limits were imposed.
-
-This setup ensures that both configurations operate under identical external
-constraints and that observed differences reflect how efficiently the available
-time is converted into search depth and explored nodes.
-
-\subsubsection{Evaluation Metrics}
-
-For each position and configuration, the following metrics were recorded:
-\begin{itemize}
-    \item total number of explored nodes,
-    \item maximum search depth reached within the time limit,
-    \item average search depth over all positions.
-\end{itemize}
-
-All results are aggregated across the full set of 128 positions.
-
-\subsubsection{Results}
-
-Table~\ref{tab:ablation_nodes} compares the average number of explored nodes per
-search depth for the optimized and unoptimized configurations under the fixed
-2-second time limit.
+The transposition table trades memory for search efficiency: a larger table
+retains more previously computed positions but consumes more memory. To determine
+a sensible default, the table size was swept over $1, 4, 16, 64$, and $256$\,MB
+at a fixed one-second budget, with null-move pruning enabled.
+\cref{tab:tt_size} reports the reachable depth, the eviction rate (the share of
+stores that overwrite an entry of a different position), and the hit rate.
 
 \begin{table}[ht]
 \centering
-\begin{tabular}{@{}rcc@{}}
+\begin{tabular}{@{}rccc@{}}
 \toprule
-Depth & Optimized Nodes (avg.) & Unoptimized Nodes (avg.) \\ \midrule
-1 & $\approx 36$ & $\approx 1651$ \\
-2 & $\approx 114$ & $\approx 278$ \\
-3 & $\approx 625$ & $\approx 2596$ \\
-4 & $\approx 1689$ & $\approx 19766$ \\
-5 & $\approx 9410$ & $\approx 185529$ \\
-\bottomrule
+Table size (MB) & Completed depth (ply) & Eviction rate & Hit rate \\ \midrule
+1   & 7.75 & 0.616 & 0.101 \\
+4   & 8.02 & 0.265 & 0.131 \\
+16  & 8.12 & 0.076 & 0.151 \\
+64  & 8.19 & 0.020 & 0.158 \\
+256 & 8.20 & 0.005 & 0.160 \\ \bottomrule
 \end{tabular}
-\caption{Average number of explored nodes per depth under a fixed 2-second time
-limit, aggregated over 128 positions.}
-\label{tab:ablation_nodes}
+\caption{Effect of transposition table size at a one-second budget, averaged over
+309 positions and three repetitions.}
+\label{tab:tt_size}
 \end{table}
 
-The optimized configuration consistently reaches greater search depths and
-explores significantly fewer nodes per depth level. This indicates a substantial
-reduction in the effective branching factor compared to the unoptimized search.
+Only the smallest table has a measurable negative effect: at 1\,MB the search
+loses roughly half a ply of depth ($7.75$ versus $\approx 8.2$) while more than
+$60\,\%$ of all stores evict a foreign entry, so useful information is displaced
+before it can be reused. From 16\,MB onward the curve flattens; the difference
+between 64\,MB and 256\,MB is within noise, even though the eviction rate keeps
+falling. For the target time controls the search therefore stops being
+memory-bound well below 32\,MB, which justifies the default hash size used
+elsewhere in this work.
 
-In a subset of the tested positions, both configurations selected identical best
-moves and principal variations despite differences in achieved search depth. A
-detailed discussion of this observation is provided in
-Section~\ref{sec:discussion}.
+\subsection{Time-to-Quality and Depth-versus-Time}
+\label{subsec:eval_ttq}
+
+The per-budget measurements in \cref{tab:nmp_depth_cpl} also answer the
+time-to-quality and depth-versus-time questions directly. Reachable depth grows
+smoothly and predictably with the budget, roughly one additional ply per
+doubling of time in the tested range, which reflects the exponential relationship
+between depth and node count discussed in \cref{sec:preliminaries}.
+
+Move quality, in contrast, improves far less smoothly. Centipawn loss decreases
+only weakly and non-monotonically with the budget, and much of the improvement is
+concentrated at the long end of the range (for the pruning configuration, from
+about $50$\,cp around one second to $42$\,cp at five seconds). This is the central
+observation behind the thesis question: beyond a certain point, additional search
+time keeps increasing depth but no longer translates proportionally into better
+decisions, because the engine has already found a move of comparable quality to
+what the deeper search eventually confirms. The practical sweet spot thus lies
+where the depth curve is still rising steeply but the quality curve has begun to
+flatten.
+
+\subsection{PVS Parameter Sweep}
+\label{subsec:eval_pvs_sweep}
+
+Principal Variation Search exposes two tunable parameters, the minimum scouting
+depth (\texttt{PvsMinDepth}) and the number of leading moves searched with the
+full window (\texttt{PvsScoutAfterMove}). To determine whether these parameters
+offer a worthwhile tuning gain, a full grid of $6 \times 5 = 30$ configurations
+(\texttt{PvsMinDepth} $1$ to $6$, \texttt{PvsScoutAfterMove} $1$ to $5$) was
+evaluated on the full suite at a one-second budget with null-move pruning
+enabled. \cref{tab:pvs_sweep} lists a representative selection.
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{@{}ccccc@{}}
+\toprule
+\texttt{PvsMinDepth} & \texttt{PvsScoutAfterMove} & Depth (ply) & Nodes & Re-searches \\ \midrule
+1 & 1 & 8.15 & 1\,526\,519 & 103.2 \\
+2 & 1 & 8.14 & 1\,516\,165 & 51.5 \\
+3 & 1 & 8.14 & 1\,513\,910 & 28.7 \\
+6 & 5 & 8.07 & 1\,524\,975 & 3.2 \\ \bottomrule
+\end{tabular}
+\caption{Representative configurations from the PVS parameter sweep (one-second
+budget). The default configuration is \texttt{PvsMinDepth}\,$=2$,
+\texttt{PvsScoutAfterMove}\,$=1$.}
+\label{tab:pvs_sweep}
+\end{table}
+
+The sweep is a deliberate null result: across all 30 configurations the completed
+depth stays between $8.07$ and $8.15$\,ply and the node count between $1.51$ and
+$1.53$ million, a spread of about $1.4\,\%$ that is within measurement noise. No
+configuration offers a meaningful improvement over any other.
+
+The reason is visible in the re-search column. The whole point of the scouting
+parameters is to control the trade-off between the savings of the cheap
+null-window scout and the cost of the occasional full-window re-search when the
+scout fails high. In this engine that trade-off barely materializes: even the
+most aggressive configuration triggers only about $103$ re-searches over roughly
+$1.5$ million nodes, and the most conservative one only about $3$. The existing
+move ordering (transposition-table move, MVV-LVA captures, killer moves, and the
+history heuristic) is already good enough that the first move is almost always
+the best, so the null-window scout almost always holds and there is little
+re-search cost left for the parameters to tune away. As a side observation, the
+transposition table hit rate correlates weakly with the number of re-searches
+($0.155$ at $103$ re-searches versus $0.141$ at $3$), which again confirms that
+the hit rate reflects the shape of the search rather than being an independent
+quality target. Consequently, the default configuration
+(\texttt{PvsMinDepth}\,$=2$, \texttt{PvsScoutAfterMove}\,$=1$) is retained, as no
+setting in the sweep improves upon it.
+
+\subsection{Move Stability}
+\label{subsec:eval_move_stability}
+
+A further question is at which depth the engine's chosen move stabilizes, i.e.,
+the depth beyond which additional iterations no longer change the root decision.
+This is measured by recording, for each position, the best move at every
+completed iteration of iterative deepening and determining the depth from which
+it no longer changes.
+
+\emph{Note: this experiment is still being measured with the current build; the
+results and the corresponding table will be inserted here.}

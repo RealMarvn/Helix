@@ -165,6 +165,11 @@ bool Board::pop_last_move()
 
 bool Board::make_move(const Move& move)
 {
+    // A transposition-table move can belong to a different position then
+    // point at a square that is now empty or holds an enemy piece.
+    if (board_[move.square_].piece_type_ != move.moving_piece_.piece_type_)
+        return false;
+
     // Set the square to move to the piece where it is currently.
     board_[move.move_square_] = board_[move.square_];
 
