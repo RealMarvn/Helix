@@ -152,7 +152,7 @@ ChessBot::SearchReport ChessBot::think(Board board, SearchConstraints config /* 
         print_debug(board, config.depth_, SCORE, START_TIME_MS);
 
         // Check legality before returning!
-        if (!board.is_legal_by_make_unmake(move))
+        if (!board.is_legal_move(move))
             move = moveGenUtils::get_legal_fallback_move(board);
 
         return build_report(move);
@@ -231,7 +231,7 @@ Move ChessBot::iterative_deepening(Board& board)
         }
     }
 
-    if (!board.is_legal_by_make_unmake(bestMove))
+    if (!board.is_legal_move(bestMove))
         bestMove = moveGenUtils::get_legal_fallback_move(board);
 
     return bestMove;
@@ -259,25 +259,22 @@ ChessBot::SearchResult ChessBot::negamax(Board& board, const int depth, int alph
     Move tt_move{};
     if (int tt_score = 0; tt.probe(key, depth, alpha, beta, ply, tt_score, tt_move))
     {
-        // Check if we are in the root, the move is not null and legal!
-        if (ply == 0 && !tt_move.is_null() && board.is_legal_by_make_unmake(tt_move))
+        // Check if we are in the root, the move is not null and legal
+        // since TT can return illegal moves.
+        if (ply == 0 && !tt_move.is_null() && board.is_legal_move(tt_move))
             best_move = tt_move;
 
         ++tt_returns;
         return {tt_score, false};
     }
 
-    // If tt is not legal, reset it!
-    if (!tt_move.is_null() && !board.is_legal_by_make_unmake(tt_move))
-        tt_move = Move{};
-
     // Null move pruning skipped when:
-    //  - directly after another null move (two passes in a row make no sense),
-    //  - at the root (we always need a real best move there),
-    //  - the depth is too shallow (the reduced search would prove nothing),
-    //  - beta is a mate score (mate distances get distorted by a fake move),
-    //  - we are in check (passing would be illegal, the king is hanging),
-    //  - only pawns and king are left (zugzwang, passing is often best there).
+    //  - directly after another null move,
+    //  - at the root,
+    //  - the depth is too shallow,
+    //  - beta is a mate score,
+    //  - we are in check,
+    //  - only pawns and king are left.
     if (nmp.enabled && can_null && ply > 0 && depth >= nmp.min_depth &&
         std::abs(beta) < tt_score_constants::kMate - tt_score_constants::kMateWindow &&
         !board.is_king_in_check(board.player_ == WHITE) &&
@@ -308,6 +305,7 @@ ChessBot::SearchResult ChessBot::negamax(Board& board, const int depth, int alph
     auto moveList = moveGenUtils::get_pseudo_legal_moves(board, board.player_ == WHITE);
 
     // Sort so the best moves are first (TT move + captures + killer/history heuristics).
+    // tt_move can be a null move but is only used for scoring the moveList.
     search::heuristics::order_moves(moveList, tt_move, ply, board.player_, killers, history);
 
     int legalMoves = 0;
@@ -439,10 +437,6 @@ ChessBot::SearchResult ChessBot::quiescence(Board& board, int alpha, const int b
     Move tt_move{};
     tt.probe_move(board.get_hash(), tt_move);
     auto moveList = moveGenUtils::get_pseudo_legal_moves(board, board.player_ == WHITE);
-
-    // Reset tt_move if it is not legal!
-    if (!tt_move.is_null() && !board.is_legal_by_make_unmake(tt_move))
-        tt_move = Move{};
 
     // Quiescence only looks at captures, so filter them out before sorting.
     // Ordering a handful of captures is way cheaper than ordering the full list.

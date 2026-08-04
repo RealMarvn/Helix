@@ -144,28 +144,29 @@ public:
     bool try_to_move_piece(const Move& move);
 
     /**
-     * @brief Checks if a move is legal by performing it.
+     * @brief Checks whether a move is legal in the current position.
      *
-     * This function attempts to move a chess piece on the board. It checks if the move can be applied
-     * by moving it and checking if a check occurred.
+     * Matches the move against the generated pseudo-legal moves and then checks
+     * that it does not leave the own king in check. Meant for moves of unknown
+     * origin, above all moves from the transposition table.
      *
-     * This function is only used for legality checks on generated moves.
-     *
-     * @param move The move to be made.
+     * @param move The move to verify.
      * @return True if the move is legal, false otherwise.
      */
-    bool is_legal_by_make_unmake(const Move& move);
+    bool is_legal_move(const Move& move);
 
     /**
-     * @brief Moves a chess piece on the board.
+     * @brief Applies a move to the board.
      *
-     * This function moves a chess piece on the board. It only checks if the move is legal (you don't set yourself in
-     * check) and updates the board accordingly. This function does not check if the move is correct. Use @see
-     * tryToMovePiece for correct checking. The function returns true if the move is successful, and false otherwise. If
-     * false the move will not be applied!
+     * Expects a pseudo-legal move. Rejects moves that leave the own king in
+     * check, as well as an empty or mismatched source square and a target
+     * square holding one of our own pieces. Move geometry, slider paths and the
+     * castling/en-passant prerequisites are not checked, use @see is_legal_move
+     * for that.
      *
      * @param move The move to make.
-     * @return True if the move is successful, false otherwise. If false the move will not be applied!.
+     * @return True if the move was applied, false otherwise. If false the board
+     *         is left untouched.
      */
     bool make_move(const Move& move);
 

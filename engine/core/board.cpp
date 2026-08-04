@@ -165,9 +165,16 @@ bool Board::pop_last_move()
 
 bool Board::make_move(const Move& move)
 {
-    // A transposition-table move can belong to a different position then
+    // A little guard: A move can belong to a different position then
     // point at a square that is now empty or holds an enemy piece.
-    if (board_[move.square_].piece_type_ != move.moving_piece_.piece_type_)
+    if (board_[move.square_].piece_type_ == EMPTY ||
+        board_[move.square_].piece_type_ != move.moving_piece_.piece_type_)
+        return false;
+
+    // Never capture our own piece. Castling needs no exception, it always ends
+    // on an empty square.
+    if (board_[move.move_square_].piece_type_ != EMPTY &&
+        board_[move.move_square_].is_white() == move.moving_piece_.is_white())
         return false;
 
     // Set the square to move to the piece where it is currently.
@@ -485,8 +492,13 @@ bool Board::try_to_move_piece(const Move& move)
     return true;
 }
 
-bool Board::is_legal_by_make_unmake(const Move& move)
+bool Board::is_legal_move(const Move& move)
 {
+    // Check the move against the pseudo_legal movegen.
+    if (!moveGenUtils::get_pseudo_legal_moves(*this, player_ == WHITE).contains(move))
+        return false;
+
+    // Check if the move does leave in check and is therefore illegal.
     if (!make_move(move))
         return false;
 

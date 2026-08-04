@@ -89,10 +89,11 @@ void print_pv(const ChessBot& bot, const Board& board)
         if (!bot.tt.probe_move(key, m) || m.is_null())
             break;
 
-        // Stop if the TT move is not legal.
-        if (!b.make_move(m))
+        // The entry can come from a colliding key, so check before walking it.
+        if (!b.is_legal_move(m))
             break;
 
+        b.make_move(m);
         pv.push_back(m.to_string());
     }
 

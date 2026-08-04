@@ -111,13 +111,14 @@ void run_tree_reuse(const std::vector<std::string>& args)
 
             // Follow the game with the move that was actually played.
             Move move = board.parse_move(played);
-            if (!board.make_move(move))
+            if (!board.is_legal_move(move))
             {
                 std::cerr << "Illegal move '" << played << "' in game " << game_id
                           << ", skipping rest of the game." << std::endl;
                 break;
             }
 
+            board.make_move(move);
             ply++;
         }
 
