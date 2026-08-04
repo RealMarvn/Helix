@@ -295,11 +295,11 @@ This script:
 
 ### Compiling
 
-After the initial setup, rebuilding is a single Ninja call into the desired build directory:
+After the initial setup, rebuilding is a single Meson call into the desired build directory:
 
 ```bash
-ninja -C build/release        # optimized build (engine, tests, bench)
-ninja -C build/debug          # debug build (engine only)
+meson compile -C build/release        # optimized build (engine, tests, bench)
+meson compile -C build/debug          # debug build (engine only)
 ```
 
 The engine binary is `build/release/helix` (or `build/debug/helix`). Note that the **tests and the
