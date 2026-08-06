@@ -435,7 +435,8 @@ Move Board::parse_move(const std::string& input) const
     }
 
     // If you try to move to a ep square set the move to ep.
-    if (move_square == board_settings_.ep_square_)
+    // Check if it is a pawn.
+    if (move_square == board_settings_.ep_square_ && (figure == 'P' || figure == 'p'))
         moveType = EN_PASSANT;
 
     // If the promotion is given set the move to a promotion.

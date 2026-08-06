@@ -66,8 +66,9 @@ void ChessGame::parser_uci_handle_position(const std::string& line) const
         {
             while (iss >> token)
             {
-                Move m = board_->parse_move(token);
-                board_->try_to_move_piece(m);
+                // Parse and try the move.
+                if (Move m = board_->parse_move(token); !board_->try_to_move_piece(m))
+                    std::cout << "info string ERROR could not apply move " << token << std::endl;
             }
         }
     }
@@ -84,8 +85,9 @@ void ChessGame::parser_uci_handle_position(const std::string& line) const
         {
             while (iss >> token)
             {
-                Move m = board_->parse_move(token);
-                board_->try_to_move_piece(m);
+                // Parse and try the move.
+                if (Move m = board_->parse_move(token); !board_->try_to_move_piece(m))
+                    std::cout << "info string ERROR could not apply move " << token << std::endl;
             }
         }
     }
