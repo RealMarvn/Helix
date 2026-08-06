@@ -228,10 +228,28 @@ bool Board::make_move(const Move& move)
 
     if (move.moving_piece_.piece_type_ == WP || move.moving_piece_.piece_type_ == BP)
     {
-        // Set EP square if a pawn moves exact 2 rows.
+        // Check if the move is in the fields.
         if (std::abs(move.square_ - move.move_square_) == 16)
-            board_settings_.ep_square_ =
-                move.move_square_ + (move.moving_piece_.is_white() ? -8 : +8);
+        {
+            // Get the opponent piece.
+            const PieceType ENEMY_PAWN = move.moving_piece_.is_white() ? BP : WP;
+            // Get the rank
+            const int FILE = move.move_square_ % 8;
+
+            // Check if opponent on the left column. (Checking if it is the leftest so we dont go
+            // oob.
+            const bool LEFT_TAKER =
+                FILE > 0 && board_[move.move_square_ - 1].piece_type_ == ENEMY_PAWN;
+            // Check if opponent on the right column. (Checking if it is the rightest so we dont go
+            // oob.
+            const bool RIGHT_TAKER =
+                FILE < 7 && board_[move.move_square_ + 1].piece_type_ == ENEMY_PAWN;
+
+            // If at least one exists, set ep.
+            if (LEFT_TAKER || RIGHT_TAKER)
+                board_settings_.ep_square_ =
+                    move.move_square_ + (move.moving_piece_.is_white() ? -8 : +8);
+        }
     }
 
     // Set the permissions for castling!
