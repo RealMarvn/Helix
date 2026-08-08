@@ -1,116 +1,143 @@
 \section{Conclusions and Future Work}
 \label{sec:discussion}
 
-This section discusses the experimental results presented in
-Section~\ref{sec:evaluation}, relates them to the central research question of
-this thesis, and draws overall conclusions. The focus lies on interpreting the observed effects of search
-optimizations under time constraints and on understanding their implications for
-iterative deepening search in practical chess engines.
+The experiments of \cref{sec:evaluation} allow the central question of this
+thesis to be answered, and the answer is more nuanced than the initial
+formulation suggested. This section relates the individual results to that
+question, draws the overall conclusions, and outlines where the engine would have
+to be extended for the remaining gap to close.
 
-\subsection{Search Efficiency and Effective Branching Factor}
-\label{subsec:discussion_efficiency}
-
-The ablation study clearly demonstrates that the implemented search
-optimizations lead to a substantial reduction in search effort under identical
-external constraints. When operating under a fixed time limit, the optimized
-search explores significantly fewer nodes per depth level than the unoptimized
-plain Negamax with Alpha-Beta pruning.
-
-This behavior can be interpreted as a reduction of the effective branching
-factor. While Alpha-Beta pruning already reduces the theoretical branching
-factor compared to naive Minimax search, its practical effectiveness depends
-strongly on the order in which moves are explored. Without informed move
-ordering, large parts of the game tree must still be searched before cutoffs
-occur.
-
-The optimized configuration benefits from a combination of transposition tables
-and heuristic move ordering, which prioritizes tactically and strategically
-relevant moves early in the search. As a result, Alpha-Beta cutoffs occur earlier
-and more frequently, allowing the engine to reach greater effective depth within
-the same time budget.
-
-\subsection{Depth versus Decision Quality}
+\subsection{Depth and Decision Quality Are Not Proportional}
 \label{subsec:discussion_depth_vs_quality}
 
-An important insight from the experiments is that search depth alone is an
-insufficient measure of decision quality. In a notable fraction of the tested
-positions, both the optimized and unoptimized configurations selected the same
-best move and, in some cases, identical principal variations, despite differences
-in achieved search depth.
+The clearest finding of this work is that additional search depth does not
+translate into proportionally better decisions. Null-move pruning
+(\cref{subsec:eval_nmp}) reaches a greater depth at every single one of the nine
+time budgets, at one second a full ply, and yet the mean centipawn loss remains
+statistically unchanged. Search tree reuse (\cref{subsec:eval_tree_reuse}) adds
+another $0.28$ ply at no cost at all. Both refinements do exactly what they are
+designed to do, and neither shows up as a measurable gain in move quality on the
+test suite.
 
-This observation suggests that the optimized search often converges to
-decision-relevant lines earlier than the unoptimized search. In such situations,
-additional depth gained by an uninformed search does not necessarily translate
-into improved decision quality, but instead reflects redundant exploration of
-less relevant branches.
+The move stability measurements (\cref{subsec:eval_move_stability}) explain why.
+By depth 8, the depth the engine reaches at a one-second budget, three quarters
+of all positions have already settled on their final move, and about a quarter
+never change it from the very first iteration. Deeper search can only change the
+decision in the remaining fifth of positions, so an across-the-board gain in
+depth is diluted accordingly. This is the practical sweet spot the thesis asked
+for: it lies where the depth curve is still rising while the quality curve has
+already flattened, for this engine and suite at roughly one second per move.
 
-From an algorithmic perspective, this highlights the importance of directing
-search effort toward critical variations rather than maximizing depth in an
-uninformed manner. A shallower but better-focused search can therefore yield
-decisions of equal or higher quality than a deeper search with poor move
-ordering.
+\subsection{Where the Search Is Actually Limited}
+\label{subsec:discussion_limits}
 
-\subsection{Implications for Iterative Deepening under Time Constraints}
+The distribution of move quality (\cref{subsec:eval_outliers}) shows where the
+remaining errors come from. The engine plays exactly Stockfish's move in
+$49\,\%$ of the positions and stays within $25$\,cp in two thirds of them, with a
+median loss of $2$\,cp. The mean of $52$\,cp is produced almost entirely by a
+small residue: fifteen positions account for nearly half of it.
+
+These positions share a profile. They hold fewer pieces than average, a third of
+them are endgames, and three contain a forced mate the engine does not find.
+They are precisely the positions in which material and piece-square tables carry
+no useful information, since passed pawns, opposition and king activity are not
+represented in the evaluation (\cref{subsec:eval_limitations}). In such
+positions the limiting factor is not how deep the engine searches but what its
+evaluation is able to distinguish, and no attainable depth compensates for that.
+
+This also puts the null result of the parameter sweep
+(\cref{subsec:eval_pvs_sweep}) into perspective. Across all 30 configurations the
+node count varies by less than two percent, because re-searches are rare to begin
+with: even the most aggressive scouting triggers about 104 of them over 1.5
+million nodes. The move ordering, built from transposition table moves, MVV-LVA,
+killer moves and the history heuristic, is already good enough that the first
+move examined is almost always the best one. This is consistent with the
+long-standing observation that the effectiveness of Alpha-Beta pruning is
+governed by move ordering rather than by the pruning scheme
+itself~\cite{knuth1975alphabeta, marsland1986review}, and it means the scouting
+parameters have almost no trade-off left to tune.
+
+\subsection{Implications for Time-Managed Search}
 \label{subsec:discussion_time}
 
-The results have direct implications for time-constrained iterative deepening
-search. Iterative deepening inherently trades additional overhead from repeated
-searches for improved move ordering and search stability. The experimental
-findings indicate that this trade-off is beneficial when combined with effective
-search optimizations.
+For iterative deepening under time constraints~\cite{korf1985iterative} these
+results are encouraging. The anytime property is not merely a safety net: since
+most positions settle early, an interrupted search usually returns the same move
+a deeper one would have confirmed. Stopping between iterations therefore costs
+far less quality than the depth difference alone would suggest.
 
-Under strict time limits, the optimized engine is able to preserve move quality
-even when the maximum achievable depth is reduced. This supports the central
-hypothesis of this work: degradation in playing strength under time constraints
-is not determined solely by reduced depth, but by how effectively the available
-time is converted into meaningful search.
+The measurements also show that the engine stops being memory-bound well below
+the default hash size (\cref{subsec:eval_tt_size}). Only the smallest table
+degrades the search measurably, while beyond 16\,MB the curve flattens. Combined
+with the tree reuse result, this argues for keeping the table alive across moves
+rather than enlarging it: retaining what was already computed helps more than
+providing space for more of it, and the benefit grows over the course of a game
+as positions transpose more frequently~\cite{warnock1988search}.
 
-Furthermore, the observed stability of best moves across different depths
-suggests that iterative deepening provides a robust mechanism for time-managed
-search. Even when interrupted before reaching maximal depth, the engine often
-returns a move that is consistent with deeper searches.
-
-\subsection{Relation to Practical Playing Strength}
-\label{subsec:discussion_strength}
-
-The engine-versus-engine evaluation complements the ablation study by confirming
-that improved search efficiency translates into higher practical playing
-strength. The optimized engine significantly outperforms the reference opponent
-under classical tournament time controls, despite operating under identical
-hardware and threading constraints.
-
-While this result depends on the chosen reference configuration, it provides
-empirical evidence that the observed reductions in search effort and improvements
-in move quality have tangible effects on game outcomes. The combination of
-efficient pruning, informed move ordering, and stable time management enables the
-engine to allocate its computational resources more effectively throughout the
-game.
+Under tournament conditions all of this adds up to a clear result: the engine
+wins its match against the reference opponent by roughly $205$ Elo points
+(\cref{subsec:engine_eval}), with both colors and a low draw ratio.
 
 \subsection{Limitations}
 \label{subsec:discussion_limitations}
 
-Several limitations of the presented evaluation should be noted. First, move
-quality is assessed indirectly through agreement of best moves and principal
-variations rather than through comparison with ground-truth solutions or
-exhaustive searches. While this provides valuable insight into search behavior,
-it does not guarantee objective optimality.
+Several limitations qualify these conclusions. Move quality is measured against a
+strong reference engine rather than against ground truth, so agreement with
+Stockfish is treated as a proxy for correctness; positions in which a different
+move is equally good are penalised by the agreement metric, which is why
+centipawn loss is used as the primary measure.
 
-Second, the ablation study is conducted under a fixed time limit and on a finite
-set of predefined positions. Although this setup allows controlled comparison,
-results may vary for different position distributions or time budgets.
+The suite consists of 309 predefined positions with three repetitions each. It is
+large enough for the aggregate effects reported here, but the skewed distribution
+of the loss means that individual means are sensitive to a small number of
+positions, and differences of a few centipawns should not be over-interpreted.
 
-Finally, the engine deliberately uses a transparent mailbox board
-representation and a handcrafted evaluation function. While these choices
-support clarity and experimental control, they may limit absolute playing
-strength and affect how well the conclusions generalize to state-of-the-art
-engines.
+The opponent in the match was deliberately weakened through Stockfish's built-in
+strength limitation. That mechanism provides only a nominal Elo target and works
+partly by introducing random inaccuracies, so the reported difference describes
+the relation to this specific configuration and not an absolute rating.
+
+Finally, the engine uses a mailbox board representation and a handcrafted
+evaluation, both chosen for clarity rather than for strength. Modern engines rely
+on bitboards~\cite{cpw_bitboards} and learned evaluation
+functions~\cite{silver2018alphazero}, and the conclusions about absolute playing
+strength do not transfer to those designs.
+
+\subsection{Future Work}
+\label{subsec:discussion_future}
+
+The results point to one clear priority. Since the residual errors are
+concentrated in positions the evaluation cannot describe, further work should be
+directed at the evaluation function rather than at the search. Pawn structure,
+passed pawns, king activity and dedicated endgame knowledge would address exactly
+the positions that dominate the mean loss today, and only then would the depth
+already gained by null-move pruning and tree reuse have anything left to
+contribute.
+
+A second direction concerns the measurement itself. Reporting the median
+alongside the mean, or trimming the extreme cases, would make the effect of
+search refinements visible at all, since the mean is dominated by a residue that
+no search improvement can fix.
+
+Finally, the search refinements evaluated here are only the beginning of what a
+classical engine typically employs. Late move reductions, aspiration windows and
+static exchange evaluation all target the same goal of spending effort where it
+changes the decision, and the move ordering measured here is strong enough that
+they would likely pay off.
 
 \subsection{Summary}
 
-In summary, the discussion highlights that effective search optimizations improve
-not only raw search efficiency but also the reliability of decision-making under
-time constraints. The results support the view that in practical chess engines,
-search quality depends more on informed pruning and move ordering than on raw
-search depth alone. These findings motivate further investigation into
-time-managed search strategies and provide a solid foundation for future
-extensions of this work.
+This thesis implemented a complete chess engine and used it to examine how
+invested search time translates into decision quality. Both refinements studied
+work as intended: null-move pruning gains a full ply at one second, and a
+persistent transposition table adds a further $0.28$ ply for free, growing to
+$0.39$ ply in the endgame. Neither improves the average move quality measurably,
+because three quarters of all positions have settled by the depth the engine
+already reaches, and the remaining errors are concentrated in endgames that the
+evaluation cannot assess regardless of depth.
+
+The sweet spot between search time and decision quality is therefore reached
+earlier than expected, at around one second per move for this engine. Beyond that
+point, additional time keeps buying depth but no longer buys decisions. What
+limits the engine at that stage is no longer how far it looks ahead, but what it
+is able to recognise when it gets there.

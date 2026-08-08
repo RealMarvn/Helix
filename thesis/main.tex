@@ -33,24 +33,36 @@ The engine is implemented from scratch in \texttt{C++} using a classical
 mailbox-based board representation. Its baseline integrates established
 techniques such as alpha-beta pruning, transposition tables, quiescence search,
 heuristic move ordering, and a two-stage time management system with soft and
-hard deadlines. On top of this baseline, the thesis develops two further search
+hard deadlines. On top of this baseline, the thesis develops three further search
 improvements: Principal Variation Search (PVS), which verifies all but the
-presumed best move with inexpensive null-window searches, and the reuse of
-search trees from previous searches, realized through a persistent
+presumed best move with inexpensive null-window searches; null-move pruning,
+which discards subtrees that remain winning even after passing a turn; and the
+reuse of search trees from previous searches, realized through a persistent
 transposition table that allows the engine to resume earlier computations.
 
-The experimental evaluation studies time-dependent decision making along four
-axes: move stability, i.e., the depth at which the best move stabilizes and no
-longer changes with deeper search; time-to-quality curves, which capture how
-move quality evolves under increasing time limits; depth-versus-time behavior
-with and without Principal Variation Search; and a PVS parameter sweep that
-determines which combination of scouting depth and number of fully searched
-moves yields the best ratio of cost reduction to move quality.
+The evaluation combines a 400-game match against a strength-limited reference
+engine, which the engine wins by $205 \pm 38$ Elo, with systematic measurements
+on a suite of 309 positions across time budgets from 10\,ms to 5\,s. Move quality
+is scored against a strong reference engine as centipawn loss.
 
-The findings aim to characterize how gracefully decision quality degrades under
-tight time budgets and to identify configurations in which a deliberately simple
-engine architecture converts limited search time into stable, high-quality
-decisions.
+The results separate the two halves of the question. Both refinements deliver
+depth as intended: null-move pruning gains a full ply at a one-second budget, and
+the persistent transposition table adds a further $0.28$ ply at no cost, rising
+to $0.39$ ply in the endgame. Neither improves average move quality measurably.
+The reason is that decisions settle early, three quarters of all positions have
+fixed their move by the depth the engine already reaches, and that the remaining
+error is concentrated in a small residue: the median centipawn loss is $2$ while
+the mean is $52$, with fifteen positions accounting for nearly half of that mean.
+These positions are predominantly endgames, in which material and piece-square
+tables carry no useful information. A sweep over the Principal Variation Search
+parameters produces a deliberate null result, as strong move ordering leaves
+almost no re-search cost to tune away.
+
+The sweet spot between search time and decision quality is therefore reached
+earlier than expected, at roughly one second per move for this engine. Beyond
+that point additional time continues to buy depth but no longer buys better
+decisions, since the limiting factor shifts from how far the engine searches to
+what its evaluation is able to distinguish.
 \end{abstract}
 % ---------------
 % ------------------------------------------------------------------------------

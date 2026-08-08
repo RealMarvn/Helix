@@ -3,9 +3,10 @@
 
 Since the search explores only a limited portion of the game tree, a heuristic
 evaluation is required to estimate the quality of non-terminal positions. The
-implemented evaluation follows a classical \emph{tapered} approach with separate
+implemented evaluation follows a classic \emph{tapered} approach with separate
 midgame (MG) and endgame (EG) scores, piece-square tables (PSQT), a phase-based
-interpolation scheme, and a tempo bonus.
+interpolation scheme, and a tempo bonus. Its material values and tables are
+adapted from the widely used PeSTO tables~\cite{cpw_pesto}.
 
 \subsubsection{Material Model}
 \label{subsec:material_model}

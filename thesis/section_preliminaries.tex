@@ -19,7 +19,6 @@ information such as the side to move, castling rights, and en-passant
 availability. Players alternate turns by selecting legal moves, and the game
 terminates in a win, loss, or draw according to the rules of chess.
 
-\paragraph{Formal Representation}
 More formally, let $\mathcal{T} = \{\text{pawn}, \text{knight}, \text{bishop},
 \text{rook}, \text{queen}, \text{king}\}$ denote the set of piece types and
 $\mathcal{C} = \{\text{white}, \text{black}\}$ the set of colours. A piece is then
@@ -30,10 +29,9 @@ b : \{1, \dots, 8\}^2 \rightarrow \mathcal{F} \cup \{\varnothing\},
 \]
 which assigns to each square either a piece or the empty symbol $\varnothing$. A
 complete game state $s = (b, t, r, e)$ additionally comprises the side to move
-$t \in \mathcal{C}$, the castling rights $r$, and the en-passant target $e$. The
-latter two are part of the state because the legality of a move can depend on the
-movement history, for instance on whether a king or rook has already moved. We
-write $\mathcal{S}$ for the set of all legal states.
+$t \in \mathcal{C}$, the castling rights $r$, and the en-passant target $e$, both
+of which depend on the movement history rather than on the current placement
+alone. We write $\mathcal{S}$ for the set of all legal states.
 
 The rules of chess induce a transition relation
 $\delta \subseteq \mathcal{S} \times \mathcal{S}$, where $(s, s') \in \delta$ if
@@ -43,7 +41,6 @@ position and each edge is a legal move. A state $s$ is \emph{terminal} if it has
 no outgoing edges, as in checkmate or stalemate, or if it is declared drawn by
 the rules of chess.
 
-\paragraph{Game Tree Interpretation}
 For decision making, the graph $G$ is unrolled into a game tree rooted at the
 current position. Each level of the tree corresponds to one ply. Due to the high
 branching factor of chess, which typically lies between 30 and 40 in middlegame

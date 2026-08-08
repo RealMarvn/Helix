@@ -24,23 +24,26 @@ The primary motivation of this work is to understand how a chess engine should
 spend its limited time. More search time generally yields deeper searches and
 better moves, but the relationship is far from linear: at some point the chosen
 move stabilizes and additional computation no longer changes the decision. At
-the same time, search refinements such as Principal Variation Search and the
-reuse of previous search trees change how efficiently a given time budget is
-converted into depth and decision quality. This leads to the central research
-question of this thesis:
+the same time, search refinements such as null-move pruning, Principal Variation
+Search and the reuse of previous search trees change how efficiently a given time
+budget is converted into depth and decision quality. This leads to the central
+research question of this thesis:
 
 \emph{Where lies the sweet spot between invested search time and decision
 quality in heuristic chess search, and how do search refinements such as
-Principal Variation Search and search tree reuse shift this trade-off?}
+null-move pruning, Principal Variation Search and search tree reuse shift this
+trade-off?}
 
-To make this question measurable, the thesis examines four concrete aspects:
+To make this question measurable, the thesis examines five concrete aspects:
 (i) \emph{move stability}, i.e., the depth at which the best move stabilizes
 and deeper search no longer changes the decision, (ii) the
 \emph{time-to-quality curve}, i.e., how move quality changes as the time limit
-increases, (iii) \emph{depth-versus-time} behavior with and without Principal
-Variation Search, and (iv) a \emph{PVS parameter sweep} that determines which
+increases, (iii) the \emph{depth and quality} gained by null-move pruning and by
+search tree reuse, (iv) a \emph{PVS parameter sweep} that determines which
 combination of minimum scouting depth and number of fully searched moves yields
-the best ratio of cost reduction to move quality.
+the best ratio of cost reduction to move quality, and (v) the \emph{distribution}
+of move quality over the suite, which reveals where the remaining errors are
+concentrated.
 
 To address this question, a complete chess engine is implemented from scratch in
 \texttt{C++}. The engine employs a classical mailbox-based board representation
@@ -57,22 +60,23 @@ the UCI protocol. In particular, a two-stage time budget with soft and hard
 deadlines is used to control the interaction between iterative deepening and
 time constraints.
 
-Beyond this baseline, this thesis develops two further search improvements:
-Principal Variation Search and the reuse of search trees from previous searches
-through a persistent transposition table. Both techniques are introduced
-formally in \cref{sec:preliminaries} and described at the implementation level
-in \cref{sec:algorithm_implementation}.
+Beyond this baseline, this thesis develops three further search improvements:
+Principal Variation Search, null-move pruning, and the reuse of search trees from
+previous searches through a persistent transposition table. The techniques are
+introduced formally in \cref{sec:preliminaries} and described at the
+implementation level in \cref{sec:algorithm_implementation}.
 
 The contribution of this work is threefold. First, it provides a clean and
 modular implementation of a classical chess engine that serves as a transparent
 experimental platform. Second, it extends the baseline search with Principal
-Variation Search and transposition-based search tree reuse and describes how
-these techniques are realized in practice. Third, it presents an empirical
-evaluation of time-dependent decision making, analyzing move stability across
-depths, time-to-quality curves, depth-versus-time behavior with and without
-PVS, and the effect of the PVS tuning parameters. The results aim to locate the
-practical sweet spot between search time and decision quality in time-controlled
-chess engines.
+Variation Search, null-move pruning and transposition-based search tree reuse,
+and describes how these techniques are realized in practice. Third, it presents
+an empirical evaluation of time-dependent decision making, analyzing move
+stability across depths, time-to-quality curves, the depth and quality gained by
+each refinement, and the distribution of move quality over the position suite.
+The results locate the practical sweet spot between search time and decision
+quality in time-controlled chess engines, and show that beyond it the limiting
+factor is the evaluation function rather than the reachable depth.
 
 The remainder of this thesis is structured as follows. \cref{sec:related_work}
 discusses relevant prior work in computer chess and game tree search.

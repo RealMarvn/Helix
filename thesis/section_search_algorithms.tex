@@ -48,9 +48,14 @@ and the distinction between the hard deadline and the \emph{soft} deadline that
 is only consulted between completed iterations of iterative deepening, are
 described in \cref{sec:time_management}.
 
+The stop flag and the node budget are checked at every node, the clock only every
+1024 nodes. Reading a monotonic clock costs considerably more than the comparison
+it guards, and at the node rates the engine reaches, the resulting imprecision
+stays below a millisecond.
+
 As an additional robustness measure, the engine verifies the final move before
 returning it. If the selected move is not legal (checked via
-\texttt{is\_legal\_by\_make\_unmake()}), the engine falls back to a legal move
+\texttt{is\_legal\_move()}), the engine falls back to a legal move
 obtained from \texttt{get\_legal\_fallback\_move()}.
 
 \subsubsection{Iterative Deepening Loop}
@@ -167,7 +172,9 @@ Quiescence search is implemented in \texttt{ChessBot::quiescence(...)} and is
 entered whenever the regular search reaches depth $0$. The function evaluates
 the current position via \texttt{eval::evaluate(board)} and then selectively
 extends the search by exploring only tactical moves (captures and en-passant).
-Non-capturing moves are skipped explicitly.
+Non-capturing moves are skipped explicitly. The captures are filtered out of the
+generated list before the list is ordered, so the ordering only has to run over
+the handful of moves that are actually searched instead of over all of them.
 
 The implementation uses the standard \emph{stand-pat} scheme:
 \begin{itemize}
@@ -288,10 +295,24 @@ not displaced. In combination with iterative deepening, this means consecutive
 searches behave less like independent computations and more like one continuous
 search that is deepened and re-rooted as the game advances.
 
+Keeping the table alive across searches has one consequence that a table cleared
+per search does not have: a stored move outlives the position it was generated
+for. Since the table is indexed by a truncated key, two different positions can
+map to the same entry, and the move handed back then describes pieces that are no
+longer where it expects them. Such a move is not merely bad, it is not playable at
+all, and applying it would corrupt the board rather than just cost search time.
+Every move taken from the table is therefore validated against the current
+position before it is used as an answer: it has to be one the move generator
+produces here, and it must not leave the own king in check. Moves that come
+straight from the generator need no such check, they are pseudo-legal by
+construction, so the validation is confined to the few places where a move of
+foreign origin enters the search.
+
 \subsubsection{Move Ordering and Heuristics}
 
 Move ordering is implemented in \texttt{search::heuristics::order\_moves}.
-The ordering score combines several standard heuristics:
+The ordering score combines several standard heuristics, all of which are
+surveyed by Marsland~\cite{marsland1986review}:
 \begin{itemize}
     \item \textbf{TT/PV move first:} if a transposition table move exists, it
     receives a large bonus and is sorted to the front.
@@ -300,9 +321,10 @@ The ordering score combines several standard heuristics:
     with a special case for en-passant.
     \item \textbf{Killer moves:} for each ply, the engine tracks up to two quiet
     moves that previously caused beta cutoffs and boosts them in ordering.
-    \item \textbf{History heuristic:} a 3D table indexed by side, from-square,
-    and to-square accumulates bonuses (scaled by depth squared) for quiet moves
-    that caused cutoffs, and the accumulated score is added during ordering.
+    \item \textbf{History heuristic}~\cite{schaeffer1989history}\textbf{:} a 3D
+    table indexed by side, from-square, and to-square accumulates bonuses (scaled
+    by depth squared) for quiet moves that caused cutoffs, and the accumulated
+    score is added during ordering.
 \end{itemize}
 
 Killer and history updates are performed only on beta cutoffs and only for quiet
