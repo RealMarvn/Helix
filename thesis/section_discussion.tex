@@ -45,6 +45,24 @@ represented in the evaluation (\cref{subsec:eval_limitations}). In such
 positions the limiting factor is not how deep the engine searches but what its
 evaluation is able to distinguish, and no attainable depth compensates for that.
 
+Judging stability by evaluation instead of by the identity of the move makes the
+consequence explicit (\cref{subsubsec:eval_eps_stability}). While the move
+settles in nearly every position, a third of them never come within 20\,cp of the
+reference at any depth, ending at an average loss of $120$\,cp. The search does
+not remain undecided in these cases, it converges, and it converges on the wrong
+move. A stable decision is therefore not by itself a good one, which is worth
+keeping in mind wherever move stability is used as a stopping criterion in
+time management.
+
+That these positions are limited by evaluation rather than by depth can be shown
+directly. They are searched just as deeply as the rest, to the same average of
+$10.1$ plies, but they convert that depth into far less: over the course of a
+search their loss improves by $5.4$\,cp where the converging positions gain
+$36.5$\,cp. Depth is not useless there, it is merely too weak a lever to close a
+gap of more than $100$\,cp. This is the clearest argument that further effort
+belongs in the evaluation function: a search that optimizes a misleading
+objective more thoroughly only becomes more certain of the wrong answer.
+
 This also puts the null result of the parameter sweep
 (\cref{subsec:eval_pvs_sweep}) into perspective. Across all 30 configurations the
 node count varies by less than two percent, because re-searches are rare to begin
@@ -118,6 +136,14 @@ A second direction concerns the measurement itself. Reporting the median
 alongside the mean, or trimming the extreme cases, would make the effect of
 search refinements visible at all, since the mean is dominated by a residue that
 no search improvement can fix.
+
+The stability analysis could be extended in the same spirit. Judging convergence
+by evaluation rather than by the identity of the move already proved more
+informative here (\cref{subsubsec:eval_eps_stability}); applying the same
+criterion to the time-to-quality measurements, and reporting from which
+\emph{budget} rather than from which depth the loss stays within a margin, would
+describe the practical behavior of the engine under a clock more directly than
+the depth-based view can.
 
 Finally, the search refinements evaluated here are only the beginning of what a
 classical engine typically employs. Late move reductions, aspiration windows and

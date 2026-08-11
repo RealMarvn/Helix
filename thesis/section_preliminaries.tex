@@ -42,11 +42,9 @@ no outgoing edges, as in checkmate or stalemate, or if it is declared drawn by
 the rules of chess.
 
 For decision making, the graph $G$ is unrolled into a game tree rooted at the
-current position. Each level of the tree corresponds to one ply. Due to the high
-branching factor of chess, which typically lies between 30 and 40 in middlegame
-positions~\cite{russell2010aima}, the number of nodes grows exponentially with
-depth. As a result, even moderately deep exhaustive search is computationally
-infeasible.
+current position. Each level of the tree corresponds to one ply, and the number of
+nodes per level is governed by the branching factor of chess, which typically lies
+between 30 and 40 in middlegame positions~\cite{russell2010aima}.
 
 \subsection{Search Problem Formulation}
 
@@ -61,8 +59,9 @@ which the engine explores a subset of the game tree to estimate the value of
 available moves. The root of the tree corresponds to the current position, while
 internal nodes represent positions reachable through sequences of legal moves.
 
-Due to the exponential growth of the search tree, it is infeasible to evaluate
-all reachable positions. Consequently, the search must be limited by depth,
+With that branching factor the tree grows exponentially with depth, so evaluating
+all reachable positions is computationally infeasible even for moderate depths.
+Consequently, the search must be limited by depth,
 time, or other computational resources. This limitation introduces approximation:
 the engine can no longer guarantee optimal play, but instead aims to select the
 best move according to the information explored within the available budget.
@@ -94,7 +93,9 @@ minimizing players, Negamax expresses all evaluations from the perspective of th
 side to move. The value of a position is defined as the negation of the value
 obtained by the opponent after making a move.
 
-This formulation exploits the inherent symmetry of zero-sum games and allows the
+This formulation exploits the symmetry of \emph{two-player} zero-sum games, in
+which one side's gain is exactly the other's loss, so that a single score suffices
+if it is always read from the perspective of the side to move. It allows the
 search to be implemented using a single recursive procedure. Negamax is
 functionally equivalent to Minimax but leads to more compact and uniform code,
 which is why it is widely used in practical chess engines.

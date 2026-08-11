@@ -468,11 +468,27 @@ is unaffected by other load on the machine.
 
 For each position the \emph{stabilization depth} is defined as the smallest depth
 from which the root move matches the move of the deepest completed iteration and
-never changes again. Positions whose move still changes at the deepest searched
-depth are counted as not yet settled within the budget. Of the 309 positions, 306
-produced a usable move sequence, reaching a mean depth of $10.1$ plies.
-\cref{fig:move_stability} shows the cumulative distribution and
-\cref{tab:move_stability} lists selected thresholds.
+does not change again \emph{within the searched range}. Positions whose move still
+changes at the deepest searched depth are counted as not yet settled within the
+budget. Of the 309 positions, 306 produced a usable move sequence, reaching a mean
+depth of $10.1$ plies. \cref{fig:move_stability} shows the cumulative distribution
+and \cref{tab:move_stability} lists selected thresholds.
+
+This definition can only observe what happens inside the budget, which has to be
+kept in mind when reading the numbers. A move that survives until the last
+completed iteration might still change one ply deeper, and the evidence for a late
+stabilization is necessarily thinner than for an early one: a position that
+settles at depth 3 and is searched to depth 11 confirms that move eight more
+times, whereas one that settles at depth 10 out of 11 confirms it once. The
+measurement quantifies this directly. On average a stabilized move is confirmed by
+$4.3$ further iterations (median 3), but for $22.2\,\%$ of the positions the move
+changed in the very last iteration, which is why those are reported as unsettled
+rather than as stabilized at the final depth. Restricting the analysis to the 178
+positions whose move is confirmed by at least three further iterations shifts the
+median stabilization depth down to 3 plies, with $87\,\%$ settled by depth 6.
+That subset is itself selective, since it excludes late stabilizers by
+construction, so the two views bracket the effect rather than replacing one
+another: the reported figures are an upper bound on the depth actually needed.
 
 \begin{figure}[ht]
 \centering
@@ -517,3 +533,76 @@ the suite, an across-the-board gain in depth is diluted accordingly, which
 explains why the substantial depth gain of null-move pruning leaves the average
 centipawn loss unchanged. Move stability is therefore concentrated: the majority of decisions are
 made cheaply and early, while a hard minority keeps rewarding deeper search.
+
+\subsubsection{Stability in Evaluation Rather Than in the Move}
+\label{subsubsec:eval_eps_stability}
+
+Judging stability by the identity of the move has a blind spot: a switch between
+two moves of equal value counts as instability, while converging on a
+consistently poor move counts as success. To separate these cases, every move of
+every iteration was additionally scored against the reference engine, and a
+position is called \emph{$\varepsilon$-stable} from the smallest depth at which
+its centipawn loss stays below $\varepsilon$ for all deeper iterations.
+\cref{tab:eps_stability} contrasts the two criteria and \cref{fig:eps_stability}
+shows the corresponding curves.
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Criterion & Positions reaching it & Median depth & By depth 6 & By depth 8 \\ \midrule
+Move identity            & $100\,\%$  & 6 & $52.5\,\%$ & $74.4\,\%$ \\
+$\varepsilon = 0$\,cp    & $52.5\,\%$ & 4 & $35.1\,\%$ & $43.9\,\%$ \\
+$\varepsilon = 20$\,cp   & $66.9\,\%$ & 2 & $49.5\,\%$ & $60.0\,\%$ \\
+$\varepsilon = 50$\,cp   & $78.4\,\%$ & 1 & $63.6\,\%$ & $72.1\,\%$ \\ \bottomrule
+\end{tabular}
+\caption{Move stability judged by move identity versus by evaluation, for 305
+scored positions. Percentages refer to the whole set, so positions that never
+reach the criterion are included in the denominator.}
+\label{tab:eps_stability}
+\end{table}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.8\linewidth]{figures/move_stability_eps.png}
+\caption{Cumulative share of positions considered stable by depth $d$, judged by
+the identity of the move and by its distance to the reference evaluation.}
+\label{fig:eps_stability}
+\end{figure}
+
+The two criteria disagree in both directions, and the curves cross at around
+depth 6. Below that, judging by evaluation reports \emph{more} stability: at
+depth 3 already $39.7\,\%$ of the positions are within 20\,cp, against $31.8\,\%$
+whose move has settled. The engine reaches a decision of adequate quality earlier
+than it settles on one particular move, since part of the apparent instability is
+merely alternation between moves of comparable value.
+
+Above depth 6 the relation reverses, and this is the more consequential half. By
+move identity, $88.9\,\%$ of the positions have settled by depth 10; measured
+against the reference evaluation, only $63.3\,\%$ are within 20\,cp, and
+$33.1\,\%$ never reach that margin at any depth. These are not positions in which
+the move keeps changing: their move does settle, but it settles on something
+poor, with a mean loss of $120$\,cp at the deepest iteration. Fourteen of the 21
+worst positions from \cref{subsec:eval_outliers} are among them.
+
+Both readings therefore support the same conclusion from opposite sides. Where
+the engine is able to find a good move, it finds it early, earlier than the
+move-identity criterion suggests. Where it is not, the search converges
+confidently on the wrong answer. Stability of the move is thus a necessary but
+not a sufficient indicator of a settled decision.
+
+It is worth asking whether these positions would simply need more depth. The data
+argue against it. Both groups are searched to the same average depth of $10.1$
+plies under the shared node budget, so the difference is not one of search effort.
+What differs is how much that effort achieves: comparing the first half of each
+search to the second, and excluding the final iteration that defines the grouping,
+the loss falls by $36.5$\,cp on average for the positions that do converge, but
+only by $5.4$\,cp for those that do not. The same picture emerges when comparing
+shallow to intermediate depths, where the converging positions gain $41.5$\,cp and
+the others $21.9$\,cp. Additional depth is therefore not without effect on the
+difficult positions, but it is roughly half to one seventh as effective, and it
+starts from a worse level. Extrapolating the observed rate, the remaining gap of
+over $100$\,cp would not be closed by the few plies that are realistically
+attainable. The bottleneck lies in the evaluation, which cannot express what
+distinguishes these positions, and a search that optimizes a misleading objective
+more thoroughly does not arrive at a better move.
