@@ -58,8 +58,31 @@ tactically unstable positions, quiescence search produces more reliable
 evaluations and has become a standard component of classical chess
 engines~\cite{marsland1986review}.
 
+Beyond exact pruning, engines also employ heuristic forward pruning, which
+discards subtrees without proving them irrelevant. The most widely used variant
+is null-move pruning, introduced by Beal~\cite{beal1989nullmove}: if passing a
+turn still leaves the position good enough to cause a cutoff, the subtree is
+assumed to be safe to skip. Unlike Alpha-Beta this is not value-preserving, so it
+trades a small risk of overlooking a line for a substantially smaller tree.
+
+Closest to the question of this thesis is the work on how additional search
+actually pays off. Junghanns et al.~\cite{junghanns1997diminishing} studied
+diminishing returns in self-play and found the winning percentage per additional
+ply to decrease with depth, an effect partly masked by the high error rate of
+programs at shallow depths. Ferreira~\cite{ferreira2013impact} approached the
+same relationship from the other direction and related search depth to Elo,
+reporting gains per ply that shrink as depth grows.
+
+These studies establish that the returns of additional search diminish, but they
+measure it through game outcomes between engines of differing depth. What they do
+not address is where the returns diminish \emph{within a single engine under a
+clock}, at which depth its decisions stop changing, and which positions cause the
+remaining error. This thesis takes that perspective: instead of relating depth to
+playing strength, it relates the time budget to the quality of the individual
+decision on a fixed set of positions, and separates the positions in which
+additional search still changes the decision from those in which it does not.
+
 While modern state-of-the-art engines incorporate additional techniques such as
 bitboards, evaluation learning, and neural networks~\cite{silver2018alphazero},
 the classical search principles discussed above remain fundamental. This work
-builds upon these established ideas and focuses specifically on the relationship
-between invested search time and decision quality.
+builds upon these established ideas.

@@ -16,31 +16,46 @@ individual experiments remain directly comparable.
 
 The experimental evaluation addresses the following research questions:
 
+The experiments group around three questions. The first concerns the relationship
+between computation and decision quality, the second the effect of the individual
+search refinements, and the third the origin of the errors that remain.
+
+\paragraph{Time and decision quality.}
 \begin{itemize}
-    \item \textbf{Playing strength:} how strong is the engine under realistic
-    tournament time controls when compared to a fixed reference opponent?
-    \item \textbf{Null-move pruning:} how does null-move pruning affect reachable
-    depth, node throughput, transposition table behavior, and move quality across
-    time budgets?
-    \item \textbf{Transposition table size:} from which table size onward does
-    the available memory stop limiting the search?
     \item \textbf{Time-to-quality and depth-versus-time:} how do reachable depth
-    and move quality develop as the time budget increases, and where does
-    additional time stop paying off?
+    and move quality develop as the time budget increases, and from which budget
+    onward is no further improvement detectable?
+    \item \textbf{Move stability:} at which search depth does the decision settle,
+    measured both by the identity of the chosen move and by its distance to a
+    reference evaluation?
+\end{itemize}
+
+\paragraph{Effect of the search refinements.}
+\begin{itemize}
+    \item \textbf{Null-move pruning:} how does it affect reachable depth, node
+    throughput, transposition table behavior, and move quality across time
+    budgets?
+    \item \textbf{Search tree reuse:} how much depth does a persistent
+    transposition table gain over the course of a game compared to starting each
+    search from an empty table?
     \item \textbf{PVS parameter sweep:} which combination of minimum scouting
     depth (\texttt{PvsMinDepth}) and number of fully searched moves
     (\texttt{PvsScoutAfterMove}) yields the best ratio of cost reduction to move
     quality?
-    \item \textbf{Search tree reuse:} how much depth does a persistent
-    transposition table gain over the course of a game compared to starting each
-    search from an empty table?
-    \item \textbf{Move stability:} at which search depth does the best move
-    stabilize, so that deeper search no longer changes the decision?
 \end{itemize}
 
-The playing-strength question establishes an absolute reference point, while the
-remaining questions characterize time-dependent decision making directly and
-quantify the effect of the individual search refinements.
+\paragraph{Origin of the residual error.}
+\begin{itemize}
+    \item \textbf{Distribution of move quality:} how is the error spread over the
+    suite, and which positions account for it?
+    \item \textbf{Transposition table size:} from which table size onward does
+    the available memory stop limiting the search?
+\end{itemize}
+
+In addition, the engine is compared against a fixed reference opponent in a match.
+That experiment is a sanity check on the implementation as a whole rather than a
+research question in its own right, since its result depends entirely on the
+chosen opponent configuration.
 
 \subsection{Experimental Setup}
 \label{subsec:common_setup}
@@ -545,10 +560,10 @@ transposition table kept versus cleared before every search.}
 \label{fig:tree_reuse}
 \end{figure}
 
-Compared to null-move pruning, the effect is smaller in absolute terms ($+0.28$
-versus a full ply), but it comes at no cost whatsoever: no search parameter is
-changed, nothing is pruned away, and no accuracy is traded. The engine merely
-stops discarding what it has already computed.
+Compared to null-move pruning, the effect is smaller in absolute terms ($+0.25$
+versus a full ply), but it is obtained differently: no search parameter is
+changed, no subtree is discarded, and no accuracy is traded. The engine merely
+stops throwing away what it has already computed.
 
 \subsection{Move Stability}
 \label{subsec:eval_move_stability}

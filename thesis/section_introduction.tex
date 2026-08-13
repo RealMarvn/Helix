@@ -77,9 +77,11 @@ and describes how these techniques are realized in practice. Third, it presents
 an empirical evaluation of time-dependent decision making, analyzing move
 stability across depths, time-to-quality curves, the depth and quality gained by
 each refinement, and the distribution of move quality over the position suite.
-The results locate the practical sweet spot between search time and decision
-quality in time-controlled chess engines, and show that beyond it the limiting
-factor is the evaluation function rather than the reachable depth.
+On the position suite used here, the results locate the budget beyond which
+additional time no longer measurably improves the typical decision, and they show
+that the residual error is concentrated in a minority of positions that respond
+to additional depth far more weakly than the rest, which points to the evaluation
+rather than the reachable depth as the binding constraint there.
 
 The remainder of this thesis is structured as follows. \cref{sec:related_work}
 discusses relevant prior work in computer chess and game tree search.
