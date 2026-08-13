@@ -13,20 +13,23 @@ to be extended for the remaining gap to close.
 The clearest finding of this work is that additional search depth does not
 translate into proportionally better decisions. Null-move pruning
 (\cref{subsec:eval_nmp}) reaches a greater depth at every single one of the nine
-time budgets, at one second a full ply, and yet the mean centipawn loss remains
-statistically unchanged. Search tree reuse (\cref{subsec:eval_tree_reuse}) adds
-another $0.28$ ply at no cost at all. Both refinements do exactly what they are
-designed to do, and neither shows up as a measurable gain in move quality on the
-test suite.
+time budgets, at one second a full ply, with confidence intervals that exclude
+zero throughout; the corresponding intervals for centipawn loss contain zero at
+every budget. Search tree reuse (\cref{subsec:eval_tree_reuse}) adds another
+$0.25$ ply, 95\,\% CI $[+0.22, +0.29]$, without changing any search parameter.
+Both refinements demonstrably deepen the search, and for neither could a
+corresponding gain in move quality be detected on this suite.
 
-The move stability measurements (\cref{subsec:eval_move_stability}) explain why.
-By depth 8, the depth the engine reaches at a one-second budget, three quarters
-of all positions have already settled on their final move, and about a quarter
-never change it from the very first iteration. Deeper search can only change the
-decision in the remaining fifth of positions, so an across-the-board gain in
-depth is diluted accordingly. This is the practical sweet spot the thesis asked
-for: it lies where the depth curve is still rising while the quality curve has
-already flattened, for this engine and suite at roughly one second per move.
+The move stability measurements (\cref{subsec:eval_move_stability}) offer an
+explanation. By depth 8, the depth the engine reaches at a one-second budget,
+three quarters of all positions have already settled on their final move, and
+about a quarter never change it from the very first iteration. Deeper search can
+only change the decision in the remaining fifth of positions, so an
+across-the-board gain in depth is diluted accordingly. Applying the saturation
+criterion of \cref{subsec:eval_ttq}, the smallest budget from which no further
+improvement is detectable is one second for this engine and suite. That is a
+statement about typical positions: the median loss saturates there, while the
+mean continues to fall because a minority of difficult positions keeps improving.
 
 \subsection{Where the Search Is Actually Limited}
 \label{subsec:discussion_limits}
@@ -39,11 +42,12 @@ small residue: fifteen positions account for nearly half of it.
 
 These positions share a profile. They hold fewer pieces than average, a third of
 them are endgames, and three contain a forced mate the engine does not find.
-They are precisely the positions in which material and piece-square tables carry
-no useful information, since passed pawns, opposition and king activity are not
-represented in the evaluation (\cref{subsec:eval_limitations}). In such
-positions the limiting factor is not how deep the engine searches but what its
-evaluation is able to distinguish, and no attainable depth compensates for that.
+These are the positions in which material and piece-square tables carry little
+useful information, since passed pawns, opposition and king activity are not
+represented in the evaluation (\cref{subsec:eval_limitations}). The observation
+is therefore consistent with evaluation quality being the binding constraint
+there, although the experiments presented here cannot separate it from other
+candidates such as horizon effects or missing search extensions.
 
 Judging stability by evaluation instead of by the identity of the move makes the
 consequence explicit (\cref{subsubsec:eval_eps_stability}). While the move
@@ -54,14 +58,16 @@ move. A stable decision is therefore not by itself a good one, which is worth
 keeping in mind wherever move stability is used as a stopping criterion in
 time management.
 
-That these positions are limited by evaluation rather than by depth can be shown
-directly. They are searched just as deeply as the rest, to the same average of
-$10.1$ plies, but they convert that depth into far less: over the course of a
-search their loss improves by $5.4$\,cp where the converging positions gain
-$36.5$\,cp. Depth is not useless there, it is merely too weak a lever to close a
-gap of more than $100$\,cp. This is the clearest argument that further effort
-belongs in the evaluation function: a search that optimizes a misleading
-objective more thoroughly only becomes more certain of the wrong answer.
+What can be shown directly is that these positions do not respond to depth the way
+the rest of the suite does. They are searched just as deeply, to the same average
+of $10.1$ plies, but convert that depth into far less: over the course of a search
+their loss improves by $5.4$\,cp where the converging positions gain $36.5$\,cp.
+Depth is not useless there, it is merely a much weaker lever against a gap of more
+than $100$\,cp. This rules out insufficient search effort as the explanation, but
+it does not by itself identify the evaluation as the cause; it makes it the most
+plausible candidate, given which positions are affected. Deciding the question
+requires an intervention on the evaluation itself, which is the single most
+valuable experiment this thesis leaves open.
 
 This also puts the null result of the parameter sweep
 (\cref{subsec:eval_pvs_sweep}) into perspective. Across all 30 configurations the
@@ -132,10 +138,15 @@ the positions that dominate the mean loss today, and only then would the depth
 already gained by null-move pruning and tree reuse have anything left to
 contribute.
 
-A second direction concerns the measurement itself. Reporting the median
-alongside the mean, or trimming the extreme cases, would make the effect of
-search refinements visible at all, since the mean is dominated by a residue that
-no search improvement can fix.
+A second direction concerns the measurement itself. A single mean is a poor
+summary of a distribution this skewed, and the answer is not to remove the
+extreme cases, which are the engine's real failures and arguably its most
+informative observations, but to report several estimands side by side: the mean
+as expected loss, the median as typical loss, upper percentiles, the share of
+positions within a given margin, and the rate of catastrophic errors. Each
+answers a different question, and stratifying them by position type would show
+which refinement helps which class of position instead of averaging the two
+regimes into one number.
 
 The stability analysis could be extended in the same spirit. Judging convergence
 by evaluation rather than by the identity of the move already proved more
@@ -154,16 +165,19 @@ they would likely pay off.
 \subsection{Summary}
 
 This thesis implemented a complete chess engine and used it to examine how
-invested search time translates into decision quality. Both refinements studied
-work as intended: null-move pruning gains a full ply at one second, and a
-persistent transposition table adds a further $0.28$ ply for free, growing to
-$0.39$ ply in the endgame. Neither improves the average move quality measurably,
-because three quarters of all positions have settled by the depth the engine
-already reaches, and the remaining errors are concentrated in endgames that the
-evaluation cannot assess regardless of depth.
+invested search time translates into decision quality on a fixed position suite.
+Both refinements studied deliver what they promise in terms of search: null-move
+pruning gains a full ply at one second and search tree reuse a further $0.25$ ply,
+each with intervals well clear of zero. For neither could a corresponding
+improvement in move quality be detected, and the reason appears to be twofold:
+three quarters of all positions have settled on their move by the depth the engine
+already reaches, and the residual error is concentrated in a minority of sparse
+endgame positions that respond to depth far more weakly than the rest.
 
-The sweet spot between search time and decision quality is therefore reached
-earlier than expected, at around one second per move for this engine. Beyond that
-point, additional time keeps buying depth but no longer buys decisions. What
-limits the engine at that stage is no longer how far it looks ahead, but what it
-is able to recognise when it gets there.
+Applying an explicit saturation criterion, typical move quality on this suite
+stops improving detectably at around one second per move, while average quality
+continues to fall because that difficult minority keeps improving. Beyond this
+point, additional time still buys depth, but it buys measurably better decisions
+only for a small class of positions. The evidence suggests, without establishing
+it conclusively, that what limits the engine there is less how far it looks ahead
+than what it is able to recognise when it gets there.

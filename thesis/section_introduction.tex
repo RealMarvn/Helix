@@ -60,9 +60,12 @@ the UCI protocol. In particular, a two-stage time budget with soft and hard
 deadlines is used to control the interaction between iterative deepening and
 time constraints.
 
-Beyond this baseline, this thesis develops three further search improvements:
-Principal Variation Search, null-move pruning, and the reuse of search trees from
-previous searches through a persistent transposition table. The techniques are
+Beyond this baseline, this thesis integrates and experimentally studies three
+further search refinements: Principal Variation Search, null-move pruning, and the
+reuse of search trees from previous searches through a persistent transposition
+table. All three are established techniques; the contribution lies in their
+controlled implementation and measurement within one engine, not in the
+algorithms themselves. The techniques are
 introduced formally in \cref{sec:preliminaries} and described at the
 implementation level in \cref{sec:algorithm_implementation}.
 

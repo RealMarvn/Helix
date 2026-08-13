@@ -60,6 +60,20 @@ Stockfish uses for its own benchmark. Each configuration is measured with three
 repetitions per position to average out scheduling noise, and reported figures
 are means over positions and repetitions.
 
+The suite was chosen because it is public, fixed and therefore reproducible, but
+its composition has to be kept in mind when reading the results. It contains
+between 5 and 32 pieces, with a median of 19; by piece count, $25.8\,\%$ of the
+positions are opening-like ($\geq 26$ pieces), $34.0\,\%$ middlegame-like, and
+$40.2\,\%$ endgames (fewer than 16 pieces). The positions are also not balanced:
+the median reference evaluation is $85$\,cp, only $11\,\%$ of the positions are
+approximately equal ($|\text{eval}| \leq 50$\,cp) and $16\,\%$ are already
+decided ($|\text{eval}| > 300$\,cp). This is a benchmark set built to exercise a
+search, not a sample of the positions an engine faces in a game, and endgames in
+particular are over-represented relative to ordinary play. All results in this
+chapter therefore describe the behavior of the engine \emph{on this suite};
+generalizing them to tournament play would require a second, game-derived
+position set, which is left to future work.
+
 \paragraph{Time Budgets.}
 Time-dependent experiments sweep a fixed set of per-move budgets of
 $10, 25, 50, 100, 250, 500, 1000, 2000$, and $5000$\,ms. This range spans from
@@ -69,8 +83,14 @@ that reach depths well into the middlegame.
 \paragraph{Quality Scoring.}
 Because the positions have no known ground-truth best move, move quality is
 measured against a strong reference. For every position, Stockfish is run to a
-fixed depth of 20 to obtain both a reference best move and a reference
-evaluation. Two metrics are derived from this reference:
+fixed depth of 20, single-threaded, with its default hash size and without
+tablebases, to obtain a reference best move and a reference evaluation. The move
+the engine actually played is scored by applying it and analysing the resulting
+position to the same depth, again from the perspective of the side that moved, so
+that both values are produced under identical conditions and remain comparable.
+Mate scores are capped at $1000$\,cp so that a single forced mate cannot dominate
+an average; the cap is reported explicitly wherever it is reached. Two metrics
+are derived from this reference:
 \begin{itemize}
     \item \textbf{Centipawn loss (CPL):} the difference, in centipawns and from
     the perspective of the side to move, between the reference evaluation of
@@ -84,6 +104,14 @@ CPL is the primary quality metric, as it also credits moves that differ from the
 reference move but are of comparable value; agreement is reported as a
 complementary, stricter indicator.
 
+Since the dependent variable of every quality statement in this chapter is
+produced by this reference, its stability is a limitation of the setup. Depth 20
+was chosen as a compromise between reference strength and the cost of scoring
+several thousand positions, but it was not validated against a deeper reference.
+A sensitivity check, rescoring the suite at a substantially higher depth and
+comparing how often the reference move and the resulting CPL change materially,
+would be needed to rule out that individual conclusions depend on this choice.
+
 \paragraph{Benchmark Harness.}
 All experiments are driven by the dedicated benchmarking harness in the
 \texttt{bench/} directory, which records for each search, among others, the
@@ -93,6 +121,20 @@ elapsed time. The raw per-search records are written to CSV files and aggregated
 offline, which keeps measurement and analysis reproducible. Each file also stores
 the commit hash of the engine it was produced with, so every table in this
 chapter can be traced back to a specific state of the implementation.
+
+\paragraph{Uncertainty.}
+The dominant source of variation in these experiments is not measurement noise
+but the difference between chess positions: the same configuration can lose zero
+centipawns in one position and several hundred in another. Repetitions alone
+therefore say little about how reliable a reported difference is. Since almost
+all comparisons are paired, the same positions are measured under both
+configurations, uncertainty is quantified on the paired differences
+$d_i = x_{i,A} - x_{i,B}$ instead. Reported intervals are $95\,\%$ percentile
+bootstrap confidence intervals over $10\,000$ resamples, drawn over the unit that
+is actually independent: positions for the suite experiments, and complete games
+for the tree-reuse experiment, whose plies are clustered within games. An
+interval that excludes zero is called a difference; one that does not is reported
+as such, without claiming that no effect exists.
 
 \paragraph{Correctness of the Move Generator.}
 All results rest on the assumption that the engine generates and applies moves
@@ -107,28 +149,36 @@ engine reproduces the reference values for all tested positions and depths.
 \subsection{Playing Strength (Engine versus Engine)}
 \label{subsec:engine_eval}
 
-To place the engine on an absolute strength scale, it is evaluated in
-head-to-head matches against a fixed reference opponent under tournament
-conditions. The matches are played through the CuteChess framework, with a
+As an external sanity check on the implementation, the engine is evaluated in
+head-to-head matches against a fixed reference opponent. This experiment does not
+place the engine on an absolute rating scale, it only relates it to one specific
+opponent configuration. The matches are played through the CuteChess framework, with a
 development build of Stockfish as the reference opponent. To obtain a comparison
 in the target strength range, Stockfish is restricted through its built-in
 strength limitation (\texttt{UCI\_LimitStrength} with a nominal target of
 2000\,Elo), a single search thread, and a 32\,MB hash; Helix likewise runs
 single-threaded with a 32\,MB hash and otherwise default settings. Both engines
-play a classical time control of five minutes per side with a 0.5\,second
-increment.
+play a blitz time control of five minutes per side with a 0.5\,second increment,
+which is the range in which time management is most visible while still allowing
+searches of useful depth.
 
 To obtain a fair and diverse sample, the games are opened from a balanced opening
 book (\texttt{8moves\_v3}), with each opening played once from either side so
 that both engines receive identical starting positions as White and Black. In
 total 400 games are played with alternating colors. Clearly decided games are
 adjudicated to keep the match tractable: a game is scored as won once both
-engines agree on an evaluation beyond $\pm 600$ centipawns for several
-consecutive moves, and as drawn once the evaluation stays within $\pm 10$
-centipawns for several moves in the late middlegame. All games run on the Apple
+engines report an evaluation beyond $\pm 600$ centipawns for three consecutive
+moves, and as drawn once the evaluation stays within $\pm 10$ centipawns for
+eight consecutive moves from move 40 onwards. All games run on the Apple
 M3 Pro machine described in \cref{subsec:common_setup}. Playing strength is
-reported as an Elo difference derived from the match result, together with the
-likelihood of superiority (LOS) and the draw ratio.
+reported as the Elo difference derived from the match result by the testing
+framework, together with the likelihood of superiority (LOS) and the draw ratio.
+
+Two caveats apply to the reported interval. The games are played as
+colour-swapped opening pairs, so the 400 games are not 400 independent trials;
+the interval, computed by the framework under an independence assumption, is
+therefore optimistic. And the LOS of $100\,\%$ is a rounded value, not a
+probability of one.
 
 \cref{tab:elo_results} summarizes the match.
 
@@ -174,23 +224,25 @@ centipawn loss for both configurations.
 
 \begin{table}[ht]
 \centering
-\begin{tabular}{@{}rcccc@{}}
+\begin{tabular}{@{}rccrccr@{}}
 \toprule
- & \multicolumn{2}{c}{Completed depth (ply)} & \multicolumn{2}{c}{Centipawn loss} \\
-\cmidrule(lr){2-3}\cmidrule(lr){4-5}
-Budget (ms) & without NMP & with NMP & without NMP & with NMP \\ \midrule
-10   & 3.67 & 3.91 & 60.2 & 61.9 \\
-25   & 4.29 & 4.65 & 58.9 & 60.7 \\
-50   & 4.86 & 5.30 & 57.1 & 56.0 \\
-100  & 5.37 & 5.96 & 57.2 & 60.2 \\
-250  & 6.04 & 6.81 & 54.6 & 55.7 \\
-500  & 6.52 & 7.53 & 56.8 & 55.0 \\
-1000 & 7.08 & 8.16 & 55.5 & 52.4 \\
-2000 & 7.55 & 8.79 & 49.2 & 50.3 \\
-5000 & 8.09 & 9.43 & 43.8 & 44.4 \\ \bottomrule
+ & \multicolumn{3}{c}{Completed depth (ply)} & \multicolumn{3}{c}{Centipawn loss} \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}
+Budget (ms) & no NMP & NMP & $\Delta$ [95\,\% CI] & no NMP & NMP & $\Delta$ [95\,\% CI] \\ \midrule
+10   & 3.67 & 3.91 & $+0.23$ [$+0.19$, $+0.28$] & 60.2 & 61.9 & $+1.7$ [$-1.6$, $+4.9$] \\
+25   & 4.29 & 4.65 & $+0.36$ [$+0.31$, $+0.41$] & 58.9 & 60.7 & $+1.8$ [$-2.1$, $+5.5$] \\
+50   & 4.86 & 5.30 & $+0.44$ [$+0.39$, $+0.50$] & 57.1 & 56.0 & $-1.1$ [$-8.9$, $+6.7$] \\
+100  & 5.37 & 5.96 & $+0.59$ [$+0.52$, $+0.66$] & 57.2 & 60.2 & $+3.0$ [$-5.2$, $+11.8$] \\
+250  & 6.04 & 6.81 & $+0.78$ [$+0.70$, $+0.85$] & 54.6 & 55.7 & $+1.1$ [$-7.5$, $+8.5$] \\
+500  & 6.52 & 7.53 & $+1.02$ [$+0.95$, $+1.09$] & 56.8 & 55.0 & $-1.9$ [$-8.1$, $+3.8$] \\
+1000 & 7.08 & 8.16 & $+1.09$ [$+1.02$, $+1.17$] & 55.5 & 52.4 & $-3.1$ [$-9.3$, $+2.5$] \\
+2000 & 7.55 & 8.79 & $+1.25$ [$+1.17$, $+1.33$] & 49.2 & 50.3 & $+1.1$ [$-9.7$, $+11.4$] \\
+5000 & 8.09 & 9.43 & $+1.35$ [$+1.27$, $+1.43$] & 43.8 & 44.4 & $+0.6$ [$-4.3$, $+5.1$] \\ \bottomrule
 \end{tabular}
 \caption{Reachable depth and centipawn loss with and without null-move pruning,
-averaged over 309 positions and three repetitions per budget.}
+over 309 positions and three repetitions per budget. $\Delta$ is the paired
+difference (NMP minus no NMP) with a 95\,\% bootstrap confidence interval over
+positions; positive values mean more depth respectively higher loss.}
 \label{tab:nmp_depth_cpl}
 \end{table}
 
@@ -209,24 +261,31 @@ visits a larger number of \emph{distinct} positions and re-visits known entries
 less often. The hit rate is therefore best read as a symptom of the search shape
 rather than as a quality target in itself.
 
-The effect on move quality, however, does not follow the depth gain, and this is
-reported here without smoothing. Across the nine budgets the pruning
-configuration achieves a lower centipawn loss in only three cases (50\,ms,
-500\,ms and 1000\,ms) and a higher one in the remaining six; averaged over all
-budgets the difference amounts to $+0.37$\,cp in favour of the configuration
-\emph{without} pruning, which is well inside the noise of three repetitions. The
-largest single gain for pruning occurs at one second ($52.4$ versus $55.5$\,cp),
-the largest loss at 100\,ms ($60.2$ versus $57.2$\,cp).
+The effect on move quality does not follow the depth gain. The paired differences
+scatter around zero: the pruning configuration is ahead at three of the nine
+budgets and behind at six, the largest single values being $-3.1$\,cp at one
+second and $+3.0$\,cp at 100\,ms. Crucially, the confidence interval contains
+zero at \emph{every} budget, and the intervals are wide, spanning ten centipawns
+or more, because the per-position differences vary far more than their mean. The
+experiment therefore does not show that pruning leaves quality untouched; it
+shows that any effect is small compared to the spread between positions and
+cannot be resolved with this sample. The contrast to the depth column, where
+every interval excludes zero by a wide margin, is what makes the comparison
+informative.
 
 Taken together, this is the central and somewhat sobering observation of this
-experiment: null-move pruning reliably buys depth, but the additional depth does
-not translate into measurably better moves. A full extra ply at one second leaves
-move quality statistically unchanged. This is the first direct piece of evidence
-for the thesis question, and it is examined further in
-\cref{subsec:eval_ttq,subsec:eval_move_stability}: beyond a certain point the
-engine is not limited by how deep it searches, but by what its evaluation can
-distinguish. \cref{fig:quality_vs_depth,fig:search_nps} visualize the quality and
-the node throughput across budgets.
+experiment: null-move pruning reliably buys depth, while no corresponding gain in
+move quality could be detected. One qualification matters for the interpretation.
+Null-move pruning does not give the engine the same search plus one exact ply, it
+changes which subtrees are explored at all; the comparison is therefore between
+two search algorithms under equal time, not a clean measurement of what one
+additional ply is worth. Isolating the latter would require the same algorithm
+run at different fixed budgets. What the experiment does establish is that a
+refinement which demonstrably deepens the search does not, on this suite,
+demonstrably improve its decisions, and
+\cref{subsec:eval_ttq,subsec:eval_outliers,subsec:eval_move_stability} examine
+where that gap comes from. \cref{fig:quality_vs_depth,fig:search_nps} visualize
+the quality and the node throughput across budgets.
 
 \begin{figure}[ht]
 \centering
@@ -289,21 +348,41 @@ doubling of time in the tested range, which reflects the exponential relationshi
 between depth and node count discussed in \cref{sec:preliminaries}.
 
 Move quality, in contrast, improves far less smoothly. Over the whole range from
-10\,ms to 5000\,ms, a factor of 500 in thinking time, the centipawn loss of the
-pruning configuration falls only from about $62$ to $44$\,cp, and it does so
+10\,ms to 5000\,ms, a factor of 500 in thinking time, the mean centipawn loss of
+the pruning configuration falls only from about $62$ to $44$\,cp, and it does so
 non-monotonically: the curve rises again at 100\,ms and at 2000\,ms before
-continuing downwards. Put differently, the first $250$\,ms buy roughly three
-plies of depth but barely six centipawns of quality, while the last step from
-2000 to 5000\,ms buys a further $0.6$\,ply and six more centipawns.
+continuing downwards. No single doubling of the budget produces a difference
+whose confidence interval excludes zero; only comparisons spanning several steps
+do, for instance from 500\,ms to 5000\,ms.
 
-This is the central observation behind the thesis question. Depth and decision
-quality are not proportional: additional search time reliably converts into
-depth, but only weakly into better moves. The engine typically finds a move of
-comparable quality early and spends the remaining time confirming it, which is
-consistent with the move stability results in
-\cref{subsec:eval_move_stability}. The practical sweet spot therefore lies where
-the depth curve is still rising steeply while the quality curve has already
-flattened, which for this engine and suite is reached around one second per move.
+To avoid identifying a saturation point by eye, it is defined here explicitly.
+Call a budget $t$ \emph{saturated} if no larger budget yields a paired
+improvement whose $95\,\%$ confidence interval excludes zero, and let $t^\ast$ be
+the smallest budget that is saturated and stays saturated:
+\[
+t^\ast = \min\{\, t \;:\; \text{every } s \geq t \text{ is saturated} \,\}, \quad
+t \text{ saturated} \iff \text{CI}_{95}\big(\text{CPL}(t') - \text{CPL}(t)\big)
+\ni 0 \ \forall\, t' > t .
+\]
+The second condition is necessary because saturation alone is not monotone: at
+the shortest budgets the per-position differences scatter so widely that nothing
+is detectable there either, which would otherwise mark 50\,ms as a saturation
+point. On this suite the criterion gives $t^\ast = 1000$\,ms. At 500\,ms a further
+improvement towards 5000\,ms is still detectable, at one second it is not. The
+median tells the same story more directly: it falls from $16$\,cp at 10\,ms over
+$7$\,cp at 100\,ms to $2$\,cp at one second, and then stops, standing at $3$\,cp
+at five seconds.
+
+Two qualifications belong to this number. First, $t^\ast$ marks the point where
+further improvement is no longer \emph{detectable} with this sample, not where it
+provably ceases; the intervals are wide, so a small effect could remain hidden.
+Second, mean and median diverge here in a way that matters: while the median
+saturates at one second, the mean still falls from $52$ to $44$\,cp between one
+and five seconds, because a minority of positions continues to improve.
+\cref{subsec:eval_outliers} shows that this minority dominates the mean, so the
+honest formulation is that \emph{typical} move quality saturates around one
+second on this suite, while \emph{average} quality keeps improving through a
+small group of difficult positions.
 
 \subsection{Distribution of Move Quality}
 \label{subsec:eval_outliers}
@@ -372,10 +451,21 @@ budget). The default configuration is \texttt{PvsMinDepth}\,$=2$,
 \label{tab:pvs_sweep}
 \end{table}
 
-The sweep is a deliberate null result: across all 30 configurations the completed
-depth stays between $8.09$ and $8.16$\,ply and the node count between $1.52$ and
-$1.55$ million, a spread of about $1.8\,\%$ that is within measurement noise. No
-configuration offers a meaningful improvement over any other.
+The sweep is a negative result: across all 30 configurations the completed depth
+stays between $8.09$ and $8.16$\,ply and the node count between $1.52$ and $1.55$
+million, a spread of about $1.8\,\%$. Paired against the default configuration
+over positions, the most aggressive setting differs by $+0.002$\,ply,
+95\,\% CI $[-0.003, +0.009]$, and even the most conservative one, which almost
+disables scouting, by only $-0.064$\,ply, 95\,\% CI $[-0.096, -0.033]$. The
+latter interval does exclude zero, so the sweep does detect a difference, but one
+two orders of magnitude below the ply gained by null-move pruning. No setting
+offers a practically relevant improvement over the default.
+
+A caveat applies to this sweep specifically: with 30 configurations compared
+against one another, some differences of this size are expected by chance alone,
+and no correction for multiple comparisons was applied. The result should be read
+as the absence of a usable tuning gain, not as a precise ranking of the
+configurations.
 
 The reason is visible in the re-search column. The whole point of the scouting
 parameters is to control the trade-off between the savings of the cheap
@@ -422,14 +512,22 @@ TT kept (tree reuse) & 7.52 & 0.152 & 772\,368 \\ \bottomrule
 \label{tab:tree_reuse}
 \end{table}
 
-Keeping the table yields $+0.28$\,ply on average at an unchanged time budget,
-together with a hit rate that rises from $0.136$ to $0.152$, i.e., by about
-$12\,\%$ relative. A paired comparison per position shows how this average comes
-about: in $69\,\%$ of all plies both modes reach exactly the same depth, in
-$28\,\%$ the persistent table reaches deeper, and only in the remaining few does
-the cleared table win. Tree reuse thus does not speed up every single search, it
-provides a head start in those positions where the new root actually lies inside
-the previously explored tree.
+Keeping the table yields more depth at an unchanged time budget, together with a
+higher hit rate. The 2256 plies are not independent observations, since they are
+clustered within 30 games, so the effect is quantified per game: averaging the
+paired per-ply differences within each game and bootstrapping over games gives
+$+0.254$\,ply, 95\,\% CI $[+0.218, +0.293]$, and $+0.013$ in hit rate,
+95\,\% CI $[+0.010, +0.018]$. The effect is consistent rather than driven by
+individual games: all 30 games show a positive mean difference. Treating the
+plies as independent would have produced a visibly narrower interval and thereby
+overstated the precision.
+
+A paired comparison per ply shows how the average comes about: in $69\,\%$ of all
+plies both modes reach exactly the same depth, in $28\,\%$ the persistent table
+reaches deeper, and only in the remaining few does the cleared table win. Tree
+reuse thus does not speed up every single search, it provides a head start in
+those positions where the new root actually lies inside the previously explored
+tree.
 
 That reading is supported by the development over the course of a game, shown in
 \cref{fig:tree_reuse}. The gain grows from $+0.16$\,ply in the opening
@@ -591,18 +689,29 @@ move-identity criterion suggests. Where it is not, the search converges
 confidently on the wrong answer. Stability of the move is thus a necessary but
 not a sufficient indicator of a settled decision.
 
-It is worth asking whether these positions would simply need more depth. The data
-argue against it. Both groups are searched to the same average depth of $10.1$
-plies under the shared node budget, so the difference is not one of search effort.
-What differs is how much that effort achieves: comparing the first half of each
-search to the second, and excluding the final iteration that defines the grouping,
-the loss falls by $36.5$\,cp on average for the positions that do converge, but
-only by $5.4$\,cp for those that do not. The same picture emerges when comparing
-shallow to intermediate depths, where the converging positions gain $41.5$\,cp and
-the others $21.9$\,cp. Additional depth is therefore not without effect on the
-difficult positions, but it is roughly half to one seventh as effective, and it
-starts from a worse level. Extrapolating the observed rate, the remaining gap of
-over $100$\,cp would not be closed by the few plies that are realistically
-attainable. The bottleneck lies in the evaluation, which cannot express what
-distinguishes these positions, and a search that optimizes a misleading objective
-more thoroughly does not arrive at a better move.
+It is worth asking whether these positions would simply need more depth. Within
+the tested range, the data argue against it. Both groups are searched to the same
+average depth of $10.1$ plies under the shared node budget, so the difference is
+not one of search effort. What differs is how much that effort achieves:
+comparing the first half of each search to the second, and excluding the final
+iteration that defines the grouping, the loss falls by $36.5$\,cp on average for
+the positions that do converge, but only by $5.4$\,cp for those that do not. The
+same picture emerges when comparing shallow to intermediate depths, where the
+converging positions gain $41.5$\,cp and the others $21.9$\,cp. Additional depth
+is therefore not without effect on the difficult positions, but it is roughly
+half to one seventh as effective, and it starts from a worse level.
+
+What this establishes is that the two groups differ in how well they convert
+depth into quality, not why. The observation is consistent with the evaluation
+being the binding constraint: the affected positions are materially sparse
+(\cref{subsec:eval_outliers}), and material with piece-square tables encodes
+nothing about passed pawns, opposition or king activity, which is exactly what
+decides such positions. Other explanations cannot be excluded by this experiment,
+however, among them horizon effects in long forcing lines, the absence of search
+extensions, or degraded move ordering in sparse positions. Establishing the cause
+would require an intervention rather than an observation: adding the missing
+evaluation terms and re-running the affected subset under an identical node
+budget. If the group improved materially, the argument would be direct. That
+experiment is left to future work; what can be stated here is that within the
+depths this engine reaches, the difficult positions do not respond to depth the
+way the rest of the suite does.

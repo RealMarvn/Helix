@@ -33,8 +33,8 @@ The engine is implemented from scratch in \texttt{C++} using a classical
 mailbox-based board representation. Its baseline integrates established
 techniques such as alpha-beta pruning, transposition tables, quiescence search,
 heuristic move ordering, and a two-stage time management system with soft and
-hard deadlines. On top of this baseline, the thesis develops three further search
-improvements: Principal Variation Search (PVS), which verifies all but the
+hard deadlines. On top of this baseline, the thesis implements and evaluates three
+further search refinements: Principal Variation Search (PVS), which verifies all but the
 presumed best move with inexpensive null-window searches; null-move pruning,
 which discards subtrees that remain winning even after passing a turn; and the
 reuse of search trees from previous searches, realized through a persistent
@@ -46,23 +46,22 @@ on a suite of 309 positions across time budgets from 10\,ms to 5\,s. Move qualit
 is scored against a strong reference engine as centipawn loss.
 
 The results separate the two halves of the question. Both refinements deliver
-depth as intended: null-move pruning gains a full ply at a one-second budget, and
-the persistent transposition table adds a further $0.28$ ply at no cost, rising
-to $0.39$ ply in the endgame. Neither improves average move quality measurably.
-The reason is that decisions settle early, three quarters of all positions have
-fixed their move by the depth the engine already reaches, and that the remaining
-error is concentrated in a small residue: the median centipawn loss is $2$ while
-the mean is $52$, with fifteen positions accounting for nearly half of that mean.
-These positions are predominantly endgames, in which material and piece-square
-tables carry no useful information. A sweep over the Principal Variation Search
-parameters produces a deliberate null result, as strong move ordering leaves
-almost no re-search cost to tune away.
+depth as intended: null-move pruning gains a full ply at a one-second budget and
+the persistent transposition table a further $0.25$ ply, with confidence
+intervals clear of zero. For neither could a corresponding improvement in move
+quality be detected. Two observations explain this. Decisions settle early, three
+quarters of all positions have fixed their move by the depth the engine already
+reaches. And the residual error is highly concentrated: the median centipawn loss
+is $2$ while the mean is $52$, with fifteen positions accounting for nearly half
+of that mean. These are predominantly sparse endgames, and they respond to
+additional depth far more weakly than the rest of the suite.
 
-The sweet spot between search time and decision quality is therefore reached
-earlier than expected, at roughly one second per move for this engine. Beyond
-that point additional time continues to buy depth but no longer buys better
-decisions, since the limiting factor shifts from how far the engine searches to
-what its evaluation is able to distinguish.
+Under an explicit saturation criterion, typical move quality stops improving
+detectably at roughly one second per move on this suite, while average quality
+keeps falling through that difficult minority. Beyond this point additional time
+continues to buy depth, but better decisions only for a small class of positions,
+which is consistent with the evaluation rather than the search becoming the
+binding constraint.
 \end{abstract}
 % ---------------
 % ------------------------------------------------------------------------------
