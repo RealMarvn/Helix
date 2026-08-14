@@ -30,7 +30,7 @@ search refinements, and the third the origin of the errors that remain.
     reference evaluation?
 \end{itemize}
 
-\paragraph{Effect of the search refinements.}
+\paragraph{Effect of the search refinements and their resources.}
 \begin{itemize}
     \item \textbf{Null-move pruning:} how does it affect reachable depth, node
     throughput, transposition table behavior, and move quality across time
@@ -38,18 +38,18 @@ search refinements, and the third the origin of the errors that remain.
     \item \textbf{Search tree reuse:} how much depth does a persistent
     transposition table gain over the course of a game compared to starting each
     search from an empty table?
-    \item \textbf{PVS parameter sweep:} which combination of minimum scouting
-    depth (\texttt{PvsMinDepth}) and number of fully searched moves
-    (\texttt{PvsScoutAfterMove}) yields the best ratio of cost reduction to move
-    quality?
+    \item \textbf{Principal Variation Search:} how much depth does scouting gain
+    over a plain full-window search, and does that gain depend on the choice of
+    its two parameters?
+    \item \textbf{Transposition table size:} from which table size onward does
+    the available memory stop limiting the search? This calibrates the
+    configuration under which the other experiments run.
 \end{itemize}
 
 \paragraph{Origin of the residual error.}
 \begin{itemize}
     \item \textbf{Distribution of move quality:} how is the error spread over the
     suite, and which positions account for it?
-    \item \textbf{Transposition table size:} from which table size onward does
-    the available memory stop limiting the search?
 \end{itemize}
 
 In addition, the engine is compared against a fixed reference opponent in a match.
@@ -137,19 +137,32 @@ offline, which keeps measurement and analysis reproducible. Each file also store
 the commit hash of the engine it was produced with, so every table in this
 chapter can be traced back to a specific state of the implementation.
 
+\paragraph{Separate Runs.}
+The individual experiments were executed as separate runs, so the same
+configuration can appear with slightly different absolute numbers in different
+tables; at a one-second budget the completed depth of the default configuration
+differs by a few hundredths of a ply between runs. Comparisons are therefore
+always drawn within a run, between configurations measured against each other,
+never across tables.
+
 \paragraph{Uncertainty.}
 The dominant source of variation in these experiments is not measurement noise
 but the difference between chess positions: the same configuration can lose zero
 centipawns in one position and several hundred in another. Repetitions alone
-therefore say little about how reliable a reported difference is. Since almost
-all comparisons are paired, the same positions are measured under both
-configurations, uncertainty is quantified on the paired differences
-$d_i = x_{i,A} - x_{i,B}$ instead. Reported intervals are $95\,\%$ percentile
-bootstrap confidence intervals over $10\,000$ resamples, drawn over the unit that
-is actually independent: positions for the suite experiments, and complete games
-for the tree-reuse experiment, whose plies are clustered within games. An
-interval that excludes zero is called a difference; one that does not is reported
-as such, without claiming that no effect exists.
+therefore say little about how reliable a reported difference is. Since almost all comparisons are paired, the same positions are measured under
+both configurations, uncertainty is quantified on the paired differences instead.
+For each position $i$ the three repetitions are averaged first,
+$x_i = \frac{1}{3}\sum_r x_{ir}$, and the paired difference
+$d_i = x_{i,A} - x_{i,B}$ is formed from these per-position means; the bootstrap
+then resamples the $d_i$. Reported intervals are $95\,\%$ percentile bootstrap
+confidence intervals over $20\,000$ resamples, drawn over the unit that is
+actually independent: positions for the suite experiments, and complete games for
+the tree-reuse experiment, whose plies are clustered within games. There, the
+per-ply differences are first averaged within each game and the game means are
+resampled. Seeds are fixed per reported value, so the intervals are reproducible;
+the analysis script is included with the implementation. An interval that
+excludes zero is reported as a difference; one that does not is reported as no
+detectable difference, which is not the same as evidence that no effect exists.
 
 \paragraph{Correctness of the Move Generator.}
 All results rest on the assumption that the engine generates and applies moves
@@ -189,7 +202,7 @@ M3 Pro machine described in \cref{subsec:common_setup}. Playing strength is
 reported as the Elo difference derived from the match result by the testing
 framework, together with the likelihood of superiority (LOS) and the draw ratio.
 
-Two caveats apply to the reported interval. The games are played as
+Two limitations apply to the reported interval. The games are played as
 colour-swapped opening pairs, so the 400 games are not 400 independent trials;
 the interval, computed by the framework under an independence assumption, is
 therefore optimistic. And the LOS of $100\,\%$ is a rounded value, not a
@@ -244,27 +257,28 @@ centipawn loss for both configurations.
  & \multicolumn{3}{c}{Completed depth (ply)} & \multicolumn{3}{c}{Centipawn loss} \\
 \cmidrule(lr){2-4}\cmidrule(lr){5-7}
 Budget (ms) & no NMP & NMP & $\Delta$ [95\,\% CI] & no NMP & NMP & $\Delta$ [95\,\% CI] \\ \midrule
-10   & 3.67 & 3.91 & $+0.23$ [$+0.19$, $+0.28$] & 60.2 & 61.9 & $+1.7$ [$-1.6$, $+4.9$] \\
-25   & 4.29 & 4.65 & $+0.36$ [$+0.31$, $+0.41$] & 58.9 & 60.7 & $+1.8$ [$-2.1$, $+5.5$] \\
-50   & 4.86 & 5.30 & $+0.44$ [$+0.39$, $+0.50$] & 57.1 & 56.0 & $-1.1$ [$-8.9$, $+6.7$] \\
-100  & 5.37 & 5.96 & $+0.59$ [$+0.52$, $+0.66$] & 57.2 & 60.2 & $+3.0$ [$-5.2$, $+11.8$] \\
-250  & 6.04 & 6.81 & $+0.78$ [$+0.70$, $+0.85$] & 54.6 & 55.7 & $+1.1$ [$-7.5$, $+8.5$] \\
-500  & 6.52 & 7.53 & $+1.02$ [$+0.95$, $+1.09$] & 56.8 & 55.0 & $-1.9$ [$-8.1$, $+3.8$] \\
-1000 & 7.08 & 8.16 & $+1.09$ [$+1.02$, $+1.17$] & 55.5 & 52.4 & $-3.1$ [$-9.3$, $+2.5$] \\
-2000 & 7.55 & 8.79 & $+1.25$ [$+1.17$, $+1.33$] & 49.2 & 50.3 & $+1.1$ [$-9.7$, $+11.4$] \\
-5000 & 8.09 & 9.43 & $+1.35$ [$+1.27$, $+1.43$] & 43.8 & 44.4 & $+0.6$ [$-4.3$, $+5.1$] \\ \bottomrule
+10   & 3.69 & 3.93 & $+0.23$ [$+0.19$, $+0.28$] & 60.2 & 61.9 & $+1.7$ [$-1.6$, $+4.9$] \\
+25   & 4.32 & 4.68 & $+0.36$ [$+0.31$, $+0.41$] & 58.9 & 60.7 & $+1.8$ [$-2.1$, $+5.5$] \\
+50   & 4.89 & 5.34 & $+0.44$ [$+0.39$, $+0.50$] & 57.1 & 56.0 & $-1.1$ [$-8.9$, $+6.7$] \\
+100  & 5.40 & 6.00 & $+0.59$ [$+0.52$, $+0.66$] & 57.2 & 60.2 & $+3.0$ [$-5.2$, $+11.8$] \\
+250  & 6.07 & 6.85 & $+0.78$ [$+0.70$, $+0.85$] & 54.6 & 55.7 & $+1.1$ [$-7.5$, $+8.5$] \\
+500  & 6.56 & 7.58 & $+1.02$ [$+0.95$, $+1.09$] & 56.8 & 55.0 & $-1.9$ [$-8.1$, $+3.8$] \\
+1000 & 7.12 & 8.21 & $+1.09$ [$+1.02$, $+1.17$] & 55.5 & 52.4 & $-3.1$ [$-9.3$, $+2.5$] \\
+2000 & 7.59 & 8.84 & $+1.25$ [$+1.17$, $+1.33$] & 49.2 & 50.3 & $+1.1$ [$-9.7$, $+11.4$] \\
+5000 & 8.14 & 9.49 & $+1.35$ [$+1.27$, $+1.43$] & 43.8 & 44.4 & $+0.6$ [$-4.3$, $+5.1$] \\ \bottomrule
 \end{tabular}
 \caption{Reachable depth and centipawn loss with and without null-move pruning,
-over 309 positions and three repetitions per budget. $\Delta$ is the paired
-difference (NMP minus no NMP) with a 95\,\% bootstrap confidence interval over
-positions; positive values mean more depth respectively higher loss.}
+over the 306 positions for which a reference score is available, with three
+repetitions per budget. $\Delta$ is the paired difference (NMP minus no NMP) with
+a 95\,\% bootstrap confidence interval over positions; positive values mean more
+depth respectively higher loss.}
 \label{tab:nmp_depth_cpl}
 \end{table}
 
 The clearest and most robust effect is on search depth: null-move pruning reaches
 a greater depth at \emph{every} one of the nine budgets, and the gap widens with
-more time, from $+0.24$\,ply at 10\,ms to a full ply ($8.16$ versus $7.08$) at one
-second and $+1.34$\,ply at five seconds. This confirms that skipping provably
+more time, from $+0.23$\,ply at 10\,ms to a full ply ($8.21$ versus $7.12$) at one
+second and $+1.35$\,ply at five seconds. This confirms that skipping provably
 weak subtrees lets the engine invest the saved effort into depth.
 
 This additional depth is not bought at the cost of node throughput. At the
@@ -288,7 +302,7 @@ cannot be resolved with this sample. The contrast to the depth column, where
 every interval excludes zero by a wide margin, is what makes the comparison
 informative.
 
-Taken together, this is the central and somewhat sobering observation of this
+Taken together, this is the central observation of this
 experiment: null-move pruning reliably buys depth, while no corresponding gain in
 move quality could be detected. One qualification matters for the interpretation.
 Null-move pruning does not give the engine the same search plus one exact ply, it
@@ -330,28 +344,33 @@ stores that overwrite an entry of a different position), and the hit rate.
 
 \begin{table}[ht]
 \centering
-\begin{tabular}{@{}rccc@{}}
+\begin{tabular}{@{}rcrcc@{}}
 \toprule
-Table size (MB) & Completed depth (ply) & Eviction rate & Hit rate \\ \midrule
-1   & 7.75 & 0.610 & 0.104 \\
-4   & 8.01 & 0.263 & 0.134 \\
-16  & 8.14 & 0.076 & 0.153 \\
-64  & 8.18 & 0.019 & 0.161 \\
-256 & 8.18 & 0.005 & 0.163 \\ \bottomrule
+Table size (MB) & Depth (ply) & $\Delta$ to 256\,MB [95\,\% CI] & Eviction rate & Hit rate \\ \midrule
+1   & 7.75 & $-0.435$ [$-0.498$, $-0.373$] & 0.610 & 0.104 \\
+4   & 8.01 & $-0.170$ [$-0.215$, $-0.128$] & 0.263 & 0.134 \\
+16  & 8.14 & $-0.045$ [$-0.070$, $-0.023$] & 0.076 & 0.153 \\
+64  & 8.18 & $-0.003$ [$-0.014$, $+0.005$] & 0.019 & 0.161 \\
+256 & 8.18 & --- & 0.005 & 0.163 \\ \bottomrule
 \end{tabular}
-\caption{Effect of transposition table size at a one-second budget, averaged over
-309 positions and three repetitions.}
+\caption{Effect of transposition table size at a one-second budget, over 309
+positions and three repetitions. The third column gives the paired difference in
+depth against the largest table with a 95\,\% bootstrap confidence interval over
+positions.}
 \label{tab:tt_size}
 \end{table}
 
-Only the smallest table has a measurable negative effect: at 1\,MB the search
-loses roughly half a ply of depth ($7.75$ versus $\approx 8.2$) while more than
-$60\,\%$ of all stores evict a foreign entry, so useful information is displaced
-before it can be reused. From 16\,MB onward the curve flattens; the difference
-between 64\,MB and 256\,MB is within noise, even though the eviction rate keeps
-falling. For the target time controls the search therefore stops being
-memory-bound well below 32\,MB, which justifies the default hash size used
-elsewhere in this work.
+The cost of a small table is substantial and clearly resolved: at 1\,MB the search
+loses $0.44$ ply against the largest table, with more than $60\,\%$ of all stores
+evicting a foreign entry, so useful information is displaced before it can be
+reused. The penalty then shrinks rapidly, to $0.17$ ply at 4\,MB and $0.05$ ply at
+16\,MB. Both of these differences are still resolved by the data, so the curve
+does not become flat as early as the raw means suggest; what changes is that the
+effect becomes practically irrelevant, an order of magnitude below the ply gained
+by null-move pruning. Only from 64\,MB onward is no difference to the largest
+table detectable at all, even though the eviction rate keeps falling. For the
+target time controls the search therefore stops being appreciably memory-bound
+around the 32\,MB default used elsewhere in this work.
 
 \subsection{Time-to-Quality and Depth-versus-Time}
 \label{subsec:eval_ttq}
@@ -392,12 +411,13 @@ Two qualifications belong to this number. First, $t^\ast$ marks the point where
 further improvement is no longer \emph{detectable} with this sample, not where it
 provably ceases; the intervals are wide, so a small effect could remain hidden.
 Second, mean and median diverge here in a way that matters: while the median
-saturates at one second, the mean still falls from $52$ to $44$\,cp between one
-and five seconds, because a minority of positions continues to improve.
-\cref{subsec:eval_outliers} shows that this minority dominates the mean, so the
-honest formulation is that \emph{typical} move quality saturates around one
-second on this suite, while \emph{average} quality keeps improving through a
-small group of difficult positions.
+stops falling at one second, the mean still decreases from $52$ to $44$\,cp
+between one and five seconds, because a minority of positions continues to
+improve. \cref{subsec:eval_outliers} shows that this minority dominates the mean.
+The defensible formulation is therefore that no further improvement of
+\emph{typical} move quality is detectable beyond roughly one second on this
+suite, while \emph{average} quality keeps improving through a small group of
+difficult positions.
 
 \subsection{Distribution of Move Quality}
 \label{subsec:eval_outliers}
@@ -428,23 +448,73 @@ entirely. A typical example is the pawn endgame
 \texttt{8/1p3pp1/7p/5P1P/2k3P1/8/2K2P2/8 w}, in which the engine plays
 \texttt{g4g5} instead of the winning \texttt{f5f6}.
 
-This is a direct consequence of the evaluation function discussed in
-\cref{subsec:eval_limitations}. Material and piece-square tables describe a
-middlegame reasonably well, but they encode nothing about passed pawns,
-opposition or king activity, the very concepts that decide sparse endgames. In
-such positions no attainable search depth compensates for what the evaluation
-cannot express, which is consistent with these positions being exactly the ones
-that never stabilize in \cref{subsec:eval_move_stability}. It also explains why
-the depth gained through null-move pruning does not show up in the mean: the
-positions where extra depth would matter are the ones limited by evaluation
-knowledge, not by depth.
+The pattern is consistent with the limitations of the evaluation function
+discussed in \cref{subsec:eval_limitations}. Material and piece-square tables
+describe a middlegame reasonably well, but they encode nothing about passed pawns,
+opposition or king activity, the very concepts that decide sparse endgames. That
+the affected positions are predominantly sparse, and that they are largely the
+same ones which never stabilize in \cref{subsec:eval_move_stability}, supports
+this reading, though the present experiments cannot separate it from search-side
+explanations such as horizon effects. Under either reading, the concentration of
+the error explains why an across-the-board depth gain such as the one from
+null-move pruning need not show up in the mean: the positions where additional
+depth would have to make the difference are precisely the few that dominate it.
 
-\subsection{PVS Parameter Sweep}
+\subsection{Effect of Principal Variation Search}
+\label{subsec:eval_pvs}
+
+Principal Variation Search is evaluated in two steps: first against a search that
+does not scout at all, then across its own parameters. The first comparison
+answers what the technique contributes, the second whether that contribution
+depends on how it is tuned.
+
+For the first, scouting was disabled entirely, so that every move is searched with
+the full window $[\alpha, \beta]$, and the time-budget sweep was repeated with
+null-move pruning active in both configurations. \cref{tab:pvs_onoff} reports the
+result.
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{@{}rccr@{}}
+\toprule
+Budget (ms) & without PVS & with PVS & $\Delta$ depth [95\,\% CI] \\ \midrule
+10   & 3.86 & 3.90 & $+0.040$ [$+0.010$, $+0.071$] \\
+25   & 4.54 & 4.64 & $+0.099$ [$+0.061$, $+0.138$] \\
+50   & 5.20 & 5.29 & $+0.094$ [$+0.054$, $+0.135$] \\
+100  & 5.80 & 5.96 & $+0.163$ [$+0.119$, $+0.209$] \\
+250  & 6.67 & 6.80 & $+0.131$ [$+0.091$, $+0.174$] \\
+500  & 7.33 & 7.52 & $+0.187$ [$+0.143$, $+0.232$] \\
+1000 & 7.92 & 8.16 & $+0.234$ [$+0.186$, $+0.284$] \\ \bottomrule
+\end{tabular}
+\caption{Completed depth with and without Principal Variation Search, null-move
+pruning enabled in both cases, over 309 positions and three repetitions. $\Delta$
+is the paired difference with a 95\,\% bootstrap confidence interval over
+positions.}
+\label{tab:pvs_onoff}
+\end{table}
+
+Scouting gains depth at every budget, and every interval excludes zero. The gain
+grows with the budget, from $+0.04$\,ply at 10\,ms to $+0.23$\,ply at one second,
+which is roughly a fifth of what null-move pruning contributes at the same budget.
+The mechanism is visible in the node counts: with scouting the engine examines
+about $2.5\,\%$ \emph{more} nodes per second at one second
+($1.69$ against $1.64$ million), because a null-window search produces cutoffs
+more cheaply than a full-window one. Scouting therefore does not reduce the tree
+at equal depth so much as it makes each node cheaper, which under a fixed clock
+converts into additional depth. The transposition table hit rate rises alongside
+it, from $0.124$ to $0.158$.
+
+The comparison is limited to reachable depth. Since this experiment records no
+reference scores, it does not establish whether the additional depth also
+improves move quality, and \cref{subsec:eval_nmp} suggests that such a transfer
+should not be assumed.
+
+\subsubsection{Parameter Sensitivity}
 \label{subsec:eval_pvs_sweep}
 
-Principal Variation Search exposes two tunable parameters, the minimum scouting
-depth (\texttt{PvsMinDepth}) and the number of leading moves searched with the
-full window (\texttt{PvsScoutAfterMove}). To determine whether these parameters
+Given that scouting helps, the question is whether its two parameters matter: the
+minimum scouting depth (\texttt{PvsMinDepth}) and the number of leading moves
+searched with the full window (\texttt{PvsScoutAfterMove}). To determine whether these parameters
 offer a worthwhile tuning gain, a full grid of $6 \times 5 = 30$ configurations
 (\texttt{PvsMinDepth} $1$ to $6$, \texttt{PvsScoutAfterMove} $1$ to $5$) was
 evaluated on the full suite at a one-second budget with null-move pruning
@@ -476,11 +546,14 @@ latter interval does exclude zero, so the sweep does detect a difference, but on
 two orders of magnitude below the ply gained by null-move pruning. No setting
 offers a practically relevant improvement over the default.
 
-A caveat applies to this sweep specifically: with 30 configurations compared
-against one another, some differences of this size are expected by chance alone,
-and no correction for multiple comparisons was applied. The result should be read
-as the absence of a usable tuning gain, not as a precise ranking of the
-configurations.
+One limitation applies to this sweep: with 30 configurations compared against one
+another, some differences of this size are expected by chance alone, and no
+correction for multiple comparisons was applied. The result should be read as the
+absence of a usable tuning gain, not as a precise ranking of the configurations.
+
+Together with \cref{tab:pvs_onoff} this yields a two-part answer. Scouting itself
+contributes measurably, but how aggressively it is applied does not: the decision
+that matters is whether to scout at all, not where to start.
 
 The reason is visible in the re-search column. The whole point of the scouting
 parameters is to control the trade-off between the savings of the cheap
@@ -547,10 +620,12 @@ tree.
 That reading is supported by the development over the course of a game, shown in
 \cref{fig:tree_reuse}. The gain grows from $+0.16$\,ply in the opening
 (plies 0--15) over $+0.22$ in the middlegame to $+0.39$ in the endgame
-(ply 41 onwards), where the hit rate also climbs to $0.207$ versus $0.178$. With
-fewer pieces on the board, positions transpose more often and a larger share of
-the stored tree remains reachable, so the retained information keeps paying off
-increasingly as the game progresses.
+(ply 41 onwards), where the hit rate also climbs to $0.207$ versus $0.178$. This
+is consistent with a larger share of the stored tree remaining reachable as
+material decreases, since positions with fewer pieces admit more transpositions.
+The experiment measures the hit rate, however, not the number of transpositions
+itself, so this remains an interpretation of the observed pattern rather than a
+measured mechanism.
 
 \begin{figure}[ht]
 \centering
@@ -561,9 +636,11 @@ transposition table kept versus cleared before every search.}
 \end{figure}
 
 Compared to null-move pruning, the effect is smaller in absolute terms ($+0.25$
-versus a full ply), but it is obtained differently: no search parameter is
-changed, no subtree is discarded, and no accuracy is traded. The engine merely
-stops throwing away what it has already computed.
+versus a full ply), but it is obtained differently. Unlike null-move pruning,
+persistence introduces no additional forward-pruning heuristic; it reuses bounds
+and moves that a previous search already computed exactly. Whether this also
+changes move quality was not measured here, since the experiment records depth
+and table statistics but does not score the played moves against a reference.
 
 \subsection{Move Stability}
 \label{subsec:eval_move_stability}
@@ -600,8 +677,13 @@ rather than as stabilized at the final depth. Restricting the analysis to the 17
 positions whose move is confirmed by at least three further iterations shifts the
 median stabilization depth down to 3 plies, with $87\,\%$ settled by depth 6.
 That subset is itself selective, since it excludes late stabilizers by
-construction, so the two views bracket the effect rather than replacing one
-another: the reported figures are an upper bound on the depth actually needed.
+construction, so the two views complement rather than replace one another. Note
+that the censoring can bias the reported depths in either direction: a move that
+looks settled may still change beyond the horizon, in which case the true
+stabilization depth is larger, while restricting the analysis to well-confirmed
+cases discards exactly the late stabilizers and thus reports smaller depths. All
+figures below should therefore be read as \emph{observed} stabilization within
+the searched range, not as the depth ultimately required.
 
 \begin{figure}[ht]
 \centering
@@ -628,24 +710,24 @@ depth (306 positions, 20-million-node budget).}
 \label{tab:move_stability}
 \end{table}
 
-The root move settles early for most positions: the median stabilization depth is
-6 plies, and $23.9\,\%$ of positions never change their move at all. By depth 8,
-roughly the depth the engine reaches at a one-second budget
-(\cref{tab:nmp_depth_cpl}), three quarters of all positions have already locked in
-their final move. This is the central evidence for the sweet-spot argument of this
-thesis: beyond this point additional search keeps increasing depth but only rarely
+The root move settles early for most positions: the median observed stabilization
+depth is 6 plies, and $23.9\,\%$ of positions never change their move within the
+searched range at all. By depth 8, roughly the depth the engine reaches at a
+one-second budget (\cref{tab:nmp_depth_cpl}), three quarters of all positions have
+stopped changing their move for the remainder of the search. Within the tested
+range, additional search beyond this point keeps increasing depth but only rarely
 changes the decision.
 
 At the same time, the effect is not uniform. Roughly one position in five
-($22.2\,\%$) still changes its move at the deepest depth searched, i.e., remains
-unsettled even around depth 10 and beyond. These are the tactically sharp
-positions in which deeper search still changes the decision, and they are the
-only ones for which the extra ply bought by null-move pruning
-(\cref{subsec:eval_nmp}) can pay off at all. Since they make up only a fifth of
-the suite, an across-the-board gain in depth is diluted accordingly, which
-explains why the substantial depth gain of null-move pruning leaves the average
-centipawn loss unchanged. Move stability is therefore concentrated: the majority of decisions are
-made cheaply and early, while a hard minority keeps rewarding deeper search.
+($22.2\,\%$) still changes its move at the deepest depth searched and is thus not
+observed to stabilize at all. These are the positions whose root decision remains
+depth-sensitive within the tested range, and they are the only ones for which the
+extra ply bought by null-move pruning (\cref{subsec:eval_nmp}) can change anything.
+Since they make up only a fifth of the suite, an across-the-board gain in depth is
+diluted accordingly, which is consistent with the depth gain of null-move pruning
+leaving the average centipawn loss unchanged. Decision stability is therefore
+concentrated: the majority of decisions are made early, while a minority remains
+sensitive to further search.
 
 \subsubsection{Stability in Evaluation Rather Than in the Move}
 \label{subsubsec:eval_eps_stability}

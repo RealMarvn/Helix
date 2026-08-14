@@ -22,14 +22,19 @@ corresponding gain in move quality be detected on this suite.
 
 The move stability measurements (\cref{subsec:eval_move_stability}) offer an
 explanation. By depth 8, the depth the engine reaches at a one-second budget,
-three quarters of all positions have already settled on their final move, and
-about a quarter never change it from the very first iteration. Deeper search can
-only change the decision in the remaining fifth of positions, so an
-across-the-board gain in depth is diluted accordingly. Applying the saturation
-criterion of \cref{subsec:eval_ttq}, the smallest budget from which no further
-improvement is detectable is one second for this engine and suite. That is a
-statement about typical positions: the median loss saturates there, while the
-mean continues to fall because a minority of difficult positions keeps improving.
+three quarters of all positions have stopped changing their move within the
+searched range, and about a quarter never change it from the very first
+iteration. Deeper search can only change the decision in the remaining fifth, so
+an across-the-board gain in depth is diluted accordingly. Applying the criterion
+of \cref{subsec:eval_ttq}, the smallest budget beyond which no further
+improvement is detectable is one second for this engine and suite.
+
+That number should be read for what it is. It describes typical positions, where
+the median loss stops falling, while the mean keeps decreasing because a minority
+of difficult positions continues to improve. And it marks the point where a
+difference is no longer \emph{resolved} by this sample, not where improvement
+provably ends: the intervals are wide enough that a small effect could remain
+hidden.
 
 \subsection{Where the Search Is Actually Limited}
 \label{subsec:discussion_limits}
@@ -69,17 +74,23 @@ plausible candidate, given which positions are affected. Deciding the question
 requires an intervention on the evaluation itself, which is the single most
 valuable experiment this thesis leaves open.
 
-This also puts the null result of the parameter sweep
-(\cref{subsec:eval_pvs_sweep}) into perspective. Across all 30 configurations the
-node count varies by less than two percent, because re-searches are rare to begin
-with: even the most aggressive scouting triggers about 104 of them over 1.5
-million nodes. The move ordering, built from transposition table moves, MVV-LVA,
-killer moves and the history heuristic, is already good enough that the first
-move examined is almost always the best one. This is consistent with the
-long-standing observation that the effectiveness of Alpha-Beta pruning is
-governed by move ordering rather than by the pruning scheme
-itself~\cite{knuth1975alphabeta, marsland1986review}, and it means the scouting
-parameters have almost no trade-off left to tune.
+The Principal Variation Search results (\cref{subsec:eval_pvs}) fit the same
+picture from a different angle. Scouting itself is worth having: it gains
+$0.23$\,ply at a one-second budget, with intervals excluding zero at every budget.
+Its parameters, however, are irrelevant, since the node count varies by less than
+two percent across all 30 configurations. The reason is that re-searches are rare
+to begin with, about 104 over 1.5 million nodes even under the most aggressive
+setting. The move ordering, built from transposition table moves, MVV-LVA, killer
+moves and the history heuristic, is already good enough that the first move
+examined is almost always the best one, so the trade-off the parameters are meant
+to control barely arises. This is consistent with the long-standing observation
+that the effectiveness of Alpha-Beta pruning is governed by move ordering rather
+than by the pruning scheme itself~\cite{knuth1975alphabeta, marsland1986review}.
+
+Notably, scouting buys its depth not by shrinking the tree but by making each node
+cheaper: with scouting the engine visits more nodes per second, not fewer. All
+three refinements studied here therefore increase reachable depth by different
+means, and none of them was shown to improve move quality.
 
 \subsection{Implications for Time-Managed Search}
 \label{subsec:discussion_time}
@@ -90,17 +101,19 @@ most positions settle early, an interrupted search usually returns the same move
 a deeper one would have confirmed. Stopping between iterations therefore costs
 far less quality than the depth difference alone would suggest.
 
-The measurements also show that the engine stops being memory-bound well below
-the default hash size (\cref{subsec:eval_tt_size}). Only the smallest table
-degrades the search measurably, while beyond 16\,MB the curve flattens. Combined
-with the tree reuse result, this argues for keeping the table alive across moves
-rather than enlarging it: retaining what was already computed helps more than
-providing space for more of it, and the benefit grows over the course of a game
-as positions transpose more frequently~\cite{warnock1988search}.
+The measurements also show that the engine stops being appreciably memory-bound
+around the default hash size (\cref{subsec:eval_tt_size}). A small table costs
+real depth, but the penalty falls below a twentieth of a ply by 16\,MB and is no
+longer detectable at 64\,MB. Set against the tree-reuse result, this suggests that
+keeping the table alive across moves is worth more than enlarging it: retaining
+what was already computed gains $0.25$ ply, whereas quadrupling the table from
+64\,MB upwards gains nothing measurable~\cite{warnock1988search}.
 
-Under tournament conditions all of this adds up to a clear result: the engine
-wins its match against the reference opponent by roughly $205$ Elo points
-(\cref{subsec:engine_eval}), with both colors and a low draw ratio.
+Against a fixed reference opponent, the engine wins its match by roughly $205$
+Elo points with both colors (\cref{subsec:engine_eval}). This is a check that the
+implementation performs sensibly as a whole, not a rating: the figure describes
+the relation to one weakened Stockfish configuration and would change with any
+other opponent.
 
 \subsection{Limitations}
 \label{subsec:discussion_limitations}
@@ -116,6 +129,15 @@ large enough for the aggregate effects reported here, but the skewed distributio
 of the loss means that individual means are sensitive to a small number of
 positions, and differences of a few centipawns should not be over-interpreted.
 
+The stability results are bounded by the observation horizon. A move counts as
+stabilized when it stops changing within a 20-million-node search, which cannot
+say what a deeper search would do; roughly a fifth of the positions still change
+their move at the deepest iteration reached. The comparison between converging
+and non-converging positions inherits this limitation and is additionally
+descriptive by construction, since the groups are defined by the very quality
+behavior whose trajectories are then compared. Defining the groups in advance, by
+piece count or game phase, would make that comparison independent.
+
 The opponent in the match was deliberately weakened through Stockfish's built-in
 strength limitation. That mechanism provides only a nominal Elo target and works
 partly by introducing random inaccuracies, so the reported difference describes
@@ -130,17 +152,20 @@ strength do not transfer to those designs.
 \subsection{Future Work}
 \label{subsec:discussion_future}
 
-The results point to one clear priority. Since the residual errors are
-concentrated in positions the evaluation cannot describe, further work should be
-directed at the evaluation function rather than at the search. Pawn structure,
-passed pawns, king activity and dedicated endgame knowledge would address exactly
-the positions that dominate the mean loss today, and only then would the depth
-already gained by null-move pruning and tree reuse have anything left to
-contribute.
+The results point to one clear priority, and it takes the form of a testable
+hypothesis rather than a conclusion. The static evaluation is the most plausible
+candidate for the residual error and therefore the most valuable next
+intervention: adding passed-pawn, king-activity and pawn-structure terms together
+with dedicated endgame knowledge, and re-running the difficult subset under an
+identical node budget. If that group improves materially while the rest of the
+suite stays unchanged, the interpretation offered here would become direct
+evidence; if it does not, the cause lies elsewhere in the search, which would be
+an equally informative outcome. Either way this is the experiment that would turn
+the present interpretation into a result.
 
 A second direction concerns the measurement itself. A single mean is a poor
 summary of a distribution this skewed, and the answer is not to remove the
-extreme cases, which are the engine's real failures and arguably its most
+extreme cases, which are the engine's real failures and among its most
 informative observations, but to report several estimands side by side: the mean
 as expected loss, the median as typical loss, upper percentiles, the share of
 positions within a given margin, and the rate of catastrophic errors. Each
@@ -166,18 +191,30 @@ they would likely pay off.
 
 This thesis implemented a complete chess engine and used it to examine how
 invested search time translates into decision quality on a fixed position suite.
-Both refinements studied deliver what they promise in terms of search: null-move
-pruning gains a full ply at one second and search tree reuse a further $0.25$ ply,
-each with intervals well clear of zero. For neither could a corresponding
-improvement in move quality be detected, and the reason appears to be twofold:
-three quarters of all positions have settled on their move by the depth the engine
-already reaches, and the residual error is concentrated in a minority of sparse
-endgame positions that respond to depth far more weakly than the rest.
+The central finding is that this translation is not uniform. Additional
+computation reliably increases search depth, but the value of that depth differs
+sharply between positions, and averaging over the suite hides two regimes rather
+than describing one.
 
-Applying an explicit saturation criterion, typical move quality on this suite
-stops improving detectably at around one second per move, while average quality
-continues to fall because that difficult minority keeps improving. Beyond this
-point, additional time still buys depth, but it buys measurably better decisions
-only for a small class of positions. The evidence suggests, without establishing
-it conclusively, that what limits the engine there is less how far it looks ahead
-than what it is able to recognise when it gets there.
+The majority of positions reaches a low centipawn loss early and stops changing
+its move at modest depth; the median loss is $2$\,cp, and further time changes
+little. A minority behaves in the opposite way: it accounts for nearly half of the
+mean loss, keeps improving with additional time, and responds to depth far more
+weakly than the rest, gaining $5.4$\,cp over a search where the others gain
+$36.5$. These positions are predominantly sparse endgames.
+
+All three refinements studied deliver what they promise in terms of search. At a
+one-second budget null-move pruning gains a full ply, Principal Variation Search
+$0.23$ ply and search tree reuse $0.25$ ply, each with $95\,\%$ intervals
+excluding zero, and each by a different mechanism: pruning subtrees, making
+individual nodes cheaper, and retaining what was already computed. For none of
+them could a corresponding improvement in move quality be detected, which follows
+from the heterogeneity above: a gain in depth applies to all positions, but only a
+fifth of them are still in a state where depth changes the decision.
+
+Under an explicit criterion, no further improvement of typical move quality is
+detectable beyond roughly one second per move on this suite. This is an
+operational statement rather than a claim that improvement ends there. What the
+evidence supports, without establishing it conclusively, is that beyond this
+point the limit lies less in how far the engine looks ahead than in what its
+evaluation is able to distinguish when it arrives.

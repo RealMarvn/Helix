@@ -45,23 +45,25 @@ engine, which the engine wins by $205 \pm 38$ Elo, with systematic measurements
 on a suite of 309 positions across time budgets from 10\,ms to 5\,s. Move quality
 is scored against a strong reference engine as centipawn loss.
 
-The results separate the two halves of the question. Both refinements deliver
-depth as intended: null-move pruning gains a full ply at a one-second budget and
-the persistent transposition table a further $0.25$ ply, with confidence
-intervals clear of zero. For neither could a corresponding improvement in move
-quality be detected. Two observations explain this. Decisions settle early, three
-quarters of all positions have fixed their move by the depth the engine already
-reaches. And the residual error is highly concentrated: the median centipawn loss
-is $2$ while the mean is $52$, with fifteen positions accounting for nearly half
-of that mean. These are predominantly sparse endgames, and they respond to
-additional depth far more weakly than the rest of the suite.
+The results separate the two halves of the question. All three refinements deliver
+depth as intended: at a one-second budget null-move pruning gains a full ply,
+Principal Variation Search $0.23$ ply and the persistent transposition table
+$0.25$ ply, each with $95\,\%$ confidence intervals excluding zero. For none of
+them could a corresponding improvement in move quality be detected. Two
+observations explain this. Decisions settle early, three quarters of all positions
+have fixed their move by the depth the engine already reaches. And the residual
+error is highly concentrated: the median centipawn loss is $2$ while the mean is
+$52$, with fifteen positions accounting for nearly half of that mean. These are
+predominantly sparse endgames, and they respond to additional depth far more
+weakly than the rest of the suite.
 
-Under an explicit saturation criterion, typical move quality stops improving
-detectably at roughly one second per move on this suite, while average quality
-keeps falling through that difficult minority. Beyond this point additional time
-continues to buy depth, but better decisions only for a small class of positions,
-which is consistent with the evaluation rather than the search becoming the
-binding constraint.
+Under an explicit criterion, no further improvement of typical move quality is
+detectable beyond roughly one second per move on this suite, while average
+quality keeps falling through that difficult minority. The value of additional
+computation is thus highly heterogeneous across positions: it continues to buy
+depth everywhere, but measurably better decisions only for a small class of
+positions. This is consistent with limitations of the static evaluation
+contributing substantially to the residual error.
 \end{abstract}
 % ---------------
 % ------------------------------------------------------------------------------
