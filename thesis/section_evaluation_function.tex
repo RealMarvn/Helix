@@ -70,8 +70,8 @@ evaluation changes and provides a simple, interpretable blending scheme.
 \begin{figure}[ht]
 \centering
 \begin{tikzpicture}[scale=1.0]
-  \draw[->] (0,0) -- (8,0) node[right] {game phase (normalized)};
-  \draw[->] (0,0) -- (0,4) node[above] {weight};
+  \draw[->] (0,0) -- (8.2,0) node[below right] {game phase (normalized)};
+  \draw[->] (0,0) -- (0,4.2) node[above left] {weight};
 
   % mg weight line: 0..1
   \draw[thick] (0,0) -- (7,3.5) node[right] {$w_{MG}$};
@@ -85,8 +85,6 @@ evaluation changes and provides a simple, interpretable blending scheme.
   }
   \draw (0,3.5) -- (0.12,3.5);
   \node[left] at (0,3.5) {1};
-
-  \node at (3.7,3.9) {Linear MG/EG interpolation};
 \end{tikzpicture}
 \caption{Tapered evaluation: midgame and endgame weights vary linearly with the
 game phase.}
@@ -107,6 +105,13 @@ encouraging initiative and reducing symmetry artifacts.
 
 \subsubsection{Algorithmic Summary}
 \label{subsec:eval_algorithm}
+
+\cref{algo:evaluation} combines the parts described above into the procedure the
+engine actually executes. A single pass over the 64 squares accumulates the
+midgame and endgame scores for both sides together with the game phase, so that
+material, piece-square values and phase are collected in one traversal. The two
+scores are then formed from the perspective of the side to move, interpolated
+according to the phase, and the tempo bonus is added.
 
 \begin{algorithm}[ht]
 \DontPrintSemicolon

@@ -394,9 +394,11 @@ Call a budget $t$ \emph{saturated} if no larger budget yields a paired
 improvement whose $95\,\%$ confidence interval excludes zero, and let $t^\ast$ be
 the smallest budget that is saturated and stays saturated:
 \[
-t^\ast = \min\{\, t \;:\; \text{every } s \geq t \text{ is saturated} \,\}, \quad
-t \text{ saturated} \iff \text{CI}_{95}\big(\text{CPL}(t') - \text{CPL}(t)\big)
-\ni 0 \ \forall\, t' > t .
+t \text{ saturated} \iff 0 \in \text{CI}_{95}\big(\text{CPL}(t') - \text{CPL}(t)\big)
+\quad \text{for all } t' > t ,
+\]
+\[
+t^\ast = \min\{\, t \;:\; \text{every } s \geq t \text{ is saturated} \,\} .
 \]
 The second condition is necessary because saturation alone is not monotone: at
 the shortest budgets the per-position differences scatter so widely that nothing
@@ -445,8 +447,10 @@ hold on average $13.8$ pieces, against $19.5$ for the well-played ones, and a
 third of them are endgames with ten pieces or fewer. Three positions reach the
 scoring cap of $1000$\,cp, meaning Stockfish sees a forced mate the engine misses
 entirely. A typical example is the pawn endgame
-\texttt{8/1p3pp1/7p/5P1P/2k3P1/8/2K2P2/8 w}, in which the engine plays
-\texttt{g4g5} instead of the winning \texttt{f5f6}.
+\begin{center}
+\texttt{8/1p3pp1/7p/5P1P/2k3P1/8/2K2P2/8 w},
+\end{center}
+in which the engine plays \texttt{g4g5} instead of the winning \texttt{f5f6}.
 
 The pattern is consistent with the limitations of the evaluation function
 discussed in \cref{subsec:eval_limitations}. Material and piece-square tables

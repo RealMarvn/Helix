@@ -11,9 +11,10 @@ through the persistent transposition table (\cref{subsec:tree_reuse}).
 
 \subsubsection{Search Entry Point and Modes}
 
-The main entry point is \texttt{ChessBot::think(Board board, SearchConstraints config)}.
-The \texttt{SearchConstraints} object is copied intentionally and stored inside
-the engine instance for the duration of the search. Before searching, the engine
+The main entry point is \texttt{ChessBot::think()}, which receives the board
+together with a \texttt{SearchConstraints} object. The constraints are copied
+intentionally and stored inside the engine instance for the duration of the
+search. Before searching, the engine
 initializes a clean state via \texttt{reset\_search\_state()}, which resets node
 counters, selective depth tracking, stop state, and heuristic tables (killer and
 history), and also advances the transposition table generation via
