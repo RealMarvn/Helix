@@ -27,7 +27,7 @@ and the interaction between the individual modules.
 \node[box, below=1cm of search] (eval) {Evaluation\\(MG/EG + PSQT)};
 \node[box, above=1cm of search] (tt) {Position Cache\\(TT)};
 \node[box, below=1cm of movegen] (time) {Search Constraints\\(Time / Nodes / Depth)};
-\node[box, right=1cm of search] (heuristics) {Heuristics - Move ord.\\(PV/TT+HH+KM+Material)};
+\node[box, right=0.5cm of search] (heuristics) {Heuristics - Move ord.\\(PV/TT+HH+KM+Material)};
 
 \draw[arr] (board) -- (movegen);
 \draw[arr] (movegen) -- (search);

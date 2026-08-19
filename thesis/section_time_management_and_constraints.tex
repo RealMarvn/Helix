@@ -77,8 +77,8 @@ false. This ensures that depth-limited and node-limited search do not depend on
 any timing state.
 
 \paragraph{Arming the Budget Before Search}
-Immediately before a time-managed search begins, \texttt{TimeManager::init\_search}
-is called. This function captures the current monotonic time
+Immediately before a time-managed search begins, the engine calls
+\texttt{TimeManager::init\_search}. This function captures the current monotonic time
 (\texttt{now\_ms()}) as the start timestamp and derives absolute deadlines:
 \[
 \texttt{soft\_deadline\_ms\_} = \texttt{start\_ms\_} + \texttt{soft\_ms\_}, \qquad

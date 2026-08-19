@@ -91,9 +91,11 @@ depth-limited Negamax with Alpha-Beta bounds:
     cutoff occurs when $\alpha \ge \beta$.
 \end{itemize}
 
-To support correct transposition table storage, the implementation stores the
-original alpha value (\texttt{ORIGINAL\_ALPHA}) and uses it later to classify the
-result as \texttt{EXACT}, \texttt{LOWER\_BOUND}, or \texttt{UPPER\_BOUND}.
+To support correct transposition table storage, the implementation keeps the
+original alpha value in \texttt{ORIGINAL\_ALPHA} and uses it afterwards to
+classify the result: as \texttt{EXACT} if the score lies inside the window, as
+\texttt{LOWER\_BOUND} if the node failed high, and otherwise as
+\texttt{UPPER\_BOUND}.
 
 \paragraph{Legal Move Handling}
 Moves are generated as pseudo-legal moves and filtered by attempting to apply

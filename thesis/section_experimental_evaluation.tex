@@ -69,9 +69,9 @@ single-threaded process. Apart from the parameter that is varied in a given
 experiment, all engine options were kept at their defaults throughout.
 
 \paragraph{Position Suite.}
-The experiments use a fixed suite of 309 positions
-(\texttt{tests/data/stockfish-bench-all.epd}), derived from the position set that
-Stockfish uses for its own benchmark. Each configuration is measured with three
+The experiments use a fixed suite of 309 positions, stored in the repository as
+\texttt{tests/data/stockfish-bench-all.epd} and derived from the position set
+that Stockfish uses for its own benchmark. Each configuration is measured with three
 repetitions per position to average out scheduling noise, and reported figures
 are means over positions and repetitions.
 
@@ -747,8 +747,8 @@ should not be assumed.
 
 Given that scouting helps, the question is whether its two parameters matter: the
 minimum scouting depth (\texttt{PvsMinDepth}) and the number of leading moves
-searched with the full window (\texttt{PvsScoutAfterMove}). To determine whether these parameters
-offer a worthwhile tuning gain, a full grid of $6 \times 5 = 30$ configurations
+searched with the full window (\texttt{PvsScoutAfterMove}). To find out whether
+tuning them is worthwhile, a full grid of $6 \times 5 = 30$ configurations
 (\texttt{PvsMinDepth} $1$ to $6$, \texttt{PvsScoutAfterMove} $1$ to $5$) was
 evaluated on the full suite at a one-second budget with null-move pruning
 enabled. \cref{tab:pvs_sweep} lists a representative selection.
