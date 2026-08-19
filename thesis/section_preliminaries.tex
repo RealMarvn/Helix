@@ -31,7 +31,7 @@ which assigns to each square either a piece or the empty symbol $\varnothing$. A
 complete game state $s = (b, t, r, e)$ additionally comprises the side to move
 $t \in \mathcal{C}$, the castling rights $r$, and the en-passant target $e$, both
 of which depend on the movement history rather than on the current placement
-alone. We write $\mathcal{S}$ for the set of all legal states.
+alone. The set of all legal states is denoted by $\mathcal{S}$.
 
 The rules of chess induce a transition relation
 $\delta \subseteq \mathcal{S} \times \mathcal{S}$, where $(s, s') \in \delta$ if
@@ -120,6 +120,69 @@ evaluation is therefore more reliable. Once such a position is reached, the
 evaluation function is applied and the resulting score is propagated back up the
 search tree.
 
+\cref{fig:horizon} shows why a fixed depth limit is not merely imprecise but can
+be actively misleading. An exchange of pieces unfolds over several plies, and its
+intermediate states are wildly unbalanced: after one side has captured but before
+the recapture, the position looks winning by a whole piece. A search that stops
+exactly at that moment reports this intermediate state as the final one. The
+error is not small and random but large and systematic, since it always favors
+the side that captured last. This is also the reason a purely depth-based
+comparison of search algorithms is fragile without quiescence search, as one
+additional ply can invert the sign of the evaluation.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[scale=0.95, transform shape, font=\small]
+% evaluation axis (zero line kept separate from the ply axis)
+\draw[->, thick] (0,-2.3) -- (0,2.05) node[above left, font=\footnotesize] {evaluation};
+\draw[dotted] (0,0) -- (10.2,0);
+\node[font=\footnotesize, anchor=east] at (-0.08,0) {$0$};
+
+% ply axis, drawn below the curve so labels never touch it
+\draw[->, thick] (0,-2.45) -- (10.4,-2.45) node[below right, font=\footnotesize] {ply};
+\foreach \x/\lab in {1/1,2/2,3/3,4/4,5/5,6/6}{
+  \draw (1.55*\x,-2.37) -- (1.55*\x,-2.53);
+  \node[below, font=\footnotesize, gray] at (1.55*\x,-2.55) {\lab};
+}
+
+% evaluation trace: quiet, capture (+9), recapture (-1), quiet
+\coordinate (p0) at (0,0.15);
+\coordinate (p1) at (1.55,0.15);
+\coordinate (p2) at (3.10,1.55);
+\coordinate (p3) at (4.65,-1.25);
+\coordinate (p4) at (6.20,-0.35);
+\coordinate (p5) at (7.75,-0.30);
+\coordinate (p6) at (9.30,-0.30);
+\draw[very thick, blue!65!black] (p0) -- (p1) -- (p2) -- (p3) -- (p4) -- (p5) -- (p6);
+\foreach \p in {p0,p1,p2,p3,p4,p5,p6}
+  \fill[blue!65!black] (\p) circle (1.6pt);
+
+% horizon at ply 2
+\draw[red!75!black, thick, densely dashed] (3.10,-2.45) -- (3.10,2.05);
+\node[red!75!black, font=\footnotesize, anchor=south] at (3.10,2.10)
+  {search horizon (depth 2)};
+\node[red!75!black, font=\footnotesize, anchor=west] at (3.24,1.50)
+  {reported: $+9$};
+
+% quiescence extension
+\draw[->, green!45!black, thick] (3.10,-1.85) -- (6.15,-1.85);
+\node[green!45!black, font=\footnotesize, anchor=north west] at (3.22,-1.92)
+  {quiescence search continues};
+\node[font=\footnotesize, anchor=west] at (6.35,-0.72) {true value: $-1$};
+
+% annotations on the trace
+\node[font=\footnotesize, anchor=east] at (2.35,1.15) {capture};
+\node[font=\footnotesize, anchor=north] at (4.65,-1.40) {recapture};
+\end{tikzpicture}
+\caption{The horizon effect. The curve shows the static evaluation along a single
+line of play in which a capture is answered by a recapture. A search limited to
+two plies stops immediately after the capture and reports a decisive material
+advantage that does not exist; one ply later the material is nearly balanced
+again. Quiescence search resolves this by continuing beyond the nominal depth as
+long as captures are available, and evaluating only once the position is quiet.}
+\label{fig:horizon}
+\end{figure}
+
 In practice, quiescence search is commonly implemented using Alpha-Beta pruning
 with a so-called \emph{stand-pat} evaluation~\cite{marsland1986review}, which
 represents the static evaluation of the current position before any tactical
@@ -156,6 +219,70 @@ whenever a better move is found. If $\alpha$ becomes greater than or equal to
 $\beta$, further exploration of sibling nodes is unnecessary, as the minimizing
 player would avoid reaching this position. An analogous argument applies during
 minimizing steps.
+
+\cref{fig:alphabeta} illustrates this on a minimal tree. The essential point is
+that the pruned subtree is discarded without being looked at, and that this is
+nevertheless safe: the discarded branch contains the highest leaf value of the
+entire tree, but that value is never reachable, because the opponent decides at
+that node and already holds a better alternative there. Pruning therefore removes
+work, not information, which is what distinguishes Alpha-Beta from the heuristic
+pruning discussed in \cref{subsec:null_move_pruning}.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+  scale=0.95, transform shape,
+  font=\small,
+  maxn/.style={draw, thick, rectangle, minimum size=8mm, inner sep=1pt},
+  minn/.style={draw, thick, circle, minimum size=8mm, inner sep=1pt},
+  leaf/.style={draw, rectangle, rounded corners=2pt, minimum size=7mm, inner sep=2pt},
+  gone/.style={draw=gray!50, densely dashed, rectangle, rounded corners=2pt,
+               minimum size=7mm, inner sep=2pt, text=gray!60},
+  edge/.style={-, thick},
+  gedge/.style={-, gray!50, densely dashed}
+]
+% --- nodes -----------------------------------------------------------------
+\node[maxn] (root) at (5,3.1) {$5$};
+\node[left=1mm of root, font=\footnotesize] {MAX};
+
+\node[minn] (a) at (1.7,1.5) {$5$};
+\node[minn] (b) at (5,1.5)   {$\leq 3$};
+\node[minn] (c) at (8.3,1.5) {$4$};
+\node[left=1mm of a, font=\footnotesize] {MIN};
+
+\node[leaf] (a1) at (0.8,0) {$5$};
+\node[leaf] (a2) at (2.6,0) {$6$};
+\node[leaf] (b1) at (4.1,0) {$3$};
+\node[gone] (b2) at (5.0,0) {$8$};
+\node[gone] (b3) at (5.9,0) {$2$};
+\node[leaf] (c1) at (7.4,0) {$7$};
+\node[leaf] (c2) at (9.2,0) {$4$};
+
+% --- edges -----------------------------------------------------------------
+\foreach \t in {a,b,c} \draw[edge] (root) -- (\t);
+\foreach \t in {a1,a2} \draw[edge] (a) -- (\t);
+\draw[edge] (b) -- (b1);
+\foreach \t in {b2,b3} \draw[gedge] (b) -- (\t);
+\foreach \t in {c1,c2} \draw[edge] (c) -- (\t);
+
+% --- cut marker ------------------------------------------------------------
+\draw[red!75!black, thick] (4.85,0.78) -- (5.68,0.78);
+\node[red!75!black, font=\footnotesize, anchor=west] at (5.78,0.78) {cutoff};
+\node[font=\footnotesize, align=center, anchor=north] at (5.0,-0.55)
+  {not searched\\[-1pt]$\beta = 3 \leq \alpha = 5$};
+\node[font=\footnotesize, align=left, anchor=east] at (1.05,2.35)
+  {$\alpha = 5$};
+\end{tikzpicture}
+\caption{Alpha-Beta pruning on a minimal tree. The square root node maximizes,
+the circular nodes minimize. The left subtree is searched first and yields $5$,
+so the maximizing player is guaranteed at least $\alpha = 5$. In the middle
+subtree the first leaf already returns $3$; since the minimizing player will
+never choose more than $3$ there, this subtree cannot beat $5$ and its remaining
+leaves are skipped, including the $8$, which is the largest value in the whole
+tree. The result is identical to an exhaustive search, but two of the seven
+leaves are never evaluated.}
+\label{fig:alphabeta}
+\end{figure}
 
 \paragraph{Effectiveness and Influencing Factors}
 In the worst case, Alpha-Beta pruning explores the same number of nodes as plain
@@ -249,6 +376,67 @@ all previous ones, so re-searching depths $1$ to $d-1$ adds only a constant
 factor to the cost of the depth-$d$ search. As discussed next, this overhead is
 typically more than recovered through the improved move ordering that earlier
 iterations provide.
+
+\cref{fig:iterative_deepening} makes the two consequences of this exponential
+growth visible at once. Because each iteration costs roughly three times its
+predecessor, everything before the last one is nearly free, which is what makes
+the repetition affordable. The same fact, however, means the engine faces an
+all-or-nothing decision at every iteration boundary: the next iteration will
+consume more time than the entire search so far, and if the clock runs out
+half-way through it, that work is discarded entirely. Deciding whether to start
+another iteration is therefore not a minor scheduling detail but the central
+question of time management, and it is addressed in
+\cref{sec:time_management}.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[scale=1.0, font=\small]
+% ---- the bar: widths proportional to measured cost per iteration ----------
+\def\ybot{0}\def\ytop{0.72}
+\fill[blue!16] (0,\ybot)    rectangle (1.29,\ytop);
+\fill[blue!32] (1.29,\ybot) rectangle (3.86,\ytop);
+\fill[blue!55] (3.86,\ybot) rectangle (11.5,\ytop);
+\draw[thick] (0,\ybot) rectangle (11.5,\ytop);
+\foreach \x in {1.29,3.86} \draw[thick] (\x,\ybot) -- (\x,\ytop);
+
+% ---- segment labels ------------------------------------------------------
+\node[font=\footnotesize, white] at (7.68,0.36) {depth 8 \qquad $665$\,ms};
+\node[font=\footnotesize, align=center, anchor=south] at (2.57,0.92)
+  {depth 7\\[-2pt]$223$\,ms};
+\node[font=\footnotesize, align=center, anchor=south] at (0.95,1.85)
+  {depths 1--6\\[-2pt]$113$\,ms};
+\draw[gray!70] (0.95,1.80) -- (0.95,0.78);
+
+% ---- time axis -----------------------------------------------------------
+\draw[->, thick] (0,-1.35) -- (11.85,-1.35) node[below right, font=\footnotesize] {time};
+\foreach \x/\lab in {0/0, 3.86/335, 11.5/1000}{
+  \draw (\x,-1.27) -- (\x,-1.43);
+  \node[below, font=\footnotesize] at (\x,-1.45) {\lab};
+}
+\node[below, font=\footnotesize] at (5.75,-1.85) {milliseconds};
+
+% ---- soft stop decision --------------------------------------------------
+\draw[red!75!black, thick, densely dashed] (3.86,\ytop+0.08) -- (3.86,2.30);
+\fill[red!75!black] (3.86,2.30) circle (2pt);
+\node[red!75!black, font=\footnotesize, anchor=south west, align=left]
+  at (3.98,1.80) {decision point: start depth 8?\\[-2pt]
+                  it alone costs twice everything before it};
+
+% ---- anytime property ----------------------------------------------------
+\foreach \x in {1.29,3.86,11.5}
+  \draw[->, green!45!black, thick] (\x,-0.12) -- (\x,-0.52);
+\node[green!45!black, font=\footnotesize, anchor=north] at (5.75,-0.62)
+  {a usable best move is available after every completed iteration};
+\end{tikzpicture}
+\caption{Iterative deepening under a one-second budget, with the width of each
+segment proportional to the time that iteration consumes. The proportions follow
+from the effective branching factor of about $3$ measured for this engine in
+\cref{subsec:eval_ttq}. The first six iterations together account for roughly a
+tenth of the budget, so the repeated re-searching is cheap; the last iteration
+alone accounts for two thirds. Every completed iteration leaves a valid best move
+behind, which is what allows the search to be stopped at any point.}
+\label{fig:iterative_deepening}
+\end{figure}
 
 \paragraph{Interaction with Pruning}
 In addition to providing robustness under time constraints, iterative deepening

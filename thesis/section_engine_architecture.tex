@@ -62,6 +62,20 @@ simplicity and transparency~\cite{cpw_bitboards}. Given the focus of this work o
 algorithmic behavior rather than raw performance, the mailbox model provides a
 clear and easily analyzable foundation.
 
+It is worth being explicit about what this decision costs, since it is the single
+most consequential one in the architecture. The engine sustains roughly
+$1.7$ million nodes per second and reaches an average depth of $8.2$ plies at a
+one-second budget (\cref{subsec:eval_ttq}). A bitboard implementation would
+plausibly search several times as many nodes per second, but because depth grows
+only logarithmically with search effort, even a fivefold faster move generator
+would buy no more than about $1.5$ additional plies at the same budget. The
+representation therefore shifts the operating point of the measurements without
+changing their structure: every result in this thesis is a statement about how
+decision quality behaves \emph{as a function of} depth and budget, and such a
+statement is displaced along the axis by a faster engine, not invalidated. The
+same reasoning is the reason absolute playing strength is treated throughout as a
+sanity check rather than as a result.
+
 \paragraph{Move Representation}
 Moves are represented as explicit objects containing all information required to
 apply and undo them. This includes the source and destination squares, the moving

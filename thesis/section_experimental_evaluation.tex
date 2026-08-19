@@ -103,9 +103,15 @@ tablebases, to obtain a reference best move and a reference evaluation. The move
 the engine actually played is scored by applying it and analysing the resulting
 position to the same depth, again from the perspective of the side that moved, so
 that both values are produced under identical conditions and remain comparable.
-Mate scores are capped at $1000$\,cp so that a single forced mate cannot dominate
-an average; the cap is reported explicitly wherever it is reached. Two metrics
-are derived from this reference:
+Mate scores are first converted to a large finite value, and the resulting
+centipawn loss is then clamped at $1000$\,cp so that a single decided position
+cannot dominate an average. The clamp applies to \emph{every} loss above that
+threshold, not only to those involving a mate. At a one-second budget it is
+reached in three of the 309 positions: in two of them either the reference move
+or the played move leads to a forced mate, while in the third both evaluations
+are ordinary and the raw difference is $1165$\,cp. All aggregate figures in this
+chapter are therefore mildly conservative, since these three losses enter the
+statistics smaller than they are. Two metrics are derived from this reference:
 \begin{itemize}
     \item \textbf{Centipawn loss (CPL):} the difference, in centipawns and from
     the perspective of the side to move, between the reference evaluation of
@@ -117,7 +123,65 @@ are derived from this reference:
 \end{itemize}
 CPL is the primary quality metric, as it also credits moves that differ from the
 reference move but are of comparable value; agreement is reported as a
-complementary, stricter indicator.
+complementary, stricter indicator. \cref{fig:cpl_pipeline} traces the procedure
+for one concrete position. Note that the metric never asks whether a move is
+``correct'' in any absolute sense; it only asks how much worse the position
+becomes compared to the best available alternative, which is what makes small
+inaccuracies and outright blunders comparable on a single scale.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+  scale=0.86, transform shape, font=\small,
+  box/.style={draw, thick, rounded corners=2pt, align=center, inner sep=3pt,
+              minimum height=8mm, font=\footnotesize},
+  eng/.style={box, fill=blue!12},
+  ref/.style={box, fill=gray!15},
+  mv/.style={box, fill=white, font=\footnotesize\ttfamily},
+  val/.style={box, fill=white},
+  ar/.style={->, thick, >=stealth}
+]
+\node[box, fill=yellow!18] (pos) at (0,0) {position 25\\[-1pt]\tiny(Black to move)};
+
+% top lane: the engine's move
+\node[eng] (helix) at (2.9,1.5) {Helix\\1000\,ms};
+\node[mv]  (m1)    at (5.3,1.5) {h6h5};
+\node[ref] (sf1)   at (7.8,1.5) {Stockfish\\depth 20};
+\node[val] (v1)    at (10.2,1.5) {$-497$\,cp};
+
+% bottom lane: the reference move
+\node[ref] (sf2) at (2.9,-1.5) {Stockfish\\depth 20};
+\node[mv]  (m2)  at (5.3,-1.5) {h4h3};
+\node[val] (v2)  at (7.8,-1.5) {$0$\,cp};
+
+\node[box, fill=red!12] (cpl) at (10.4,-1.5)
+  {CPL $= 0 - (-497)$\\[-1pt]$= 497$};
+
+\draw[ar] (pos) -- (helix);
+\draw[ar] (helix) -- (m1);
+\draw[ar] (m1) -- node[above, font=\tiny] {apply} (sf1);
+\draw[ar] (sf1) -- (v1);
+\draw[ar] (pos) -- (sf2);
+\draw[ar] (sf2) -- (m2);
+\draw[ar] (m2) -- (v2);
+\draw[ar] (v2) -- (cpl);
+\draw[ar] (v1) -- (cpl);
+
+\node[font=\footnotesize, anchor=west, text=blue!45!black] at (10.9,1.5)
+  {value after the engine's move};
+\node[font=\footnotesize, anchor=north] at (5.3,-2.15)
+  {value of the best available move};
+\end{tikzpicture}
+\caption{How a move becomes a number, shown for position 25 of the suite. The
+same position is given to the engine under its time budget and to the reference
+engine without one. The engine's move is applied and the resulting position is
+evaluated to the same fixed depth, so both values describe the same quantity
+under identical conditions. Their difference is the centipawn loss: here the
+reference holds a balanced position at $0$, while the engine's move leaves it
+roughly five pawns worse, giving a loss of $497$\,cp. A value of $0$ means the
+engine's move is as good as the reference move, not that it is the same move.}
+\label{fig:cpl_pipeline}
+\end{figure}
 
 Since the dependent variable of every quality statement in this chapter is
 produced by this reference, its stability is a limitation of the setup. Depth 20
@@ -232,6 +296,20 @@ colors: Helix scores $138$--$40$--$22$ as White ($74.5\,\%$) and
 $150$--$36$--$14$ as Black ($78.5\,\%$), so it remains clearly stronger even
 without the first-move advantage. The moderate draw ratio of $9.0\,\%$ indicates
 that most games are decided rather than drawn.
+
+Two aspects of this result deserve interpretation. That the engine performs
+slightly better as Black is not a property of the engine but of the opponent:
+Stockfish's strength limitation introduces random inaccuracies, and a game in
+which the weakened side moves first offers more opportunity for such an
+inaccuracy to decide the game early. More importantly, the result contrasts with
+the position-based measurements that follow. A margin of $205$\,Elo describes an
+engine that plays soundly across a whole game, while
+\cref{subsec:eval_outliers} shows that it fails badly in a small class of
+positions. Both are true at once: the failures are concentrated in sparse
+endgames, and games between engines of this strength difference are usually
+decided long before such an endgame is reached. Game results and per-position
+analysis therefore measure genuinely different things, which is the reason this
+thesis relies on the latter.
 
 It should be emphasized that this is a \emph{relative} result. The reference
 engine was deliberately weakened, and Stockfish's \texttt{UCI\_LimitStrength}
@@ -372,14 +450,33 @@ table detectable at all, even though the eviction rate keeps falling. For the
 target time controls the search therefore stops being appreciably memory-bound
 around the 32\,MB default used elsewhere in this work.
 
+The shape of this curve follows from what the search actually needs. At a
+one-second budget the engine visits roughly $1.5$ million nodes, and a 1\,MB table
+holds about $32\,000$ entries, so it is overwritten many times over during a single
+search: the $61\,\%$ eviction rate means most entries are displaced before they can
+be reused, and the table degenerates from a memory into a cache of the most recent
+positions. Every additional megabyte then buys fewer new hits than the previous
+one, because entries are displaced in rough order of usefulness, and once the
+table is large enough to survive one search the remaining gain comes only from
+positions that recur rarely. That the curve flattens near the size actually needed
+for one search, rather than at some arbitrary point, is what makes the result
+transferable: an engine searching ten times as many nodes would need a
+correspondingly larger table.
+
 \subsection{Time-to-Quality and Depth-versus-Time}
 \label{subsec:eval_ttq}
 
 The per-budget measurements in \cref{tab:nmp_depth_cpl} also answer the
 time-to-quality and depth-versus-time questions directly. Reachable depth grows
-smoothly and predictably with the budget, roughly one additional ply per
-doubling of time in the tested range, which reflects the exponential relationship
-between depth and node count discussed in \cref{sec:preliminaries}.
+smoothly and predictably with the budget: a log-linear fit over all nine budgets
+yields $0.63$ additional plies per doubling of time ($R^2 = 0.999$), and the
+individual doublings stay within a narrow band around it, between $+0.63$ and
+$+0.72$. Inverted, this corresponds to
+an effective branching factor of $2^{1/0.63} \approx 3$, meaning each additional
+ply costs about three times the work of the previous one. This is the exponential
+relationship discussed in \cref{sec:preliminaries}, and it is the reason the
+budget has to grow by a factor of roughly $500$ to buy the five and a half plies
+separating the smallest budget from the largest.
 
 Move quality, in contrast, improves far less smoothly. Over the whole range from
 10\,ms to 5000\,ms, a factor of 500 in thinking time, the mean centipawn loss of
@@ -446,11 +543,143 @@ The outliers share a recognizable profile. Positions with a loss above $200$\,cp
 hold on average $13.8$ pieces, against $19.5$ for the well-played ones, and a
 third of them are endgames with ten pieces or fewer. Three positions reach the
 scoring cap of $1000$\,cp, meaning Stockfish sees a forced mate the engine misses
-entirely. A typical example is the pawn endgame
-\begin{center}
-\texttt{8/1p3pp1/7p/5P1P/2k3P1/8/2K2P2/8 w},
-\end{center}
-in which the engine plays \texttt{g4g5} instead of the winning \texttt{f5f6}.
+entirely.
+
+\subsubsection{The Worst Positions in Detail}
+\label{subsubsec:eval_case_studies}
+
+Since a handful of positions determines the headline figure, it is worth naming
+them. \cref{tab:worst_positions} lists the ten positions with the highest loss at
+a one-second budget, together with the move the engine chose and the move the
+reference preferred.
+
+\begin{table}[ht]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}rlllr@{}}
+\toprule
+\# & Position (FEN) & Engine & Reference & CPL \\ \midrule
+ 22 & {\ttfamily\scriptsize 8/1p3pp1/7p/5P1P/2k3P1/8/2K2P2/8 w - - 0 1} & \texttt{g4g5} & \texttt{f5f6} & 1000 \\
+ 46 & {\ttfamily\scriptsize r2r1n2/pp2bk2/2p1p2p/3q4/3PN1QP/2P3R1/P4PP1/5RK1 w - - 0 1} & \texttt{c3c4} & \texttt{g4g7} & 1000 \\
+202 & {\ttfamily\scriptsize 5b2/5k2/R1K5/2p1P1B1/p2r1PP1/4r3/8/7R b - - 8 50} & \texttt{a4a3} & \texttt{f8g7} & 1000 \\
+ 21 & {\ttfamily\scriptsize 8/2p5/8/2kPKp1p/2p4P/2P5/3P4/8 w - - 0 1} & \texttt{e5f5} & \texttt{d5d6} & 568 \\
+ 25 & {\ttfamily\scriptsize 5k2/7R/4P2p/5K2/p1r2P1p/8/8/8 b - - 0 1} & \texttt{h6h5} & \texttt{h4h3} & 497 \\
+203 & {\ttfamily\scriptsize 8/R4kb1/2K5/2p1P1B1/p2r1PP1/4r3/8/7R b - - 10 51} & \texttt{f7g8} & \texttt{f7g6} & 432 \\
+307 & {\ttfamily\scriptsize 8/8/5pk1/7p/7P/2b1K3/R4N1r/8 b - - 0 63} & \texttt{h2h4} & \texttt{c3e1} & 367 \\
+240 & {\ttfamily\scriptsize 1r2qbk1/2Rn2p1/r2Ppp1p/1pB5/1P2P3/1Q3N1P/p4PP1/3R2K1 w - - 0 38} & \texttt{b3c3} & \texttt{d1a1} & 363 \\
+148 & {\ttfamily\scriptsize 8/3k4/4p1R1/2P1K1P1/8/2P1N3/8/6rb w - - 11 46} & \texttt{g6e6} & \texttt{e5f4} & 333 \\
+268 & {\ttfamily\scriptsize 2r1r1k1/1p3ppp/p2P1p2/2P5/2q2P2/P1bb1NN1/R4QPP/2R3K1 b - - 0 24} & \texttt{c8c5} & \texttt{e8d8} & 331 \\
+\bottomrule
+\end{tabular}
+\caption{The ten positions with the highest centipawn loss at a one-second
+budget, with the complete FEN of each. The three values of $1000$ are all
+clamped: in positions 46 and 202 a forced mate is involved, in position 22 the
+raw difference is $1165$\,cp between two ordinary evaluations.}
+\label{tab:worst_positions}
+\end{table}
+
+Before examining individual cases, it is worth noting how the ten distribute.
+Five of them are endgames with at most eight pieces beside the kings, two are
+late middlegames, and three are full middlegames; two contain a forced mate the
+engine does not find (positions 46 and 202). One property holds without
+exception: in every one of the ten the reference move is a \emph{quiet} move, and
+in four of them the engine answers with a capture instead. The failures are
+therefore not scattered but fall into three recurring mechanisms, and the three
+positions examined below, shown in \cref{fig:worst_positions}, are chosen as
+representatives of these rather than as isolated curiosities: a plan that requires
+more depth than the budget allows (position 22), a tactical resource that move
+ordering never brings to the front (position 46), and a decision the evaluation
+cannot make at any depth (position 25).
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.32\textwidth]{figures/pos22_breakthrough.png}
+\hfill
+\includegraphics[width=0.32\textwidth]{figures/pos46_mate.png}
+\hfill
+\includegraphics[width=0.32\textwidth]{figures/pos25_endgame.png}
+\caption{The three positions discussed below. Left: position 22, White to move,
+the engine plays \texttt{g4g5} instead of the breakthrough \texttt{f5f6}. Middle:
+position 46, White to move, the engine plays \texttt{c3c4} and misses the mating
+sacrifice \texttt{g4g7}. Right: position 25, Black to move, the engine plays
+\texttt{h6h5} and gives up the draw held by \texttt{h4h3}.}
+\label{fig:worst_positions}
+\end{figure}
+
+\paragraph{Position 22: a pawn breakthrough that is never seen.}
+White has pawns on f2, f5, g4 and h5 against b7, f7, g7 and h6, with the kings on
+c2 and c4. White's h-pawn is blocked by the black pawn on h6, so the position is
+only winnable by opening that file. The reference move \texttt{f5f6} sacrifices a
+pawn to deflect the g7 pawn, but its point emerges only two moves later: after
+\texttt{f6 gxf6}, White must first play the quiet \texttt{f2f4} to bring up the
+reserve pawn, so that the breakthrough \texttt{g4g5} can be met by
+\texttt{f4xg5} \emph{whichever} pawn Black captures with. Both capture orders
+transpose into the same position, in which the h-pawn is finally unblocked and
+promotes in two moves, while Black's counterpart needs four and is caught by
+White's king. Played immediately, without the preparation, \texttt{g4g5} fails to
+\texttt{f6xg5}, after which White has no passed pawn at all.
+
+The engine plays \texttt{g4g5} at every budget from 50\,ms upwards, and the
+evaluation swings from $+507$ to $-658$\,cp: this is not a missed win but a lost
+game. Three properties of the implementation combine here, and each alone would
+suffice to miss the line. White is a pawn down for its entire length, and an
+evaluation built on material and piece-square tables sees no compensation for
+that. The decisive move \texttt{f2f4} is quiet, so the quiescence search, which
+extends captures and en passant only (\cref{subsec:quiescence_impl}), never
+looks at it; note that admitting promotions to the extension, the obvious
+suspect, would not help here either, since every move of the plan up to the
+promotion is quiet. And the promotion that justifies the whole operation lies thirteen
+plies from the root, whereas the engine reaches depth 8 at a one-second budget.
+This position is also the one case in the suite where the reported loss of $1000$
+is a clamp rather than a mate: the raw difference is $1165$\,cp.
+
+\paragraph{Position 46: a mating attack that is missed.}
+The reference plays \texttt{g4g7}, moving the queen to an empty square directly in
+front of the black king. Despite appearances this is not a sacrifice: no black
+piece can capture on g7. The check leaves Black exactly one legal reply,
+\texttt{Ke8}, after which the reference reports a forced mate. The engine plays
+\texttt{c3c4} instead. This is not an evaluation problem at all, since a mate is a
+purely tactical fact that any evaluation scores correctly once it is found; the
+engine simply never searches far enough along this line. Move ordering is the
+plausible reason, and in a direction that is easy to overlook. \texttt{Qg7+} is a
+\emph{quiet} move, so MVV-LVA never applies to it and it is sorted behind every
+capture in the list (\cref{subsec:move_ordering}). Only the killer and history
+heuristics could lift it, and both require the move to have proved itself
+elsewhere in the tree first, which is exactly what does not happen here. The
+position illustrates that good move ordering is not merely a speed optimization:
+at a fixed budget it decides which moves are examined at all.
+
+\paragraph{Position 25: a draw turned into a loss.}
+Black is nominally a pawn up (rook and three pawns against rook and two), yet the
+reference evaluates the position as exactly balanced, because White's pawn on e6
+and the active rook on the seventh rank compensate. Black's two h-pawns are
+doubled, on h6 and h4, and the whole assessment hinges on which of them moves. The
+reference plays \texttt{h4h3}, advancing the front pawn, which is three moves from
+promotion and forces White to attend to it. The engine plays \texttt{h6h5},
+advancing the rear pawn directly behind its own, where it is immediately blocked
+and accomplishes nothing; the evaluation drops by roughly five pawns.
+
+Both moves are pawn pushes on the same file and neither changes material by a
+single point, so no material-based term can tell them apart. Distinguishing them
+requires knowing that one pawn is a passer close to promotion and the other is
+blocked by its own colleague, and the evaluation encodes neither passed pawns nor
+pawn structure (\cref{subsec:eval_limitations}). This is the cleanest example in
+the suite of a decision that additional search depth cannot repair, because the
+engine would still be comparing the two resulting positions with an evaluation
+that scores them almost identically.
+
+\paragraph{A pattern across the outliers.}
+These cases are not isolated. Comparing the 21 positions above $200$\,cp with the
+203 played well ($\leq 25$\,cp) reveals a systematic difference in what the engine
+chooses: in the outliers it plays a capture where the reference does not in
+$19\,\%$ of cases, against $4\,\%$ in the well-played group. The reference, in
+turn, moves its king in $24\,\%$ of the outliers but only $13\,\%$ elsewhere. The
+engine thus errs in a specific direction. It takes material where a positional
+move is required, and it overlooks king activity, the central resource in sparse
+endgames. Both follow directly from an evaluation built on material and
+piece-square tables, in combination with a quiescence search that resolves
+captures and nothing else.
 
 The pattern is consistent with the limitations of the evaluation function
 discussed in \cref{subsec:eval_limitations}. Material and piece-square tables

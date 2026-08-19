@@ -18,7 +18,14 @@ zero throughout; the corresponding intervals for centipawn loss contain zero at
 every budget. Search tree reuse (\cref{subsec:eval_tree_reuse}) adds another
 $0.25$ ply, 95\,\% CI $[+0.22, +0.29]$, without changing any search parameter.
 Both refinements demonstrably deepen the search, and for neither could a
-corresponding gain in move quality be detected on this suite.
+corresponding gain in move quality be detected on this suite. For null-move
+pruning this follows from the scored comparison directly. For tree reuse, whose
+experiment records depth rather than reference scores, it follows from the
+mechanism: the refinement acts solely by making the search reach further, and
+\cref{subsec:eval_move_stability} shows that additional depth changes the root
+decision in only a fifth of the positions. A gain of a quarter of a ply is
+therefore not in a position to move the aggregate, which is exactly what the
+scored null-move comparison confirms for a gain four times as large.
 
 The move stability measurements (\cref{subsec:eval_move_stability}) offer an
 explanation. By depth 8, the depth the engine reaches at a one-second budget,
@@ -49,8 +56,15 @@ These positions share a profile. They hold fewer pieces than average, a third of
 them are endgames, and three contain a forced mate the engine does not find.
 These are the positions in which material and piece-square tables carry little
 useful information, since passed pawns, opposition and king activity are not
-represented in the evaluation (\cref{subsec:eval_limitations}). The observation
-is therefore consistent with evaluation quality being the binding constraint
+represented in the evaluation (\cref{subsec:eval_limitations}). Position 25 of
+the suite (\cref{subsubsec:eval_case_studies}) shows the mechanism in its purest
+form: both candidate moves are pawn pushes on the same file, neither changes
+material by a single point, and separating them requires knowing that one pawn is
+a passer three moves from promotion while the other is blocked behind its own
+colleague. Depth cannot repair that decision, because the two resulting positions
+are scored almost identically no matter how long the engine looks at them. The
+observation is therefore consistent with evaluation quality being the binding
+constraint
 there, although the experiments presented here cannot separate it from other
 candidates such as horizon effects or missing search extensions.
 
@@ -86,6 +100,14 @@ examined is almost always the best one, so the trade-off the parameters are mean
 to control barely arises. This is consistent with the long-standing observation
 that the effectiveness of Alpha-Beta pruning is governed by move ordering rather
 than by the pruning scheme itself~\cite{knuth1975alphabeta, marsland1986review}.
+
+Position 46 marks the boundary of that statement. The move the engine misses
+there is a quiet queen move giving check, and quiet moves are ranked neither by
+the transposition table nor by MVV-LVA, so it sits behind every capture until the
+killer or history heuristic has encountered it elsewhere in the tree. Ordering
+that is excellent on average can therefore still fail systematically on a
+particular class of move, and an aggregate over a suite is exactly the wrong
+instrument for noticing that.
 
 Notably, scouting buys its depth not by shrinking the tree but by making each node
 cheaper: with scouting the engine visits more nodes per second, not fewer. All
@@ -148,6 +170,46 @@ evaluation, both chosen for clarity rather than for strength. Modern engines rel
 on bitboards~\cite{cpw_bitboards} and learned evaluation
 functions~\cite{silver2018alphazero}, and the conclusions about absolute playing
 strength do not transfer to those designs.
+
+\subsection{Reflection}
+\label{subsec:discussion_reflection}
+
+Three insights from this work were not anticipated when the experiments were
+designed, and they say as much about the methodology as about the engine.
+
+The first concerns the initial hypothesis. The thesis set out to find the point at
+which additional time stops paying off, implicitly assuming that time and quality
+are related by a single curve with a knee. The data show something different:
+there is no single curve, because positions fall into two regimes. Most are solved
+early and never benefit from more time, a minority is never solved and benefits
+just as little. The apparent knee in the aggregate is an artifact of mixing the
+two. The case studies make the difference tangible: position 22 is solvable by
+depth in principle, but only thirteen plies from the root, while position 25
+cannot be solved by depth at any budget because the evaluation does not
+distinguish the two candidate moves in the first place. In hindsight the question ``where is the sweet spot'' was posed one level too
+coarsely; ``for which positions does additional time still help'' would have been
+the more productive formulation from the outset.
+
+The second is methodological. For a long time the analysis reported only mean
+centipawn loss, and under that view the engine looked mediocre and the refinements
+looked useless. Only after examining the distribution did it become clear that the
+median is $2$\,cp and that half of all positions are answered with exactly the
+reference move. The mean was not wrong, it simply answered a different question
+than the one being asked. That a single summary statistic can obscure the central
+result of an experiment is the most transferable lesson of this thesis, and it is
+the reason the analysis now reports several estimands side by side.
+
+The third concerns correctness. During the evaluation the engine occasionally
+produced illegal moves in tournament play, which turned out not to be a search
+problem at all but a parser that misclassified a knight move onto the en-passant
+square. The position in the engine and the position in the arbiter drifted apart
+silently, and every subsequent move was computed for a different game. The
+measurements taken before that point were internally consistent and looked
+entirely plausible; nothing in the aggregate numbers indicated a defect. This is
+the strongest argument for the correctness infrastructure described in
+\cref{subsec:common_setup}: perft validation and the systematic comparison against
+a reference detect what plausible-looking averages do not. Were the project to be
+repeated, that infrastructure would come first, before any measurement.
 
 \subsection{Future Work}
 \label{subsec:discussion_future}

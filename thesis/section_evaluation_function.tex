@@ -66,6 +66,11 @@ Eval(P) = \frac{MG(P)\cdot mgPhase + EG(P)\cdot egPhase}{24}.
 \]
 This approach is commonly used in classical engines, as it avoids abrupt
 evaluation changes and provides a simple, interpretable blending scheme.
+\cref{fig:tapered_eval} shows the two weights over the course of a game: as
+material leaves the board, the endgame table gradually takes over from the
+midgame table, so that a king which was penalized for leaving its shelter early
+on is rewarded for centralizing later, without either table ever switching on
+abruptly.
 
 \begin{figure}[ht]
 \centering
@@ -165,6 +170,14 @@ several limitations:
     all 64 squares, rather than updating evaluation terms incrementally during
     make/unmake.
 \end{itemize}
+
+The first of these is the one that turns out to matter most in practice. Since
+neither passed pawns nor pawn structure are represented, two moves that leave
+material untouched can be scored almost identically even when one wins and the
+other draws. \cref{subsubsec:eval_case_studies} shows a position in which exactly
+this happens: both candidate moves are pawn pushes on the same file, and the
+evaluation has no term that could prefer the one advancing a passer over the one
+advancing a pawn into its own blockade.
 
 Despite these limitations, the evaluation is sufficient for the primary focus of
 this thesis, namely the investigation of search behavior and iterative deepening
