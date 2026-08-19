@@ -23,8 +23,8 @@ history), and also advances the transposition table generation via
 Depending on \texttt{config.mode\_}, the engine selects one of the following
 execution strategies:
 \begin{itemize}
-    \item \textbf{FixedDepth:} the time budget is explicitly disabled
-    (\texttt{budget\_ = \{\}}) to prevent time-based termination inside
+    \item \textbf{FixedDepth:} the time budget is explicitly disabled by leaving
+    \texttt{budget\_} empty, which prevents time-based termination inside
     \texttt{hard\_stop()}. The engine performs a single root search with the
     requested depth and returns the result.
     \item \textbf{NodeLimit / Infinite:} time-based termination is disabled and
