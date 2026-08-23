@@ -199,8 +199,10 @@ observation is that in most positions having the right to move is an advantage:
 if a side is allowed to skip its turn (a \emph{null move}) and the resulting
 position, searched to a reduced depth, is still good enough to produce a beta
 cutoff, then the position is almost certainly too strong for the opponent and the
-whole subtree can be pruned without a full-depth search. The technique goes back
-to Beal~\cite{beal1989nullmove} and is a standard component of classical engines.
+whole subtree can be pruned without a full-depth search. The recursive form with
+depth reduction implemented here follows Goetsch and
+Campbell~\cite{goetsch1990experiments} and is a standard component of classical
+engines.
 
 \cref{fig:nullmove} contrasts the two searches involved. The decisive property is
 that the reduced search answers a deliberately easier question than the one the

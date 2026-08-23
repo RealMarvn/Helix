@@ -43,8 +43,8 @@ the rules of chess.
 
 For decision making, the graph $G$ is unrolled into a game tree rooted at the
 current position. Each level of the tree corresponds to one ply, and the number of
-nodes per level is governed by the branching factor of chess, which typically lies
-between 30 and 40 in middlegame positions~\cite{russell2010aima}.
+nodes per level is governed by the branching factor of chess, which amounts to
+around $30$ available actions per position~\cite{yannakakis2018artificial}.
 
 \subsection{Search Problem Formulation}
 
@@ -83,8 +83,9 @@ evaluated heuristically.
 
 The algorithm explores the game tree recursively and propagates values from the
 leaves toward the root by alternating between maximization and minimization
-steps. A detailed introduction to Minimax can be found in standard AI textbooks,
-such as Russell and Norvig~\cite{russell2010aima}.
+steps. A detailed introduction to Minimax can be found in standard textbooks on
+artificial intelligence in games, such as Yannakakis and
+Togelius~\cite{yannakakis2018artificial}.
 
 \paragraph{Negamax Formulation}
 In zero-sum games, the Minimax algorithm can be simplified using the Negamax

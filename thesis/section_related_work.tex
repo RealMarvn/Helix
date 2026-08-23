@@ -5,7 +5,7 @@
 The problem of efficient search in chess engines has been studied extensively
 over several decades~\cite{marsland1986review}. Early approaches were based on the Minimax algorithm,
 which provides an optimal decision strategy under the assumption of perfect
-play~\cite{russell2010aima}. However, due to the exponential growth of the game tree, Minimax quickly becomes infeasible even at moderate depths.
+play~\cite{yannakakis2018artificial}. However, due to the exponential growth of the game tree, Minimax quickly becomes infeasible even at moderate depths.
 
 Alpha-Beta pruning was introduced as a major improvement over plain Minimax,
 allowing large parts of the search tree to be pruned without affecting the
@@ -60,16 +60,21 @@ engines~\cite{marsland1986review}.
 
 Beyond exact pruning, engines also employ heuristic forward pruning, which
 discards subtrees without proving them irrelevant. The most widely used variant
-is null-move pruning, introduced by Beal~\cite{beal1989nullmove}: if passing a
-turn still leaves the position good enough to cause a cutoff, the subtree is
-assumed to be safe to skip. Unlike Alpha-Beta this is not value-preserving, so it
-trades a small risk of overlooking a line for a substantially smaller tree.
+is null-move pruning: if passing a turn still leaves the position good enough to
+cause a cutoff, the subtree is assumed to be safe to skip. The null move as a
+search device is considerably older than this application of it, but the
+recursive form with depth reduction that engines use today was established
+experimentally by Goetsch and Campbell~\cite{goetsch1990experiments}. Unlike
+Alpha-Beta this is not value-preserving, so it trades a small risk of overlooking
+a line for a substantially smaller tree.
 
 Closest to the question of this thesis is the work on how additional search
 actually pays off. Junghanns et al.~\cite{junghanns1997diminishing} studied
 diminishing returns in self-play and found the winning percentage per additional
-ply to decrease with depth, an effect partly masked by the high error rate of
-programs at shallow depths. Ferreira~\cite{ferreira2013impact} approached the
+ply to decrease with depth. They also report that this decrease is not visible
+throughout: the high error rate of chess programs hides the effect for search
+depths through nine plies, which is precisely the range in which the engine
+studied here operates. Ferreira~\cite{ferreira2013impact} approached the
 same relationship from the other direction and related search depth to Elo,
 reporting gains per ply that shrink as depth grows.
 

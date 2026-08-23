@@ -43,6 +43,16 @@ difference is no longer \emph{resolved} by this sample, not where improvement
 provably ends: the intervals are wide enough that a small effect could remain
 hidden.
 
+This should be related to the depth at which the engine operates. Junghanns et
+al.~\cite{junghanns1997diminishing} find that diminishing returns do exist in
+chess, but that the high error rate of programs conceals them for search depths
+through nine plies. The budgets used here reach from $3.9$ plies at 10\,ms to
+$9.5$ plies at 5000\,ms and thus lie almost entirely inside that range. The flat
+quality curve reported above is therefore consistent with the literature rather
+than in tension with it, and the same fact bounds what it can establish: this
+setup cannot separate a genuine absence of returns from returns masked by the
+engine's own error rate.
+
 \subsection{Where the Search Is Actually Limited}
 \label{subsec:discussion_limits}
 
@@ -129,7 +139,7 @@ real depth, but the penalty falls below a twentieth of a ply by 16\,MB and is no
 longer detectable at 64\,MB. Set against the tree-reuse result, this suggests that
 keeping the table alive across moves is worth more than enlarging it: retaining
 what was already computed gains $0.25$ ply, whereas quadrupling the table from
-64\,MB upwards gains nothing measurable~\cite{warnock1988search}.
+64\,MB upwards gains nothing measurable.
 
 Against a fixed reference opponent, the engine wins its match by roughly $205$
 Elo points with both colors (\cref{subsec:engine_eval}). This is a check that the
