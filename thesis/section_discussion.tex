@@ -57,9 +57,9 @@ engine's own error rate.
 \label{subsec:discussion_limits}
 
 The distribution of move quality (\cref{subsec:eval_outliers}) shows where the
-remaining errors come from. The engine plays exactly Stockfish's move in
-$49\,\%$ of the positions and stays within $25$\,cp in two thirds of them, with a
-median loss of $2$\,cp. The mean of $52$\,cp is produced almost entirely by a
+remaining errors come from. The engine plays a move that loses nothing against
+the reference in $49\,\%$ of the positions and stays within $25$\,cp in two
+thirds of them, with a median loss of $2$\,cp. The mean of $52$\,cp is produced almost entirely by a
 small residue: fifteen positions account for nearly half of it.
 
 These positions share a profile. They hold fewer pieces than average, a third of
@@ -103,8 +103,8 @@ picture from a different angle. Scouting itself is worth having: it gains
 $0.23$\,ply at a one-second budget, with intervals excluding zero at every budget.
 Its parameters, however, are irrelevant, since the node count varies by less than
 two percent across all 30 configurations. The reason is that re-searches are rare
-to begin with, about 104 over 1.5 million nodes even under the most aggressive
-setting. The move ordering, built from transposition table moves, MVV-LVA, killer
+to begin with: depending on the configuration, between roughly 3 and 146 per
+search against 1.5 million nodes visited. The move ordering, built from transposition table moves, MVV-LVA, killer
 moves and the history heuristic, is already good enough that the first move
 examined is almost always the best one, so the trade-off the parameters are meant
 to control barely arises. This is consistent with the long-standing observation
@@ -203,8 +203,8 @@ the more productive formulation from the outset.
 The second is methodological. For a long time the analysis reported only mean
 centipawn loss, and under that view the engine looked mediocre and the refinements
 looked useless. Only after examining the distribution did it become clear that the
-median is $2$\,cp and that half of all positions are answered with exactly the
-reference move. The mean was not wrong, it simply answered a different question
+median is $2$\,cp and that half of all positions are answered without any loss
+against the reference. The mean was not wrong, it simply answered a different question
 than the one being asked. That a single summary statistic can obscure the central
 result of an experiment is the most transferable lesson of this thesis, and it is
 the reason the analysis now reports several estimands side by side.

@@ -481,8 +481,8 @@ separating the smallest budget from the largest.
 Move quality, in contrast, improves far less smoothly. Over the whole range from
 10\,ms to 5000\,ms, a factor of 500 in thinking time, the mean centipawn loss of
 the pruning configuration falls only from about $62$ to $44$\,cp, and it does so
-non-monotonically: the curve rises again at 100\,ms and at 2000\,ms before
-continuing downwards. No single doubling of the budget produces a difference
+non-monotonically: at 100\,ms the curve even rises by $4$\,cp against the
+preceding budget before continuing downwards. No single doubling of the budget produces a difference
 whose confidence interval excludes zero; only comparisons spanning several steps
 do, for instance from 500\,ms to 5000\,ms.
 
@@ -525,8 +525,10 @@ All centipawn losses reported so far are means over the suite, and that summary
 turns out to hide the actual behavior of the engine. The distribution of the
 per-position loss is strongly skewed: at a one-second budget the \emph{median}
 loss is $2$\,cp while the \emph{mean} is $52.4$\,cp. In $49.0\,\%$ of all
-positions the engine plays exactly the move Stockfish prefers, and in $66.3\,\%$
-it stays within $25$\,cp of it. At the other end, $6.9\,\%$ of the positions
+positions the engine's move loses nothing at all against the reference: in
+$43.8\,\%$ it is exactly the move Stockfish prefers, and in the remaining
+$5.2\,\%$ a different move of equal reference value. In $66.3\,\%$ of the
+positions the loss stays within $25$\,cp. At the other end, $6.9\,\%$ of the positions
 (21 of 306) exceed $200$\,cp, and the fifteen worst positions alone account for
 $46.3\,\%$ of the entire mean. The average is therefore not a description of the
 typical case, it is a description of a small number of failures.
@@ -791,9 +793,10 @@ that matters is whether to scout at all, not where to start.
 The reason is visible in the re-search column. The whole point of the scouting
 parameters is to control the trade-off between the savings of the cheap
 null-window scout and the cost of the occasional full-window re-search when the
-scout fails high. In this engine that trade-off barely materializes: even the
-most aggressive configuration triggers only about $104$ re-searches over roughly
-$1.5$ million nodes, and the most conservative one only about $3$. The existing
+scout fails high. In this engine that trade-off barely materializes: across the
+whole grid the average number of re-searches per search ranges from about $3$ to
+about $146$, against roughly $1.5$ million nodes visited, so even in the busiest
+configuration fewer than one node in ten thousand is a re-search. The existing
 move ordering (transposition-table move, MVV-LVA captures, killer moves, and the
 history heuristic) is already good enough that the first move is almost always
 the best, so the null-window scout almost always holds and there is little
