@@ -60,7 +60,7 @@ consults the active constraints).
 \subsubsection{Time Budgets: Structure and Arming}
 
 Time-based searches (Normal / FixedTime) rely on \texttt{TimeControl} stored in
-\texttt{SearchConstraints::budget\_}. The budget distinguishes a \emph{soft} and a
+\texttt{SearchConstraints::\allowbreak budget\_}. The budget distinguishes a \emph{soft} and a
 \emph{hard} limit:
 \begin{itemize}
     \item \textbf{Soft deadline:} preferred stopping point, checked only at safe
@@ -107,7 +107,7 @@ caller.
 \If{\texttt{stop\_requested} is set}{
     \Return \texttt{true}\;
 }
-\If{\texttt{budget\_.hard\_time\_up(now)}}{
+\If{\texttt{budget\_.\allowbreak hard\_time\_up(now)}}{
     \Return \texttt{true}\;
 }
 \If{\texttt{has\_node\_limit()} \textbf{and} \texttt{nodes >= nodes\_}}{
@@ -136,7 +136,7 @@ $bestMove \gets$ legal fallback move\;
         \textbf{break}\tcp*{do not trust partial iteration}
     }
     $bestMove \gets$ move from completed iteration\;
-    \If{\texttt{budget\_.soft\_time\_up(now)}}{
+    \If{\texttt{budget\_.\allowbreak soft\_time\_up(now)}}{
         \textbf{break}\tcp*{stop cleanly after a full iteration}
     }
 }

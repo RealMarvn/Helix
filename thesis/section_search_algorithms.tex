@@ -57,11 +57,11 @@ stays below a millisecond.
 As an additional robustness measure, the engine verifies the final move before
 returning it. If the selected move is not legal (checked via
 \texttt{is\_legal\_move()}), the engine falls back to a legal move
-obtained from \texttt{get\_legal\_fallback\_move()}.
+obtained from \texttt{get\_legal\_\allowbreak fallback\_move()}.
 
 \subsubsection{Iterative Deepening Loop}
 
-Time-managed searches run in \texttt{ChessBot::iterative\_deepening(Board\&)}.
+Time-managed searches run in \texttt{ChessBot::\allowbreak iterative\_deepening(Board\&)}.
 The engine starts with a legal fallback move and then performs repeated searches
 with increasing depth $d = 1,2,3,\dots$.
 
@@ -172,7 +172,7 @@ so that the iterative deepening loop can discard the incomplete iteration.
 \subsubsection{Quiescence Search}
 \label{subsec:quiescence_impl}
 
-Quiescence search is implemented in \texttt{ChessBot::quiescence(...)} and is
+Quiescence search is implemented in \texttt{ChessBot::\allowbreak quiescence(...)} and is
 entered whenever the regular search reaches depth $0$. The function evaluates
 the current position via \texttt{eval::evaluate(board)} and then selectively
 extends the search by exploring only tactical moves (captures and en-passant).
@@ -432,7 +432,7 @@ foreign origin enters the search.
 \subsubsection{Move Ordering and Heuristics}
 \label{subsec:move_ordering}
 
-Move ordering is implemented in \texttt{search::heuristics::order\_moves}.
+Move ordering is implemented in \texttt{search::heuristics::\allowbreak order\_moves}.
 The ordering score combines several standard heuristics, all of which are
 surveyed by Marsland~\cite{marsland1986review}:
 \begin{itemize}

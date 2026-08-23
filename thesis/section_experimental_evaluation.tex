@@ -70,7 +70,7 @@ experiment, all engine options were kept at their defaults throughout.
 
 \paragraph{Position Suite.}
 The experiments use a fixed suite of 309 positions, stored in the repository as
-\texttt{tests/data/stockfish-bench-all.epd} and derived from the position set
+\texttt{tests/\allowbreak data/\allowbreak stockfish-bench-all.epd} and derived from the position set
 that Stockfish uses for its own benchmark. Each configuration is measured with three
 repetitions per position to average out scheduling noise, and reported figures
 are means over positions and repetitions.
@@ -199,7 +199,10 @@ PVS re-searches and null-move cutoffs, transposition table statistics, and the
 elapsed time. The raw per-search records are written to CSV files and aggregated
 offline, which keeps measurement and analysis reproducible. Each file also stores
 the commit hash of the engine it was produced with, so every table in this
-chapter can be traced back to a specific state of the implementation.
+chapter can be traced back to a specific state of the implementation. All
+measurements reported here were produced with a single build, commit
+\texttt{f3270d5} of the engine repository\footnote{\url{https://github.com/RealMarvn/Helix}},
+so later changes to the engine do not affect the figures given in this chapter.
 
 \paragraph{Separate Runs.}
 The individual experiments were executed as separate runs, so the same
