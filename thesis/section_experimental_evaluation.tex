@@ -369,7 +369,9 @@ per node as well. What does change is the transposition table hit rate, which
 drops from $0.208$ to $0.158$ at one second: by pruning subtrees, the search
 visits a larger number of \emph{distinct} positions and re-visits known entries
 less often. The hit rate is therefore best read as a symptom of the search shape
-rather than as a quality target in itself.
+rather than as a quality target in itself. The left panel of
+\cref{fig:nmp_overview} shows the node throughput across the whole range of
+budgets.
 
 The effect on move quality does not follow the depth gain. The paired differences
 scatter around zero: the pruning configuration is ahead at three of the nine
@@ -381,7 +383,21 @@ experiment therefore does not show that pruning leaves quality untouched; it
 shows that any effect is small compared to the spread between positions and
 cannot be resolved with this sample. The contrast to the depth column, where
 every interval excludes zero by a wide margin, is what makes the comparison
-informative.
+informative. The right panel of \cref{fig:nmp_overview} plots the loss over the
+same budgets.
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=0.48\linewidth]{figures/search_nps.png}
+\hfill
+\includegraphics[width=0.48\linewidth]{figures/quality_vs_depth.png}
+\caption{Effect of null-move pruning across the nine time budgets. Left: node
+throughput in nodes per second. Right: mean centipawn loss. Pruning is slightly
+faster per node and reaches greater depth at every budget
+(\cref{tab:nmp_depth_cpl}), while the two quality curves remain intertwined
+throughout.}
+\label{fig:nmp_overview}
+\end{figure}
 
 Taken together, this is the central observation of this
 experiment: null-move pruning reliably buys depth, while no corresponding gain in
@@ -394,24 +410,7 @@ run at different fixed budgets. What the experiment does establish is that a
 refinement which demonstrably deepens the search does not, on this suite,
 demonstrably improve its decisions, and
 \cref{subsec:eval_ttq,subsec:eval_outliers,subsec:eval_move_stability} examine
-where that gap comes from. \cref{fig:quality_vs_depth,fig:search_nps} visualize
-the quality and the node throughput across budgets.
-
-\begin{figure}[ht]
-\centering
-\includegraphics[width=0.8\linewidth]{figures/quality_vs_depth.png}
-\caption{Centipawn loss as a function of the reached depth (and thus time budget)
-with and without null-move pruning.}
-\label{fig:quality_vs_depth}
-\end{figure}
-
-\begin{figure}[ht]
-\centering
-\includegraphics[width=0.8\linewidth]{figures/search_nps.png}
-\caption{Node throughput (nodes per second) across time budgets with and without
-null-move pruning.}
-\label{fig:search_nps}
-\end{figure}
+where that gap comes from.
 
 \subsection{Transposition Table Size}
 \label{subsec:eval_tt_size}
