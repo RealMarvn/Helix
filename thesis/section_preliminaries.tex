@@ -11,8 +11,10 @@ for the subsequent chapters.
 \subsection{Chess as a Game-Theoretic Model}
 
 Chess is modeled as a deterministic, two-player, zero-sum game with perfect
-information. At any point in time, the complete game state is fully observable
-to both players, and no randomness is involved in the game mechanics.
+information, the class of games for which the classical game-tree search methods
+discussed below were developed~\cite{yannakakis2018artificial}. At any point in
+time, the complete game state is fully observable to both players, and no
+randomness is involved in the game mechanics.
 
 A game state consists of a board configuration together with additional state
 information such as the side to move, castling rights, and en-passant
@@ -89,7 +91,8 @@ Togelius~\cite{yannakakis2018artificial}.
 
 \paragraph{Negamax Formulation}
 In zero-sum games, the Minimax algorithm can be simplified using the Negamax
-formulation. Instead of explicitly distinguishing between maximizing and
+formulation, a reformulation that is standard in game-tree search and treated
+in the surveys of the field~\cite{marsland1986review, knuth1975alphabeta}. Instead of explicitly distinguishing between maximizing and
 minimizing players, Negamax expresses all evaluations from the perspective of the
 side to move. The value of a position is defined as the negation of the value
 obtained by the opponent after making a move.
