@@ -144,28 +144,29 @@ public:
     bool try_to_move_piece(const Move& move);
 
     /**
-     * @brief Checks if a move is legal by performing it.
+     * @brief Checks whether a move is legal in the current position.
      *
-     * This function attempts to move a chess piece on the board. It checks if the move can be applied
-     * by moving it and checking if a check occurred.
+     * Matches the move against the generated pseudo-legal moves and then checks
+     * that it does not leave the own king in check. Meant for moves of unknown
+     * origin, above all moves from the transposition table.
      *
-     * This function is only used for legality checks on generated moves.
-     *
-     * @param move The move to be made.
+     * @param move The move to verify.
      * @return True if the move is legal, false otherwise.
      */
-    bool is_legal_by_make_unmake(const Move& move);
+    bool is_legal_move(const Move& move);
 
     /**
-     * @brief Moves a chess piece on the board.
+     * @brief Applies a move to the board.
      *
-     * This function moves a chess piece on the board. It only checks if the move is legal (you don't set yourself in
-     * check) and updates the board accordingly. This function does not check if the move is correct. Use @see
-     * tryToMovePiece for correct checking. The function returns true if the move is successful, and false otherwise. If
-     * false the move will not be applied!
+     * Expects a pseudo-legal move. Rejects moves that leave the own king in
+     * check, as well as an empty or mismatched source square and a target
+     * square holding one of our own pieces. Move geometry, slider paths and the
+     * castling/en-passant prerequisites are not checked, use @see is_legal_move
+     * for that.
      *
      * @param move The move to make.
-     * @return True if the move is successful, false otherwise. If false the move will not be applied!.
+     * @return True if the move was applied, false otherwise. If false the board
+     *         is left untouched.
      */
     bool make_move(const Move& move);
 
@@ -178,6 +179,39 @@ public:
      * @return True if the last move was successfully undone, false otherwise.
      */
     bool pop_last_move();
+
+    /**
+     * @brief Makes a null move (passes the turn without moving a piece).
+     *
+     * This function hands the turn to the opponent without touching any piece. It clears the
+     * en-passant square (the opponent can't capture en passant against a move that never happened)
+     * and rebuilds the hash. Used by the search for null move pruning, this is not a legal chess
+     * move!
+     *
+     * Every make_null_move must be undone with @see pop_null_move before any pop_last_move is
+     * called, because null moves are not stored in the move list.
+     */
+    void make_null_move();
+
+    /**
+     * @brief Undoes a null move made by @see make_null_move.
+     *
+     * This function restores the previous board settings (en-passant square, counters), gives the
+     * turn back and rebuilds the hash. Must be called exactly once for every make_null_move.
+     */
+    void pop_null_move();
+
+    /**
+     * @brief Checks if the given side still has pieces other than pawns and the king.
+     *
+     * This function is used by the search as a zugzwang guard for null move pruning. In pure
+     * pawn/king endgames "doing nothing" is often the best move, so null move pruning would cut
+     * away the truth there.
+     *
+     * @param is_white The side to check (true for white, false for black).
+     * @return True if the side has at least one knight, bishop, rook or queen.
+     */
+    [[nodiscard]] bool has_non_pawn_material(bool is_white) const;
 
     /**
      * @brief Prints the current state of the chessboard.
@@ -267,7 +301,7 @@ private:
     /**
      * @brief Precomputed Zobrist keys used to hash the board state.
      */
-    const Zobrist ZOBRIST_TABLES_;
+    inline static const Zobrist ZOBRIST_TABLES_{};
 
     /**
      * @brief Cached Zobrist hash for the current position.

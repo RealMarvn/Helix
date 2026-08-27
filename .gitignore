@@ -123,4 +123,3 @@ subprojects/*
 !subprojects/gtest.wrap
 
 build/
-

@@ -66,8 +66,9 @@ void ChessGame::parser_uci_handle_position(const std::string& line) const
         {
             while (iss >> token)
             {
-                Move m = board_->parse_move(token);
-                board_->try_to_move_piece(m);
+                // Parse and try the move.
+                if (Move m = board_->parse_move(token); !board_->try_to_move_piece(m))
+                    std::cout << "info string ERROR could not apply move " << token << std::endl;
             }
         }
     }
@@ -84,8 +85,9 @@ void ChessGame::parser_uci_handle_position(const std::string& line) const
         {
             while (iss >> token)
             {
-                Move m = board_->parse_move(token);
-                board_->try_to_move_piece(m);
+                // Parse and try the move.
+                if (Move m = board_->parse_move(token); !board_->try_to_move_piece(m))
+                    std::cout << "info string ERROR could not apply move " << token << std::endl;
             }
         }
     }
@@ -184,7 +186,7 @@ void ChessGame::parser_uci_handle_go(const std::string& line)
     SearchConstraints constraints_copy = constraints;
 
     search_thread_ = std::thread([this, board_copy, constraints_copy]() mutable {
-        const Move best = chess_bot_.think(board_copy, constraints_copy);
+        const Move best = chess_bot_.think(board_copy, constraints_copy).best_move;
 
         // If Ponder, dont print and save the best move.
         if (constraints_copy.mode_ == SearchType::Ponder)
@@ -211,6 +213,15 @@ void ChessGame::parser_parse_uci(const std::string& line)
     {
         std::cout << "id name Helix" << std::endl;
         std::cout << "id author Marvin Becker" << std::endl;
+        std::cout << "option name Hash type spin default 32 min 1 max 1024" << std::endl;
+        std::cout << "option name PvsMinDepth type spin default 2 min 1 max 64" << std::endl;
+        std::cout << "option name PvsScoutAfterMove type spin default 1 min 1 max 64" << std::endl;
+        std::cout << "option name NullMove type check default true" << std::endl;
+        std::cout << "option name NullMoveMinDepth type spin default 3 min 2 max 64" << std::endl;
+        std::cout << "option name NullMoveReduction type spin default 2 min 1 max 4" << std::endl;
+        std::cout
+            << "option name Debug type combo default none var none var basic var medium var verbose"
+            << std::endl;
         std::cout << "uciok" << std::endl;
         return;
     }
@@ -281,6 +292,101 @@ void ChessGame::parser_parse_uci(const std::string& line)
         iss >> token; // setoption
         iss >> token; // name
         iss >> name;  // Debug
+
+        if (name == "Hash")
+        {
+            iss >> token; // value
+            iss >> value;
+
+            try
+            {
+                chess_bot_.set_tt_size_mb(std::stoi(value));
+            }
+            catch (const std::exception&)
+            {
+                // Ignore malformed values.
+            }
+
+            return;
+        }
+
+        if (name == "PvsMinDepth")
+        {
+            iss >> token; // value
+            iss >> value;
+
+            try
+            {
+                chess_bot_.set_pvs_min_depth(std::stoi(value));
+            }
+            catch (const std::exception&)
+            {
+                // Ignore malformed values.
+            }
+
+            return;
+        }
+
+        if (name == "PvsScoutAfterMove")
+        {
+            iss >> token; // value
+            iss >> value;
+
+            try
+            {
+                chess_bot_.set_pvs_scout_after_move(std::stoi(value));
+            }
+            catch (const std::exception&)
+            {
+                // Ignore malformed values.
+            }
+
+            return;
+        }
+
+        if (name == "NullMove")
+        {
+            iss >> token; // value
+            iss >> value;
+
+            // UCI check options send "true" or "false".
+            chess_bot_.set_nmp_enabled(value == "true");
+            return;
+        }
+
+        if (name == "NullMoveMinDepth")
+        {
+            iss >> token; // value
+            iss >> value;
+
+            try
+            {
+                chess_bot_.set_nmp_min_depth(std::stoi(value));
+            }
+            catch (const std::exception&)
+            {
+                // Ignore malformed values.
+            }
+
+            return;
+        }
+
+        if (name == "NullMoveReduction")
+        {
+            iss >> token; // value
+            iss >> value;
+
+            try
+            {
+                chess_bot_.set_nmp_reduction(std::stoi(value));
+            }
+            catch (const std::exception&)
+            {
+                // Ignore malformed values.
+            }
+
+            return;
+        }
 
         if (name == "Debug")
         {
@@ -368,7 +474,7 @@ void ChessGame::parser_parse_classic(const std::string& line)
 
         // Bot can only move legal so no need to check if the move is legal.
         // Check if opponent is in check mate after bots turn.
-        const Move MOVE = chess_bot_.think(*board_, LIMIT);
+        const Move MOVE = chess_bot_.think(*board_, LIMIT).best_move;
         board_->make_move(MOVE);
         board_->print_current_board();
 

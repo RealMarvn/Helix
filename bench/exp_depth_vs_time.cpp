@@ -1,0 +1,92 @@
+//
+// Created by Marvin Becker on 11.06.26.
+//
+
+/**
+ * @file exp_depth_vs_time.cpp
+ * @brief Experiment 3: reachable depth per time budget, with and without PVS/NMP.
+ *
+ * Every position is searched once per budget and repetition with a fresh TT,
+ * so the budgets do not profit from each other. PVS is switched off by
+ * raising the scout threshold so high that the scout never kicks in, null
+ * move pruning has its own on/off switch. The search code itself stays
+ * untouched either way.
+ */
+
+#include "bench_common.h"
+#include "bench_experiments.h"
+
+namespace bench
+{
+
+void run_depth_vs_time(const std::vector<std::string>& args)
+{
+    const std::string SUITE = get_arg(args, "--suite", "tests/data/thesis-positions.epd");
+    const std::string OUT = get_arg(args, "--out", "results");
+    const std::string PVS = get_arg(args, "--pvs", "on");
+    const std::string NMP = get_arg(args, "--nmp", "on");
+    const int REPS = get_int_arg(args, "--reps", 3);
+    const auto BUDGETS = parse_int_list(get_arg(args, "--budgets", "10,25,50,100,250,500,1000"));
+
+    const auto FENS = load_suite(SUITE);
+    const bool PVS_ON = (PVS == "on");
+    const bool NMP_ON = (NMP == "on");
+
+    std::ostringstream config;
+    config << "suite=" << SUITE << " pvs=" << PVS << " nmp=" << NMP << " reps=" << REPS
+           << " positions=" << FENS.size();
+
+    auto csv = open_csv(OUT, "depth_vs_time", config.str());
+    csv << "fen_id,budget_ms,rep,pvs,nmp,completed_depth,seldepth,nodes,qnodes,researches,"
+        << "null_cutoffs,tt_probes,tt_hits,tt_stores,tt_replaces,tt_hit_rate,"
+        << "time_ms,bestmove,stop_reason\n";
+
+    ChessBot bot;
+    Board board;
+
+    // PVS off = the scout never triggers because no search gets that deep.
+    if (!PVS_ON)
+        bot.set_pvs_min_depth(64);
+
+    // NMP has a real switch, no trick needed here.
+    bot.set_nmp_enabled(NMP_ON);
+
+    for (std::size_t fen_id = 0; fen_id < FENS.size(); fen_id++)
+    {
+        board.read_fen(FENS[fen_id]);
+
+        for (const int BUDGET : BUDGETS)
+        {
+            for (int rep = 0; rep < REPS; rep++)
+            {
+                // Fresh TT per run, otherwise we would measure tree reuse here.
+                bot.reset_tt();
+
+                SearchConstraints limits;
+                limits.mode_ = SearchType::FixedTime;
+                limits.movetime_ms_ = BUDGET;
+
+                const SearchSample SAMPLE = run_search(bot, board, limits);
+
+                // TT is fresh per run here, so the hit rate shows how well a single
+                // search fills and reuses its own table within the given budget.
+                const TTStats& TT = SAMPLE.tt_stats;
+                const double HIT_RATE =
+                    TT.probes_ ? static_cast<double>(TT.hits_) / TT.probes_ : 0.0;
+
+                csv << fen_id << "," << BUDGET << "," << rep << "," << (PVS_ON ? "on" : "off")
+                    << "," << (NMP_ON ? "on" : "off") << "," << SAMPLE.completed_depth << ","
+                    << SAMPLE.seldepth << "," << SAMPLE.nodes << "," << SAMPLE.qnodes << ","
+                    << SAMPLE.researches << "," << SAMPLE.null_cutoffs << "," << TT.probes_ << ","
+                    << TT.hits_ << "," << TT.stores_ << "," << TT.replaces_ << "," << std::fixed
+                    << std::setprecision(4) << HIT_RATE << "," << SAMPLE.time_ms << ","
+                    << SAMPLE.move.to_string() << "," << stop_reason_name(SAMPLE.stop_reason)
+                    << "\n";
+            }
+        }
+
+        std::cout << "Position " << (fen_id + 1) << "/" << FENS.size() << " done" << std::endl;
+    }
+}
+
+} // namespace bench

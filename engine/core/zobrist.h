@@ -85,14 +85,15 @@ private:
     /**
      * @brief Generates a uniformly distributed random 64‑bit number.
      *
-     * Used to initialize the Zobrist tables. Relies on std::random_device
-     * to seed a Mersenne Twister 64‑bit generator.
+     * Used to initialize the Zobrist tables. Uses a single Mersenne Twister
+     * with a fixed seed, so the keys (and with them all hashes) are identical
+     * on every run. That makes searches reproducible and hash bugs debuggable.
      *
      * @return A random 64‑bit unsigned integer.
      */
     static uint64_t generate_random_64_bit_number() {
-        std::random_device rd;
-        std::mt19937_64 e2(rd());
+        // Fixed seed on purpose, see above. The value itself is arbitrary.
+        static std::mt19937_64 e2(0x9E3779B97F4A7C15ULL);
         std::uniform_int_distribution<uint64_t> dist(0, std::numeric_limits<uint64_t>::max());
 
         return dist(e2);

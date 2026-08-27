@@ -1,0 +1,95 @@
+\section{Introduction}
+\label{sec:introduction}
+% Motivation, problem statement, goals, research question
+
+Chess has long been regarded as a canonical benchmark problem in artificial
+intelligence and algorithm engineering~\cite{yannakakis2018artificial, knuth1975alphabeta, silver2018alphazero}.
+Despite its simple and fully specified
+rules, the game exhibits an enormous search space caused by its high branching
+factor and strategic depth. As a consequence, exhaustive search of the complete
+game tree is computationally infeasible, even with modern hardware, and chess
+engines must rely on heuristic search techniques to make strong decisions under
+limited computational resources.
+
+At the core of most classical chess engines lies a depth-limited game tree
+search based on Minimax or Negamax, enhanced by Alpha-Beta pruning. Over the
+years, a variety of improvements have been proposed to increase search
+efficiency, including iterative deepening, transposition tables, quiescence
+search, and heuristic move ordering~\cite{marsland1986review}. Among these
+techniques, iterative deepening~\cite{korf1985iterative} has become a standard
+approach, particularly in time-controlled settings, as it allows the engine to
+gradually refine its decision while always maintaining a valid best move.
+
+The primary motivation of this work is to understand how a chess engine should
+spend its limited time. More search time generally yields deeper searches and
+better moves, but the relationship is far from linear: at some point the chosen
+move stabilizes and additional computation no longer changes the decision. At
+the same time, search refinements such as null-move pruning, Principal Variation
+Search and the reuse of previous search trees change how efficiently a given time
+budget is converted into depth and decision quality. This leads to the central
+research question of this thesis:
+
+\emph{Where lies the sweet spot between invested search time and decision
+quality in heuristic chess search, and how do search refinements such as
+null-move pruning, Principal Variation Search and search tree reuse shift this
+trade-off?}
+
+To make this question measurable, the thesis examines five concrete aspects:
+(i) \emph{move stability}, i.e., the depth at which the best move stabilizes
+and deeper search no longer changes the decision, (ii) the
+\emph{time-to-quality curve}, i.e., how move quality changes as the time limit
+increases, (iii) the \emph{depth and quality} gained by null-move pruning and by
+search tree reuse, (iv) the \emph{contribution of Principal Variation Search} over
+a plain full-window search, together with a parameter sweep that determines which
+combination of minimum scouting depth and number of fully searched moves yields
+the best ratio of cost reduction to move quality, and (v) the \emph{distribution}
+of move quality over the suite, which reveals where the remaining errors are
+concentrated.
+
+To address this question, a complete chess engine is implemented from scratch in
+\texttt{C++}. The engine employs a classical mailbox-based board representation
+rather than highly optimized bitboard techniques, which keeps the impact of
+search algorithms and time management observable in isolation from low-level
+optimizations; the underlying design rationale is discussed in
+\cref{sec:architecture}.
+
+The implemented engine integrates a Negamax search with Alpha-Beta pruning,
+iterative deepening, quiescence search, transposition tables, and heuristic move
+ordering. A dedicated time management module supports multiple search modes,
+including fixed depth, fixed time, node-limited, and infinite search, following
+the UCI protocol. In particular, a two-stage time budget with soft and hard
+deadlines is used to control the interaction between iterative deepening and
+time constraints.
+
+Beyond this baseline, this thesis integrates and experimentally studies three
+further search refinements: Principal Variation Search, null-move pruning, and the
+reuse of search trees from previous searches through a persistent transposition
+table. All three are established techniques; the contribution lies in their
+controlled implementation and measurement within one engine, not in the
+algorithms themselves. The techniques are
+introduced formally in \cref{sec:preliminaries} and described at the
+implementation level in \cref{sec:algorithm_implementation}.
+
+The contribution of this work is threefold. First, it provides a clean and
+modular implementation of a classical chess engine that serves as a transparent
+experimental platform. Second, it extends the baseline search with Principal
+Variation Search, null-move pruning and transposition-based search tree reuse,
+and describes how these techniques are realized in practice. Third, it presents
+an empirical evaluation of time-dependent decision making, analyzing move
+stability across depths, time-to-quality curves, the depth and quality gained by
+each refinement, and the distribution of move quality over the position suite.
+On the position suite used here, the results locate the budget beyond which
+additional time no longer measurably improves the typical decision, and they show
+that the residual error is concentrated in a minority of positions that respond
+to additional depth far more weakly than the rest, which points to the evaluation
+rather than the reachable depth as the binding constraint there.
+
+The remainder of this thesis is structured as follows. \cref{sec:related_work}
+discusses relevant prior work in computer chess and game tree search.
+\cref{sec:preliminaries} introduces the necessary theoretical background.
+\cref{sec:algorithm_implementation} describes the architecture of the engine and
+the implementation of the baseline search, the Principal Variation Search, the
+reuse of previous search trees, the time management, and the evaluation
+function. \cref{sec:evaluation} presents the experimental evaluation, and
+\cref{sec:discussion} concludes with a discussion of the results and directions
+for future work.

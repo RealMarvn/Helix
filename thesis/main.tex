@@ -1,0 +1,64 @@
+\documentclass[english,bibfile=bibliography]{algotemplate/thesis}
+
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
+
+% ------------------------------------------ Title page ------------------------
+\title{Time-Dependent Decision Making in Heuristic Chess Search}
+\type{Bachelor Thesis}
+\author{Marvin Becker}
+\studentno{01/1365135}
+\group{Algorithmics}
+\department{Computer and Information Science}
+\institute{University of Konstanz}
+\advisor{Prof.~Dr.~Sabine Storandt}
+\reviewer{Prof.~Dr.~Sabine Storandt\\ & Prof.~Dr.~Michael Grossniklaus}
+\date{2026-09-01}
+% ------------------------------------------------------------------------------
+
+% ------------------------------------------ Abstract --------------------------
+\begin{abstract}
+Chess engines rely on heuristic search to cope with the exponential growth of the
+game tree, and under a clock the decisive question is how much additional
+computation is actually worth. This thesis investigates where the sweet spot
+between invested time and decision quality lies: how much extra search time
+translates into better moves, and from which point on further computation no
+longer changes the decision.
+
+A complete engine is implemented from scratch in \texttt{C++} on a classical
+mailbox board representation, combining alpha-beta search, transposition tables,
+quiescence search, heuristic move ordering and a two-stage time management. On
+this baseline three established refinements are implemented and evaluated:
+Principal Variation Search, null-move pruning, and the reuse of previous search
+trees through a persistent transposition table. The evaluation uses a suite of
+309 positions across budgets from 10\,ms to 5\,s, with move quality scored as
+centipawn loss against a strong reference engine, and a 400-game match against a
+strength-limited opponent, won by $205 \pm 38$ Elo, as an external check.
+
+All three refinements deliver depth as intended: at a one-second budget null-move
+pruning gains a full ply, Principal Variation Search $0.23$ and tree reuse $0.25$
+ply, each with $95\,\%$ confidence intervals excluding zero. For none of them
+could a corresponding improvement in move quality be detected. Two observations
+explain this. Decisions settle early, as three quarters of all positions have
+fixed their move by the depth the engine already reaches. And the residual error
+is highly concentrated: the median centipawn loss is $2$ while the mean is $52$,
+with fifteen positions accounting for nearly half of that mean. These are
+predominantly sparse endgames, and they respond to additional depth far more
+weakly than the rest of the suite.
+
+The value of additional computation is therefore highly heterogeneous across
+positions. Under an explicit criterion, no further improvement of typical move
+quality is detectable beyond roughly one second per move on this suite, while
+average quality keeps falling through that difficult minority. This is consistent
+with limitations of the static evaluation contributing substantially to the
+residual error.
+\end{abstract}
+% ---------------
+% ------------------------------------------------------------------------------
+
+% --------------------------------- Document / Main Content --------------------
+\begin{document}
+
+\input{body}
+
+\end{document}

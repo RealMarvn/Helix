@@ -1,0 +1,292 @@
+\section{Conclusions and Future Work}
+\label{sec:discussion}
+
+The experiments of \cref{sec:evaluation} allow the central question of this
+thesis to be answered, and the answer is more nuanced than the initial
+formulation suggested. This section relates the individual results to that
+question, draws the overall conclusions, and outlines where the engine would have
+to be extended for the remaining gap to close.
+
+\subsection{Depth and Decision Quality Are Not Proportional}
+\label{subsec:discussion_depth_vs_quality}
+
+The clearest finding of this work is that additional search depth does not
+translate into proportionally better decisions. Null-move pruning
+(\cref{subsec:eval_nmp}) reaches a greater depth at every single one of the nine
+time budgets, at one second a full ply, with confidence intervals that exclude
+zero throughout; the corresponding intervals for centipawn loss contain zero at
+every budget. Search tree reuse (\cref{subsec:eval_tree_reuse}) adds another
+$0.25$ ply, 95\,\% CI $[+0.22, +0.29]$, without changing any search parameter.
+Both refinements demonstrably deepen the search, and for neither could a
+corresponding gain in move quality be detected on this suite. For null-move
+pruning this follows from the scored comparison directly. For tree reuse, whose
+experiment records depth rather than reference scores, it follows from the
+mechanism: the refinement acts solely by making the search reach further, and
+\cref{subsec:eval_move_stability} shows that additional depth changes the root
+decision in only a fifth of the positions. A gain of a quarter of a ply is
+therefore not in a position to move the aggregate, which is exactly what the
+scored null-move comparison confirms for a gain four times as large.
+
+The move stability measurements (\cref{subsec:eval_move_stability}) offer an
+explanation. By depth 8, the depth the engine reaches at a one-second budget,
+three quarters of all positions have stopped changing their move within the
+searched range, and about a quarter never change it from the very first
+iteration. Deeper search can only change the decision in the remaining fifth, so
+an across-the-board gain in depth is diluted accordingly. Applying the criterion
+of \cref{subsec:eval_ttq}, the smallest budget beyond which no further
+improvement is detectable is one second for this engine and suite.
+
+That number should be read for what it is. It describes typical positions, where
+the median loss stops falling, while the mean keeps decreasing because a minority
+of difficult positions continues to improve. And it marks the point where a
+difference is no longer \emph{resolved} by this sample, not where improvement
+provably ends: the intervals are wide enough that a small effect could remain
+hidden.
+
+This should be related to the depth at which the engine operates. Junghanns et
+al.~\cite{junghanns1997diminishing} find that diminishing returns do exist in
+chess, but that the high error rate of programs conceals them for search depths
+through nine plies. The budgets used here reach from $3.9$ plies at 10\,ms to
+$9.5$ plies at 5000\,ms and thus lie almost entirely inside that range. The flat
+quality curve reported above is therefore consistent with the literature rather
+than in tension with it, and the same fact bounds what it can establish: this
+setup cannot separate a genuine absence of returns from returns masked by the
+engine's own error rate.
+
+\subsection{Where the Search Is Actually Limited}
+\label{subsec:discussion_limits}
+
+The distribution of move quality (\cref{subsec:eval_outliers}) shows where the
+remaining errors come from. The engine plays a move that loses nothing against
+the reference in $49\,\%$ of the positions and stays within $25$\,cp in two
+thirds of them, with a median loss of $2$\,cp. The mean of $52$\,cp is produced almost entirely by a
+small residue: fifteen positions account for nearly half of it.
+
+These positions share a profile. They hold fewer pieces than average, a third of
+them are endgames, and three contain a forced mate the engine does not find.
+These are the positions in which material and piece-square tables carry little
+useful information, since passed pawns, opposition and king activity are not
+represented in the evaluation (\cref{subsec:eval_limitations}). Position 25 of
+the suite (\cref{subsubsec:eval_case_studies}) shows the mechanism in its purest
+form: both candidate moves are pawn pushes on the same file, neither changes
+material by a single point, and separating them requires knowing that one pawn is
+a passer three moves from promotion while the other is blocked behind its own
+colleague. Depth cannot repair that decision, because the two resulting positions
+are scored almost identically no matter how long the engine looks at them. The
+observation is therefore consistent with evaluation quality being the binding
+constraint
+there, although the experiments presented here cannot separate it from other
+candidates such as horizon effects or missing search extensions.
+
+Judging stability by evaluation instead of by the identity of the move makes the
+consequence explicit (\cref{subsubsec:eval_eps_stability}). While the move
+settles in nearly every position, a third of them never come within 20\,cp of the
+reference at any depth, ending at an average loss of $120$\,cp. The search does
+not remain undecided in these cases, it converges, and it converges on the wrong
+move. A stable decision is therefore not by itself a good one, which is worth
+keeping in mind wherever move stability is used as a stopping criterion in
+time management.
+
+What can be shown directly is that these positions do not respond to depth the way
+the rest of the suite does. They are searched just as deeply, to the same average
+of $10.1$ plies, but convert that depth into far less: over the course of a search
+their loss improves by $5.4$\,cp where the converging positions gain $36.5$\,cp.
+Depth is not useless there, it is merely a much weaker lever against a gap of more
+than $100$\,cp. This rules out insufficient search effort as the explanation, but
+it does not by itself identify the evaluation as the cause; it makes it the most
+plausible candidate, given which positions are affected. Deciding the question
+requires an intervention on the evaluation itself, which is the single most
+valuable experiment this thesis leaves open.
+
+The Principal Variation Search results (\cref{subsec:eval_pvs}) fit the same
+picture from a different angle. Scouting itself is worth having: it gains
+$0.23$\,ply at a one-second budget, with intervals excluding zero at every budget.
+Its parameters, however, are irrelevant, since the node count varies by less than
+two percent across all 30 configurations. The reason is that re-searches are rare
+to begin with: depending on the configuration, between roughly 3 and 146 per
+search against 1.5 million nodes visited. The move ordering, built from transposition table moves, MVV-LVA, killer
+moves and the history heuristic, is already good enough that the first move
+examined is almost always the best one, so the trade-off the parameters are meant
+to control barely arises. This is consistent with the long-standing observation
+that the effectiveness of Alpha-Beta pruning is governed by move ordering rather
+than by the pruning scheme itself~\cite{knuth1975alphabeta, marsland1986review}.
+
+Position 46 marks the boundary of that statement. The move the engine misses
+there is a quiet queen move giving check, and quiet moves are ranked neither by
+the transposition table nor by MVV-LVA, so it sits behind every capture until the
+killer or history heuristic has encountered it elsewhere in the tree. Ordering
+that is excellent on average can therefore still fail systematically on a
+particular class of move, and an aggregate over a suite is exactly the wrong
+instrument for noticing that.
+
+Notably, scouting buys its depth not by shrinking the tree but by making each node
+cheaper: with scouting the engine visits more nodes per second, not fewer. All
+three refinements studied here therefore increase reachable depth by different
+means, and none of them was shown to improve move quality.
+
+\subsection{Implications for Time-Managed Search}
+\label{subsec:discussion_time}
+
+For iterative deepening under time constraints~\cite{korf1985iterative} these
+results are encouraging. The anytime property is not merely a safety net: since
+most positions settle early, an interrupted search usually returns the same move
+a deeper one would have confirmed. Stopping between iterations therefore costs
+far less quality than the depth difference alone would suggest.
+
+The measurements also show that the engine stops being appreciably memory-bound
+around the default hash size (\cref{subsec:eval_tt_size}). A small table costs
+real depth, but the penalty falls below a twentieth of a ply by 16\,MB and is no
+longer detectable at 64\,MB. Set against the tree-reuse result, this suggests that
+keeping the table alive across moves is worth more than enlarging it: retaining
+what was already computed gains $0.25$ ply, whereas quadrupling the table from
+64\,MB upwards gains nothing measurable.
+
+Against a fixed reference opponent, the engine wins its match by roughly $205$
+Elo points with both colors (\cref{subsec:engine_eval}). This is a check that the
+implementation performs sensibly as a whole, not a rating: the figure describes
+the relation to one weakened Stockfish configuration and would change with any
+other opponent.
+
+\subsection{Limitations}
+\label{subsec:discussion_limitations}
+
+Several limitations qualify these conclusions. Move quality is measured against a
+strong reference engine rather than against ground truth, so agreement with
+Stockfish is treated as a proxy for correctness; positions in which a different
+move is equally good are penalised by the agreement metric, which is why
+centipawn loss is used as the primary measure.
+
+The suite consists of 309 predefined positions with three repetitions each. It is
+large enough for the aggregate effects reported here, but the skewed distribution
+of the loss means that individual means are sensitive to a small number of
+positions, and differences of a few centipawns should not be over-interpreted.
+
+The stability results are bounded by the observation horizon. A move counts as
+stabilized when it stops changing within a 20-million-node search, which cannot
+say what a deeper search would do; roughly a fifth of the positions still change
+their move at the deepest iteration reached. The comparison between converging
+and non-converging positions inherits this limitation and is additionally
+descriptive by construction, since the groups are defined by the very quality
+behavior whose trajectories are then compared. Defining the groups in advance, by
+piece count or game phase, would make that comparison independent.
+
+The opponent in the match was deliberately weakened through Stockfish's built-in
+strength limitation. That mechanism provides only a nominal Elo target and works
+partly by introducing random inaccuracies, so the reported difference describes
+the relation to this specific configuration and not an absolute rating.
+
+Finally, the engine uses a mailbox board representation and a handcrafted
+evaluation, both chosen for clarity rather than for strength. Modern engines rely
+on bitboards~\cite{cpw_bitboards} and learned evaluation
+functions~\cite{silver2018alphazero}, and the conclusions about absolute playing
+strength do not transfer to those designs.
+
+\subsection{Reflection}
+\label{subsec:discussion_reflection}
+
+Three insights from this work were not anticipated when the experiments were
+designed, and they say as much about the methodology as about the engine.
+
+The first concerns the initial hypothesis. The thesis set out to find the point at
+which additional time stops paying off, implicitly assuming that time and quality
+are related by a single curve with a knee. The data show something different:
+there is no single curve, because positions fall into two regimes. Most are solved
+early and never benefit from more time, a minority is never solved and benefits
+just as little. The apparent knee in the aggregate is an artifact of mixing the
+two. The case studies make the difference tangible: position 22 is solvable by
+depth in principle, but only thirteen plies from the root, while position 25
+cannot be solved by depth at any budget because the evaluation does not
+distinguish the two candidate moves in the first place. In hindsight the question ``where is the sweet spot'' was posed one level too
+coarsely; ``for which positions does additional time still help'' would have been
+the more productive formulation from the outset.
+
+The second is methodological. For a long time the analysis reported only mean
+centipawn loss, and under that view the engine looked mediocre and the refinements
+looked useless. Only after examining the distribution did it become clear that the
+median is $2$\,cp and that half of all positions are answered without any loss
+against the reference. The mean was not wrong, it simply answered a different question
+than the one being asked. That a single summary statistic can obscure the central
+result of an experiment is the most transferable lesson of this thesis, and it is
+the reason the analysis now reports several estimands side by side.
+
+The third concerns correctness. During the evaluation the engine occasionally
+produced illegal moves in tournament play, which turned out not to be a search
+problem at all but a parser that misclassified a knight move onto the en-passant
+square. The position in the engine and the position in the arbiter drifted apart
+silently, and every subsequent move was computed for a different game. The
+measurements taken before that point were internally consistent and looked
+entirely plausible; nothing in the aggregate numbers indicated a defect. This is
+the strongest argument for the correctness infrastructure described in
+\cref{subsec:common_setup}: perft validation and the systematic comparison against
+a reference detect what plausible-looking averages do not. Were the project to be
+repeated, that infrastructure would come first, before any measurement.
+
+\subsection{Future Work}
+\label{subsec:discussion_future}
+
+The results point to one clear priority, and it takes the form of a testable
+hypothesis rather than a conclusion. The static evaluation is the most plausible
+candidate for the residual error and therefore the most valuable next
+intervention: adding passed-pawn, king-activity and pawn-structure terms together
+with dedicated endgame knowledge, and re-running the difficult subset under an
+identical node budget. If that group improves materially while the rest of the
+suite stays unchanged, the interpretation offered here would become direct
+evidence; if it does not, the cause lies elsewhere in the search, which would be
+an equally informative outcome. Either way this is the experiment that would turn
+the present interpretation into a result.
+
+A second direction concerns the measurement itself. A single mean is a poor
+summary of a distribution this skewed, and the answer is not to remove the
+extreme cases, which are the engine's real failures and among its most
+informative observations, but to report several estimands side by side: the mean
+as expected loss, the median as typical loss, upper percentiles, the share of
+positions within a given margin, and the rate of catastrophic errors. Each
+answers a different question, and stratifying them by position type would show
+which refinement helps which class of position instead of averaging the two
+regimes into one number.
+
+The stability analysis could be extended in the same spirit. Judging convergence
+by evaluation rather than by the identity of the move already proved more
+informative here (\cref{subsubsec:eval_eps_stability}); applying the same
+criterion to the time-to-quality measurements, and reporting from which
+\emph{budget} rather than from which depth the loss stays within a margin, would
+describe the practical behavior of the engine under a clock more directly than
+the depth-based view can.
+
+Finally, the search refinements evaluated here are only the beginning of what a
+classical engine typically employs. Late move reductions, aspiration windows and
+static exchange evaluation all target the same goal of spending effort where it
+changes the decision, and the move ordering measured here is strong enough that
+they would likely pay off.
+
+\subsection{Summary}
+
+This thesis implemented a complete chess engine and used it to examine how
+invested search time translates into decision quality on a fixed position suite.
+The central finding is that this translation is not uniform. Additional
+computation reliably increases search depth, but the value of that depth differs
+sharply between positions, and averaging over the suite hides two regimes rather
+than describing one.
+
+The majority of positions reaches a low centipawn loss early and stops changing
+its move at modest depth; the median loss is $2$\,cp, and further time changes
+little. A minority behaves in the opposite way: it accounts for nearly half of the
+mean loss, keeps improving with additional time, and responds to depth far more
+weakly than the rest, gaining $5.4$\,cp over a search where the others gain
+$36.5$. These positions are predominantly sparse endgames.
+
+All three refinements studied deliver what they promise in terms of search. At a
+one-second budget null-move pruning gains a full ply, Principal Variation Search
+$0.23$ ply and search tree reuse $0.25$ ply, each with $95\,\%$ intervals
+excluding zero, and each by a different mechanism: pruning subtrees, making
+individual nodes cheaper, and retaining what was already computed. For none of
+them could a corresponding improvement in move quality be detected, which follows
+from the heterogeneity above: a gain in depth applies to all positions, but only a
+fifth of them are still in a state where depth changes the decision.
+
+Under an explicit criterion, no further improvement of typical move quality is
+detectable beyond roughly one second per move on this suite. This is an
+operational statement rather than a claim that improvement ends there. What the
+evidence supports, without establishing it conclusively, is that beyond this
+point the limit lies less in how far the engine looks ahead than in what its
+evaluation is able to distinguish when it arrives.

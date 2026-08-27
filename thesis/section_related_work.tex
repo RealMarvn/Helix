@@ -1,0 +1,93 @@
+\section{Related Work}
+\label{sec:related_work}
+% Classical chess engines, alpha-beta, iterative deepening, time control
+
+The problem of efficient search in chess engines has been studied extensively
+over several decades~\cite{marsland1986review}. Early approaches were based on the Minimax algorithm,
+which provides an optimal decision strategy under the assumption of perfect
+play~\cite{yannakakis2018artificial}. However, due to the exponential growth of the game tree, Minimax quickly becomes infeasible even at moderate depths.
+
+Alpha-Beta pruning was introduced as a major improvement over plain Minimax,
+allowing large parts of the search tree to be pruned without affecting the
+correctness of the result~\cite{knuth1975alphabeta}. Subsequent work showed that
+the effectiveness of Alpha-Beta pruning depends crucially on the order in which
+moves are explored. With perfect move ordering, the effective branching factor can be reduced dramatically, enabling much deeper searches within the same computational budget~\cite{marsland1986review}.
+
+Iterative deepening~\cite{korf1985iterative} has emerged as a standard technique to improve move ordering
+and to support time-controlled search. By repeatedly searching the game tree with
+increasing depth limits, iterative deepening ensures that a valid best move is
+always available while simultaneously refining the move ordering for deeper
+iterations. Despite the apparent redundancy caused by re-searching parts of the
+tree, it has been shown that the overhead is often compensated by improved
+pruning efficiency~\cite{marsland1986review}.
+
+A detailed analysis of Alpha-Beta pruning efficiency in chess engines is
+presented by Nair~\cite{nair_improving_ab}. The paper investigates how different
+move ordering heuristics and search enhancements affect the pruning behavior of
+Alpha-Beta search. In particular, it highlights the strong interaction between
+iterative deepening, transposition tables, and heuristic move ordering. The
+results indicate that improved move ordering can significantly reduce the number
+of explored nodes, even when additional search iterations are introduced.
+
+Building directly on the observation that Alpha-Beta search is most effective
+with strong move ordering, several refinements of the basic algorithm have been
+proposed. Pearl introduced the Scout algorithm, which verifies promising moves with
+minimal-window tests before evaluating them exactly~\cite{pearl1980scout}.
+Marsland and Campbell transferred this idea to the Alpha-Beta framework in the
+form of Principal Variation Search~\cite{marsland1982parallel}, and Reinefeld
+later refined it into NegaScout, analyzing the conditions under which the
+additional re-searches pay off~\cite{reinefeld1983negascout}. PVS is
+particularly effective in combination with iterative deepening and
+transposition tables, since both increase the probability that the first move
+searched is indeed the best one~\cite{marsland1986review}.
+
+Transposition tables have further improved search efficiency by allowing engines
+to reuse previously computed results for positions reached via different move
+orders~\cite{zobrist1970hashing}. By storing evaluations together with depth
+information and bound types, transposition tables enable both direct cutoffs and
+enhanced move ordering. Their effectiveness is especially pronounced in
+combination with iterative deepening, where information from earlier iterations
+can be reused almost immediately~\cite{warnock1988search}. Beyond single search
+invocations, a persistent transposition table also allows information to be
+carried over from one move to the next, effectively resuming previously
+explored search trees instead of recomputing them from scratch.
+
+Quiescence search addresses another well-known limitation of depth-limited
+search, commonly referred to as the horizon effect. By extending the search in
+tactically unstable positions, quiescence search produces more reliable
+evaluations and has become a standard component of classical chess
+engines~\cite{marsland1986review}.
+
+Beyond exact pruning, engines also employ heuristic forward pruning, which
+discards subtrees without proving them irrelevant. The most widely used variant
+is null-move pruning: if passing a turn still leaves the position good enough to
+cause a cutoff, the subtree is assumed to be safe to skip. The null move as a
+search device is considerably older than this application of it, but the
+recursive form with depth reduction that engines use today was established
+experimentally by Goetsch and Campbell~\cite{goetsch1990experiments}. Unlike
+Alpha-Beta this is not value-preserving, so it trades a small risk of overlooking
+a line for a substantially smaller tree.
+
+Closest to the question of this thesis is the work on how additional search
+actually pays off. Junghanns et al.~\cite{junghanns1997diminishing} studied
+diminishing returns in self-play and found the winning percentage per additional
+ply to decrease with depth. They also report that this decrease is not visible
+throughout: the high error rate of chess programs hides the effect for search
+depths through nine plies, which is precisely the range in which the engine
+studied here operates. Ferreira~\cite{ferreira2013impact} approached the
+same relationship from the other direction and related search depth to Elo,
+reporting gains per ply that shrink as depth grows.
+
+These studies establish that the returns of additional search diminish, but they
+measure it through game outcomes between engines of differing depth. What they do
+not address is where the returns diminish \emph{within a single engine under a
+clock}, at which depth its decisions stop changing, and which positions cause the
+remaining error. This thesis takes that perspective: instead of relating depth to
+playing strength, it relates the time budget to the quality of the individual
+decision on a fixed set of positions, and separates the positions in which
+additional search still changes the decision from those in which it does not.
+
+While modern state-of-the-art engines incorporate additional techniques such as
+bitboards, evaluation learning, and neural networks~\cite{silver2018alphazero},
+the classical search principles discussed above remain fundamental. This work
+builds upon these established ideas.

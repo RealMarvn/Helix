@@ -9,23 +9,26 @@
  * Declares the ChessBot class which implements the engine's game-tree search:
  * - iterative deepening and fixed-depth search,
  * - negamax with alpha-beta pruning,
+ * - null move pruning,
  * - quiescence search,
  * - move ordering (TT move, killers, history),
  * - integration with the Transposition Table.
  */
 
 #pragma once
+#include <algorithm>
+#include <atomic>
 #include <chrono>
-#include <memory>
 #include <climits>
 #include <cstdint>
-#include <atomic>
+#include <memory>
+#include <vector>
 
 #include "../movement/move_gen.h"
-#include "./tt.h"
 #include "./search/heuristics.h"
-#include "time/search_constraints.h"
+#include "./tt.h"
 #include "search/debug_print.h"
+#include "time/search_constraints.h"
 
 /**
  * @class ChessBot
@@ -36,6 +39,7 @@
  *  - iterative deepening with time management,
  *  - fixed-depth searches,
  *  - negamax search with alpha-beta pruning,
+ *  - null move pruning,
  *  - quiescence search,
  *  - transposition tables,
  *  - killer and history heuristics.
@@ -45,10 +49,10 @@
  * conditions are propagated explicitly through the search to avoid
  * using incomplete results.
  */
-class ChessBot {
+class ChessBot
+{
 
-public:
-
+  public:
     /** @brief Debug verbosity level used by the search debug printer. */
     enum class DebugLevel : uint8_t
     {
@@ -68,6 +72,75 @@ public:
     };
 
     /**
+     * @brief Everything a finished search hands back to the caller.
+     *
+     * Pure output data: the chosen move plus the stats of exactly this
+     * search. Configuration (PVS params, constraints) stays outside,
+     * the caller knows what it passed in.
+     */
+    struct SearchReport
+    {
+        Move best_move{};
+
+        int completed_depth = 0; // Last fully finished iteration.
+        int seldepth = 0;        // Deepest point incl. quiescence.
+
+        long long nodes = 0;
+        long long qnodes = 0;
+        long long researches = 0;   // Failed null-window scouts.
+        long long null_cutoffs = 0; // Successful null move prunes.
+        int tt_returns = 0;         // Usable TT probes.
+
+        // Raw TT counters (probes/hits/stores/replaces) of exactly this search,
+        // copied straight out of the table. Lets the bench compute hit rate and
+        // replacement pressure without poking into the TT itself.
+        TTStats tt_stats{};
+
+        StopReason stop_reason = StopReason::NONE;
+
+        // Snapshot of one finished iterative-deepening iteration: the best move
+        // at that depth plus the running stats when it finished.
+        struct DepthSnapshot
+        {
+            int depth = 0;
+            Move move{};
+            long long nodes = 0;
+            long long qnodes = 0;
+            int seldepth = 0;
+            long long time_ms = 0;
+        };
+
+        // One entry per completed iteration
+        std::vector<DepthSnapshot> iterations{};
+    };
+
+    /**
+     * @brief Convert a StopReason enum value into a stable C-string.
+     *
+     * Used for UCI output, debug logging and the bench harness. The returned
+     * string is statically allocated and valid for the entire program lifetime.
+     *
+     * @param R Stop reason enum value.
+     * @return Null-terminated string representation.
+     */
+    static const char* stop_reason_to_cstr(const StopReason R)
+    {
+        switch (R)
+        {
+        case STOP_FLAG:
+            return "stop_flag";
+        case HARD_TIME:
+            return "hard_time";
+        case SOFT_TIME:
+            return "soft_time";
+        case NODE_LIMIT:
+            return "node_limit";
+        default:
+            return "none";
+        }
+    }
+
+    /**
      * @brief Entry point for starting a new search.
      *
      * Executes a search according to the provided SearchConstraints.
@@ -77,9 +150,9 @@ public:
      *
      * @param board Current board position to search from.
      * @param config Immutable search constraints controlling termination.
-     * @return Best move found by the completed search.
+     * @return SearchReport with the best move.
      */
-    Move think(Board board, SearchConstraints config);
+    SearchReport think(Board board, SearchConstraints config);
 
     /**
      * @brief Resets the transposition table to an empty state.
@@ -90,15 +163,112 @@ public:
     void reset_tt();
 
     /** @brief Request termination of the currently running search (thread-safe). */
-    void request_stop() { stop_requested.store(true, std::memory_order_relaxed); }
+    void request_stop()
+    {
+        stop_requested.store(true, std::memory_order_relaxed);
+    }
 
     /** @brief Turn debug logs on and off. */
-    void set_debug_enabled(const bool ON) { debug.enabled = ON; }
+    void set_debug_enabled(const bool ON)
+    {
+        debug.enabled = ON;
+    }
 
     /** @brief Set the debug level. */
-    void set_debug_level(const DebugLevel LVL) { debug.level = LVL; }
+    void set_debug_level(const DebugLevel LVL)
+    {
+        debug.level = LVL;
+    }
 
-private:
+    /** @brief Set the minimum depth at which PVS scouting (null-window) kicks in. */
+    void set_pvs_min_depth(const int N)
+    {
+        pvs.min_depth = std::max(1, N);
+    }
+
+    /** @brief Set how many leading moves are searched with a full window before scouting starts. */
+    void set_pvs_scout_after_move(const int N)
+    {
+        pvs.scout_after_move = std::max(1, N);
+    }
+
+    /** @brief Turn null move pruning on and off. */
+    void set_nmp_enabled(const bool ON)
+    {
+        nmp.enabled = ON;
+    }
+
+    /** @brief Set the minimum depth at which null move pruning kicks in. */
+    void set_nmp_min_depth(const int N)
+    {
+        nmp.min_depth = std::max(2, N);
+    }
+
+    /** @brief Set the depth reduction R applied to the null move search. */
+    void set_nmp_reduction(const int R)
+    {
+        nmp.reduction = std::max(1, R);
+    }
+
+    /**
+     * @brief Resize the transposition table to roughly MB megabytes.
+     *
+     * The entry count is rounded DOWN to a power of two, so the table never
+     * uses more memory than requested. Clears the table, so only call
+     * between searches (UCI "Hash" / bench sweeps).
+     */
+    void set_tt_size_mb(const int MB)
+    {
+        const std::size_t BYTES = static_cast<std::size_t>(std::max(1, MB)) * 1024 * 1024;
+        const std::size_t ENTRIES = BYTES / TranspositionTable::entry_size();
+
+        std::size_t pow2 = 1;
+        while (pow2 * 2 <= ENTRIES)
+            pow2 *= 2;
+
+        tt.resize(pow2);
+    }
+
+  private:
+    /**
+     * @brief Config object holding the PVS tuning parameters.
+     *
+     * min_depth: below this depth we skip the scout entirely, since the
+     *            re-search overhead would eat up the savings at shallow nodes.
+     * scout_after_move: the first N legal moves still get a full window
+     *            (we trust the ordering least at the very top), only after
+     *            that do we switch to the cheap null-window scout.
+     */
+    struct PvsConfig
+    {
+        int min_depth = 2;
+        int scout_after_move = 1;
+    };
+
+    /** @brief The current PVS config. */
+    PvsConfig pvs;
+
+    /**
+     * @brief Config object holding the null move pruning parameters.
+     *
+     * The idea: hand the opponent a free move. If our position is still
+     * good enough that a reduced search fails high anyway, the real moves
+     * can only be better and the whole node gets cut immediately.
+     *
+     * min_depth: below this depth we skip the null move, the reduced
+     *            search would land straight in quiescence and prove nothing.
+     * reduction: how many plies R the null move search is shallower than
+     *            the normal search (classic value: 2).
+     */
+    struct NullMoveConfig
+    {
+        bool enabled = true;
+        int min_depth = 3;
+        int reduction = 2;
+    };
+
+    /** @brief The current null move pruning config. */
+    NullMoveConfig nmp;
 
     /**
      * @brief Config object used to hold the debug options.
@@ -126,6 +296,19 @@ private:
         bool aborted = false;
     };
 
+    /**
+     * @brief Bundle the current search statistics into a SearchReport.
+     *
+     * Reads all the per-search counters off the member state (nodes, depths,
+     * stop reason, ...) and pulls the raw TT counters from the table. Keeping
+     * this in one place means the three return paths of think() can't drift
+     * apart when a new stat gets added.
+     *
+     * @param best_move The move the search decided on.
+     * @return A fully filled report for exactly this search.
+     */
+    [[nodiscard]] SearchReport build_report(const Move& best_move) const;
+
     /** @brief Active constraints for the current search (time/nodes/depth). */
     SearchConstraints constraint;
 
@@ -137,6 +320,18 @@ private:
 
     /** @brief Maximum selective depth (seldepth) reached in the last search. */
     int seldepth = 0;
+
+    /** @brief Depth of the last fully completed iteration (for measurements). */
+    int completed_depth = 0;
+
+    /** @brief Best move + stats of every completed ID iteration (move-stability). */
+    std::vector<SearchReport::DepthSnapshot> iterations_{};
+
+    /** @brief How often a null-window scout failed high and forced a full re-search. */
+    long long researches = 0;
+
+    /** @brief How often a null move search failed high and pruned the whole node. */
+    long long null_cutoffs = 0;
 
     /** @brief Number of times a TT probe returned a usable score/bound. */
     int tt_returns = 0;
@@ -218,9 +413,13 @@ private:
      * @param beta Beta bound of the search window.
      * @param ply Current ply (half-move) depth from the root.
      * @param best_move Output parameter for the best move at root ply.
+     * @param can_null Whether null move pruning is allowed at this node.
+     *                 Passed as false directly after a null move so the
+     *                 search never plays two null moves in a row.
      * @return SearchResult containing the score and abort status.
      */
-    SearchResult negamax(Board& board, int depth, int alpha, int beta, int ply, Move& best_move);
+    SearchResult negamax(Board& board, int depth, int alpha, int beta, int ply, Move& best_move,
+                         bool can_null = true);
 
     /**
      * @brief Quiescence search to resolve tactical instability.
@@ -237,7 +436,6 @@ private:
      * @return SearchResult containing the score and abort status.
      */
     SearchResult quiescence(Board& board, int alpha, int beta, int ply);
-
 
     /**
      * @brief Resets all search-related state before starting a new root search.
@@ -268,7 +466,10 @@ private:
     [[nodiscard]] bool hard_stop();
 
     /** @brief Clear a previously requested stop before starting a new search. */
-    void clear_stop() { stop_requested.store(false, std::memory_order_relaxed); }
+    void clear_stop()
+    {
+        stop_requested.store(false, std::memory_order_relaxed);
+    }
 
     /** @brief Update node counters and selective depth during negamax. */
     void updateStats(const int PLY)
@@ -298,26 +499,4 @@ private:
     friend void search::debug::print_tt(const ChessBot& bot);
     friend void search::debug::print_root_ordering(const ChessBot& bot, Board& board);
     friend void search::debug::print_pv(const ChessBot& bot, const Board& board);
-
-    /**
-     * @brief Convert a StopReason enum value into a stable C-string.
-     *
-     * Used for UCI output and debug logging. The returned string is
-     * statically allocated and valid for the entire program lifetime.
-     *
-     * @param r Stop reason enum value.
-     * @return Null-terminated string representation.
-     */
-    static const char* stop_reason_to_cstr(const decltype(ChessBot::stop_reason) r)
-    {
-        switch (r)
-        {
-        case ChessBot::STOP_FLAG: return "stop_flag";
-        case ChessBot::HARD_TIME: return "hard_time";
-        case ChessBot::SOFT_TIME: return "soft_time";
-        case ChessBot::NODE_LIMIT: return "node_limit";
-        default: return "none";
-        }
-    }
-
 };
